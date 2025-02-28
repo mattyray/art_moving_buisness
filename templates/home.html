@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="container text-center">
+    <h1 class="mt-5">Welcome to Art Moving</h1>
+    <p class="lead">Manage clients, work orders, and invoicing with ease.</p>
+
+    {% if user.is_authenticated %}
+        <p class="text-success">Hello, {{ user.username }}!</p>
+        <a href="{% url 'logout' %}" class="btn btn-danger">Logout</a>
+    {% else %}
+        <a href="{% url 'login' %}" class="btn btn-primary">Login</a>
+        <a href="{% url 'signup' %}" class="btn btn-secondary">Sign Up</a>
+    {% endif %}
+</div>
+{% endblock %}
