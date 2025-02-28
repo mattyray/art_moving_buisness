@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    command: python /code/manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy  # Ensures Postgres is fully started before Django starts
+    networks:
+      - art_moving_network
+
+  db:
+    image: postgres:15
+    container_name: art_moving_db  # Optional, but makes debugging easier
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      POSTGRES_DB: art_moving
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    healthcheck:  # Ensures Postgres is actually ready before Django starts
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 5
+    networks:
+      - art_moving_network
+
+volumes:
+  postgres_data:
+
+networks:
+  art_moving_network:
