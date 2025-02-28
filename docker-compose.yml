@@ -3,11 +3,11 @@ version: '3.8'
 services:
   web:
     build: .
-    command: python /code/manage.py runserver 0.0.0.0:8000
+    command: python /code/manage.py runserver 0.0.0.0:8080
     volumes:
       - .:/code
     ports:
-      - "8000:8000"
+      - "8080:8080"
     depends_on:
       db:
         condition: service_healthy  # Ensures Postgres is fully started before Django starts
