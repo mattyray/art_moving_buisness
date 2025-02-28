@@ -30,6 +30,9 @@ INSTALLED_APPS = [
     #apps
     'accounts.apps.AccountsConfig',
     'pages.apps.PagesConfig',
+    #crispy
+    'crispy_forms',
+    'crispy_bootstrap5',
 ]
 
 MIDDLEWARE = [
@@ -118,3 +121,12 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'accounts.CustomUser'
+
+#crispy
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+#login redirect
+LOGIN_REDIRECT_URL = 'home'
+LOGOUT_REDIRECT_URL = "/"  # ✅ Ensure this is present
