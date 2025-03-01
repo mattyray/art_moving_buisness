@@ -1,4 +1,7 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from django.utils import timezone
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 from .models import WorkOrder
 from .forms import WorkOrderForm
 
@@ -17,15 +20,41 @@ def workorder_create(request):
     return render(request, 'workorders/workorder_form.html', {'form': form})
 
 def jobs_overview(request):
-    # Pending: No scheduled date and status is still pending
+    query = request.GET.get('q', '')
+    
     pending_jobs = WorkOrder.objects.filter(status='pending', scheduled_date__isnull=True)
-    # Scheduled: Has a scheduled date and status is pending or in progress
     scheduled_jobs = WorkOrder.objects.filter(status__in=['pending', 'in_progress'], scheduled_date__isnull=False)
-    # Completed: Status is completed
     completed_jobs = WorkOrder.objects.filter(status='completed')
     
-    return render(request, 'workorders/jobs_overview.html', {
-         'pending_jobs': pending_jobs,
-         'scheduled_jobs': scheduled_jobs,
-         'completed_jobs': completed_jobs,
-    })
+    if query:
+        pending_jobs = pending_jobs.filter(client__name__icontains=query)
+        scheduled_jobs = scheduled_jobs.filter(client__name__icontains=query)
+        completed_jobs = completed_jobs.filter(client__name__icontains=query)
+    
+    context = {
+        'pending_jobs': pending_jobs,
+        'scheduled_jobs': scheduled_jobs,
+        'completed_jobs': completed_jobs,
+        'query': query,
+    }
+    return render(request, 'workorders/jobs_overview.html', context)
+
+def mark_scheduled(request, job_id):
+    """Mark a pending job as scheduled (or in progress)."""
+    job = get_object_or_404(WorkOrder, id=job_id)
+    if job.status == 'pending':
+        job.status = 'in_progress'
+        if not job.scheduled_date:
+            job.scheduled_date = timezone.now().date()
+        job.save()
+    # Redirect back to the referring page, or jobs overview if none
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('jobs_overview')))
+
+def mark_completed(request, job_id):
+    """Mark a scheduled job as completed."""
+    job = get_object_or_404(WorkOrder, id=job_id)
+    if job.status in ['pending', 'in_progress']:
+        job.status = 'completed'
+        job.completed_at = timezone.now()
+        job.save()
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('jobs_overview')))

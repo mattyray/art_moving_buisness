@@ -3,15 +3,40 @@
 {% block content %}
 <h2>Jobs Overview</h2>
 
-<h3>Pending Jobs (To Be Scheduled)</h3>
+<!-- Internal Navigation for Job Sections -->
+<nav class="mb-4">
+  <ul class="nav nav-pills">
+    <li class="nav-item">
+      <a class="nav-link" href="#pending">Pending</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="#scheduled">Scheduled</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="#completed">Completed</a>
+    </li>
+  </ul>
+</nav>
+
+<!-- Search Bar -->
+<form method="get" class="mb-4">
+    <div class="input-group">
+        <input type="text" name="q" class="form-control" placeholder="Search by client name..." value="{{ query }}">
+        <button type="submit" class="btn btn-primary">Search</button>
+    </div>
+</form>
+
+<!-- Pending Jobs Section -->
+<h3 id="pending">Pending Jobs (To Be Scheduled)</h3>
 {% if pending_jobs %}
-<table class="table">
+<table class="table table-striped">
   <thead>
     <tr>
       <th>ID</th>
       <th>Client</th>
       <th>Job Description</th>
       <th>Created At</th>
+      <th>Actions</th>
     </tr>
   </thead>
   <tbody>
@@ -21,23 +46,29 @@
       <td>{{ job.client.name }}</td>
       <td>{{ job.job_description|truncatewords:10 }}</td>
       <td>{{ job.created_at|date:"Y-m-d" }}</td>
+      <td>
+        <!-- Link to mark the job as scheduled -->
+        <a href="{% url 'mark_scheduled' job.id %}" class="btn btn-sm btn-outline-secondary">Mark Scheduled</a>
+      </td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
 {% else %}
-<p>No pending jobs.</p>
+<p>No pending jobs found.</p>
 {% endif %}
 
-<h3>Scheduled Jobs</h3>
+<!-- Scheduled Jobs Section -->
+<h3 id="scheduled">Scheduled Jobs</h3>
 {% if scheduled_jobs %}
-<table class="table">
+<table class="table table-striped">
   <thead>
     <tr>
       <th>ID</th>
       <th>Client</th>
       <th>Job Description</th>
       <th>Scheduled Date</th>
+      <th>Actions</th>
     </tr>
   </thead>
   <tbody>
@@ -47,17 +78,22 @@
       <td>{{ job.client.name }}</td>
       <td>{{ job.job_description|truncatewords:10 }}</td>
       <td>{{ job.scheduled_date|date:"Y-m-d" }}</td>
+      <td>
+        <!-- Link to mark the job as completed -->
+        <a href="{% url 'mark_completed' job.id %}" class="btn btn-sm btn-outline-secondary">Mark Completed</a>
+      </td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
 {% else %}
-<p>No scheduled jobs.</p>
+<p>No scheduled jobs found.</p>
 {% endif %}
 
-<h3>Completed Jobs History</h3>
+<!-- Completed Jobs Section -->
+<h3 id="completed">Completed Jobs History</h3>
 {% if completed_jobs %}
-<table class="table">
+<table class="table table-striped">
   <thead>
     <tr>
       <th>ID</th>
