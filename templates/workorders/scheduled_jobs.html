@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Scheduled Jobs{% endblock %}
+{% block content %}
+<div class="container">
+  <h2 class="mb-4">Scheduled Jobs</h2>
+  <!-- Search Bar -->
+  <form method="get" class="mb-4">
+    <div class="input-group">
+      <input type="text" name="q" class="form-control" placeholder="Search by client name..." value="{{ query }}">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </div>
+  </form>
+  <div class="row">
+    {% for job in jobs %}
+      <div class="col-md-4">
+        <div class="card mb-4 shadow-sm">
+          <div class="card-header bg-info text-white">
+            Scheduled
+          </div>
+          <div class="card-body">
+            <h5 class="card-title">{{ job.client.name }}</h5>
+            <p class="card-text"><strong>ID:</strong> {{ job.id }}</p>
+            <p class="card-text"><strong>Description:</strong> {{ job.job_description|truncatewords:10 }}</p>
+            <p class="card-text"><strong>Scheduled:</strong> {{ job.scheduled_date|date:"Y-m-d" }}</p>
+          </div>
+          <div class="card-footer">
+            <a href="{% url 'mark_completed' job.id %}" class="btn btn-sm btn-outline-secondary">Mark Completed</a>
+            <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View Details</a>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <p>No scheduled jobs found.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

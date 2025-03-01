@@ -22,23 +22,27 @@ def workorder_create(request):
 def jobs_overview(request):
     query = request.GET.get('q', '')
     
-    # Pending: no scheduled date and status is pending
+    # Base querysets for each category
     pending_jobs = WorkOrder.objects.filter(status='pending', scheduled_date__isnull=True)
-    # Scheduled: has a scheduled date and status pending or in progress
     scheduled_jobs = WorkOrder.objects.filter(status__in=['pending', 'in_progress'], scheduled_date__isnull=False)
-    # Completed: status is completed
     completed_jobs = WorkOrder.objects.filter(status='completed')
     
+    # Apply filtering by client name if query provided
     if query:
         pending_jobs = pending_jobs.filter(client__name__icontains=query)
         scheduled_jobs = scheduled_jobs.filter(client__name__icontains=query)
         completed_jobs = completed_jobs.filter(client__name__icontains=query)
     
+    # Get the most recently updated/created job for each category
+    latest_pending = pending_jobs.order_by('-updated_at').first()
+    latest_scheduled = scheduled_jobs.order_by('-updated_at').first()
+    latest_completed = completed_jobs.order_by('-updated_at').first()
+    
     context = {
-        'pending_jobs': pending_jobs,
-        'scheduled_jobs': scheduled_jobs,
-        'completed_jobs': completed_jobs,
         'query': query,
+        'latest_pending': latest_pending,
+        'latest_scheduled': latest_scheduled,
+        'latest_completed': latest_completed,
     }
     return render(request, 'workorders/jobs_overview.html', context)
 
@@ -91,3 +95,39 @@ def workorder_detail(request, job_id):
         'note_form': note_form,
     }
     return render(request, 'workorders/workorder_detail.html', context)
+
+# New view for Pending Jobs page
+def pending_jobs_view(request):
+    query = request.GET.get('q', '')
+    jobs = WorkOrder.objects.filter(status='pending', scheduled_date__isnull=True)
+    if query:
+        jobs = jobs.filter(client__name__icontains=query)
+    context = {
+        'jobs': jobs,
+        'query': query,
+    }
+    return render(request, 'workorders/pending_jobs.html', context)
+
+# New view for Scheduled Jobs page
+def scheduled_jobs_view(request):
+    query = request.GET.get('q', '')
+    jobs = WorkOrder.objects.filter(status__in=['pending', 'in_progress'], scheduled_date__isnull=False)
+    if query:
+        jobs = jobs.filter(client__name__icontains=query)
+    context = {
+        'jobs': jobs,
+        'query': query,
+    }
+    return render(request, 'workorders/scheduled_jobs.html', context)
+
+# New view for Completed Jobs page
+def completed_jobs_view(request):
+    query = request.GET.get('q', '')
+    jobs = WorkOrder.objects.filter(status='completed')
+    if query:
+        jobs = jobs.filter(client__name__icontains=query)
+    context = {
+        'jobs': jobs,
+        'query': query,
+    }
+    return render(request, 'workorders/completed_jobs.html', context)

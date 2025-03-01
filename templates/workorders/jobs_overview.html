@@ -1,128 +1,60 @@
 {% extends "base.html" %}
 {% block title %}Jobs Overview{% endblock %}
 {% block content %}
-<h2>Jobs Overview</h2>
+<div class="container">
+  <h2 class="mb-4">Jobs Overview</h2>
 
-<!-- Internal Navigation for Job Sections -->
-<nav class="mb-4">
-  <ul class="nav nav-pills">
-    <li class="nav-item">
-      <a class="nav-link" href="#pending">Pending</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" href="#scheduled">Scheduled</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" href="#completed">Completed</a>
-    </li>
-  </ul>
-</nav>
-
-<!-- Search Bar -->
-<form method="get" class="mb-4">
+  <!-- Search Bar -->
+  <form method="get" class="mb-4">
     <div class="input-group">
-        <input type="text" name="q" class="form-control" placeholder="Search by client name..." value="{{ query }}">
-        <button type="submit" class="btn btn-primary">Search</button>
+      <input type="text" name="q" class="form-control" placeholder="Search by client name..." value="{{ query }}">
+      <button type="submit" class="btn btn-primary">Search</button>
     </div>
-</form>
+  </form>
+  
+  <!-- Navigation Links to Separate Pages -->
+  <div class="mb-4 text-center">
+    <a href="{% url 'pending_jobs' %}" class="btn btn-outline-primary me-2">View All Pending Jobs</a>
+    <a href="{% url 'scheduled_jobs' %}" class="btn btn-outline-primary me-2">View All Scheduled Jobs</a>
+    <a href="{% url 'completed_jobs' %}" class="btn btn-outline-primary">View All Completed Jobs</a>
+  </div>
 
-<!-- Pending Jobs Section -->
-<h3 id="pending">Pending Jobs (To Be Scheduled)</h3>
-{% if pending_jobs %}
-<table class="table table-striped">
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Client</th>
-      <th>Job Description</th>
-      <th>Created At</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for job in pending_jobs %}
-    <tr>
-      <td>{{ job.id }}</td>
-      <td>{{ job.client.name }}</td>
-      <td>{{ job.job_description|truncatewords:10 }}</td>
-      <td>{{ job.created_at|date:"Y-m-d" }}</td>
-      <td>
-        <!-- Link to mark the job as scheduled -->
-        <a href="{% url 'mark_scheduled' job.id %}" class="btn btn-sm btn-outline-secondary">Mark Scheduled</a>
-        <!-- Link to view job details -->
-        <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View Details</a>
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p>No pending jobs found.</p>
-{% endif %}
-
-<!-- Scheduled Jobs Section -->
-<h3 id="scheduled">Scheduled Jobs</h3>
-{% if scheduled_jobs %}
-<table class="table table-striped">
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Client</th>
-      <th>Job Description</th>
-      <th>Scheduled Date</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for job in scheduled_jobs %}
-    <tr>
-      <td>{{ job.id }}</td>
-      <td>{{ job.client.name }}</td>
-      <td>{{ job.job_description|truncatewords:10 }}</td>
-      <td>{{ job.scheduled_date|date:"Y-m-d" }}</td>
-      <td>
-        <!-- Link to mark the job as completed -->
-        <a href="{% url 'mark_completed' job.id %}" class="btn btn-sm btn-outline-secondary">Mark Completed</a>
-        <!-- Link to view job details -->
-        <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View Details</a>
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p>No scheduled jobs found.</p>
-{% endif %}
-
-<!-- Completed Jobs Section -->
-<h3 id="completed">Completed Jobs History</h3>
-{% if completed_jobs %}
-<table class="table table-striped">
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Client</th>
-      <th>Job Description</th>
-      <th>Completed At</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for job in completed_jobs %}
-    <tr>
-      <td>{{ job.id }}</td>
-      <td>{{ job.client.name }}</td>
-      <td>{{ job.job_description|truncatewords:10 }}</td>
-      <td>{{ job.completed_at|date:"Y-m-d H:i" }}</td>
-      <td>
-        <!-- Link to view job details -->
-        <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View Details</a>
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p>No completed jobs yet.</p>
-{% endif %}
+  <!-- (Optionally, you can also show a summary card here as before) -->
+  <div class="card shadow-sm">
+    <div class="card-header">
+      <h4 class="mb-0">Latest Job Activity</h4>
+    </div>
+    <div class="card-body">
+      <!-- You can include a brief summary of the latest job for each category if desired -->
+      <!-- For example: -->
+      <div class="mb-4">
+        <h5>Latest Pending Job</h5>
+        {% if latest_pending %}
+          <p><strong>ID:</strong> {{ latest_pending.id }} | <strong>Client:</strong> {{ latest_pending.client.name }}</p>
+          <a href="{% url 'workorder_detail' latest_pending.id %}" class="btn btn-sm btn-info">View Details</a>
+        {% else %}
+          <p>No pending jobs available.</p>
+        {% endif %}
+      </div>
+      <div class="mb-4">
+        <h5>Latest Scheduled Job</h5>
+        {% if latest_scheduled %}
+          <p><strong>ID:</strong> {{ latest_scheduled.id }} | <strong>Client:</strong> {{ latest_scheduled.client.name }}</p>
+          <a href="{% url 'workorder_detail' latest_scheduled.id %}" class="btn btn-sm btn-info">View Details</a>
+        {% else %}
+          <p>No scheduled jobs available.</p>
+        {% endif %}
+      </div>
+      <div>
+        <h5>Latest Completed Job</h5>
+        {% if latest_completed %}
+          <p><strong>ID:</strong> {{ latest_completed.id }} | <strong>Client:</strong> {{ latest_completed.client.name }}</p>
+          <a href="{% url 'workorder_detail' latest_completed.id %}" class="btn btn-sm btn-info">View Details</a>
+        {% else %}
+          <p>No completed jobs available.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
