@@ -12,11 +12,11 @@
   {% block extra_css %}{% endblock %}
 </head>
 <body>
-  <!-- Navbar with Jobs Overview Link -->
+  <!-- Navbar with Offcanvas Menu Toggle -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container">
       <div class="d-flex align-items-center">
-        <!-- Menu Button on the Left -->
+        <!-- Offcanvas Toggle Button on Left -->
         <a class="btn btn-outline-light me-2" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSidebar" role="button" aria-controls="offcanvasSidebar">
           Menu
         </a>
@@ -30,7 +30,7 @@
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ms-auto">
           <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Dashboard</a></li>
-          <!-- New Jobs Overview Nav Link -->
+          <!-- New Jobs Overview Link -->
           <li class="nav-item"><a class="nav-link" href="{% url 'jobs_overview' %}">Jobs Overview</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'workorder_list' %}">Work Orders</a></li>
           <li class="nav-item"><a class="nav-link" href="#">Clients</a></li>
@@ -45,7 +45,7 @@
     </div>
   </nav>
 
-  <!-- Offcanvas Sidebar -->
+  <!-- Offcanvas Sidebar (Collapsible Navigation) -->
   <div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasSidebar" aria-labelledby="offcanvasSidebarLabel">
     <div class="offcanvas-header">
       <h5 class="offcanvas-title" id="offcanvasSidebarLabel">Navigation</h5>
@@ -53,18 +53,22 @@
     </div>
     <div class="offcanvas-body">
       <ul class="list-group">
+        <!-- Jobs Overview Link -->
         <li class="list-group-item">
-          <a href="#" class="stretched-link">Pending Jobs</a>
-          <p class="small mb-0">Jobs waiting for scheduling.</p>
+          <a href="{% url 'jobs_overview' %}" class="stretched-link">Jobs Overview</a>
+          <p class="small mb-0">View pending, scheduled, and completed jobs.</p>
         </li>
+        <!-- Work Orders -->
         <li class="list-group-item">
           <a href="{% url 'workorder_list' %}" class="stretched-link">Work Orders</a>
           <p class="small mb-0">Manage work orders and job details.</p>
         </li>
+        <!-- Clients -->
         <li class="list-group-item">
           <a href="#" class="stretched-link">Clients</a>
           <p class="small mb-0">View client profiles and history.</p>
         </li>
+        <!-- Invoicing -->
         <li class="list-group-item">
           <a href="#" class="stretched-link">Invoicing</a>
           <p class="small mb-0">Generate and review invoices.</p>
