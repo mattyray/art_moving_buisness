@@ -1,12 +1,11 @@
 from django.contrib import admin
 from django.urls import path, include
-from accounts.views import custom_logout  # Ensure custom_logout is imported
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("accounts/logout/", custom_logout, name="logout"),  # Uses custom logout function
-    path("accounts/", include("django.contrib.auth.urls")),
-    path("accounts/", include("accounts.urls")),
-
-    path("", include("pages.urls")),  # Ensure home route exists
+    path("accounts/", include("accounts.urls")),         # Custom signup and logout routes
+    path("accounts/", include("django.contrib.auth.urls")),  # Login, password reset, etc.
+    path("", include("pages.urls")),           
+    path("workorders/", include("workorders.urls")),  # Work Orders routes
+             # Home and other pages
 ]

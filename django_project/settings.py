@@ -30,6 +30,8 @@ INSTALLED_APPS = [
     #apps
     'accounts.apps.AccountsConfig',
     'pages.apps.PagesConfig',
+    'workorders',  # Add this line
+
     #crispy
     'crispy_forms',
     'crispy_bootstrap5',

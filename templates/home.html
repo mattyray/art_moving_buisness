@@ -1,18 +1,47 @@
 {% extends "base.html" %}
-
-{% block title %}Home{% endblock %}
+{% block title %}Dashboard - Art Moving Business{% endblock %}
 
 {% block content %}
-<div class="container text-center">
-    <h1 class="mt-5">Welcome to Art Moving</h1>
-    <p class="lead">Manage clients, work orders, and invoicing with ease.</p>
-
-    {% if user.is_authenticated %}
-        <p class="text-success">Hello, {{ user.username }}!</p>
-        <a href="{% url 'logout' %}" class="btn btn-danger">Logout</a>
-    {% else %}
-        <a href="{% url 'login' %}" class="btn btn-primary">Login</a>
-        <a href="{% url 'signup' %}" class="btn btn-secondary">Sign Up</a>
-    {% endif %}
+<div class="row">
+  <!-- Pending Jobs Card -->
+  <div class="col-md-3 mb-3">
+    <div class="card text-white" style="background-color: #3498DB;">
+      <div class="card-header">Pending Jobs</div>
+      <div class="card-body">
+        <h5 class="card-title">12</h5>
+        <p class="card-text">Jobs awaiting scheduling.</p>
+      </div>
+    </div>
+  </div>
+  <!-- Work Orders Card -->
+  <div class="col-md-3 mb-3">
+    <div class="card text-white" style="background-color: #2ECC71;">
+      <div class="card-header">Work Orders</div>
+      <div class="card-body">
+        <h5 class="card-title">8</h5>
+        <p class="card-text">Active work orders.</p>
+      </div>
+    </div>
+  </div>
+  <!-- Clients Card -->
+  <div class="col-md-3 mb-3">
+    <div class="card text-white" style="background-color: #F1C40F;">
+      <div class="card-header">Clients</div>
+      <div class="card-body">
+        <h5 class="card-title">20</h5>
+        <p class="card-text">Total clients.</p>
+      </div>
+    </div>
+  </div>
+  <!-- Invoicing Card -->
+  <div class="col-md-3 mb-3">
+    <div class="card text-white" style="background-color: #E74C3C;">
+      <div class="card-header">Invoicing</div>
+      <div class="card-body">
+        <h5 class="card-title">5</h5>
+        <p class="card-text">Pending invoices.</p>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
