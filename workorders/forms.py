@@ -15,5 +15,5 @@ class WorkOrderForm(forms.ModelForm):
             'estimated_cost',
             'assigned_to',
             'status',
-            'deadline',
+            'scheduled_date',  # Use scheduled_date instead of deadline if desired
         ]

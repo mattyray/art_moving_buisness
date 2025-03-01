@@ -16,14 +16,15 @@
   <!-- Pending Jobs Card -->
   <div class="col-md-3">
     <div class="card text-white bg-secondary mb-3">
-      <div class="card-header">Pending Jobs</div>
+      <div class="card-header">Jobs Overview</div>
       <div class="card-body">
-        <h5 class="card-title">Overview</h5>
-        <p class="card-text">Jobs waiting for scheduling.</p>
-        <a href="#" class="btn btn-light">Go to Pending Jobs</a>
+        <h5 class="card-title">All Jobs</h5>
+        <p class="card-text">View pending, scheduled, and completed jobs.</p>
+        <a href="{% url 'jobs_overview' %}" class="btn btn-light">View Jobs Overview</a>
       </div>
     </div>
   </div>
+  
   <!-- Clients Card -->
   <div class="col-md-3">
     <div class="card text-white bg-warning mb-3">

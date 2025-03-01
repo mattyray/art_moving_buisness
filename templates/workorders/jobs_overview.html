@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Jobs Overview{% endblock %}
+{% block content %}
+<h2>Jobs Overview</h2>
+
+<h3>Pending Jobs (To Be Scheduled)</h3>
+{% if pending_jobs %}
+<table class="table">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Client</th>
+      <th>Job Description</th>
+      <th>Created At</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for job in pending_jobs %}
+    <tr>
+      <td>{{ job.id }}</td>
+      <td>{{ job.client.name }}</td>
+      <td>{{ job.job_description|truncatewords:10 }}</td>
+      <td>{{ job.created_at|date:"Y-m-d" }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No pending jobs.</p>
+{% endif %}
+
+<h3>Scheduled Jobs</h3>
+{% if scheduled_jobs %}
+<table class="table">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Client</th>
+      <th>Job Description</th>
+      <th>Scheduled Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for job in scheduled_jobs %}
+    <tr>
+      <td>{{ job.id }}</td>
+      <td>{{ job.client.name }}</td>
+      <td>{{ job.job_description|truncatewords:10 }}</td>
+      <td>{{ job.scheduled_date|date:"Y-m-d" }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No scheduled jobs.</p>
+{% endif %}
+
+<h3>Completed Jobs History</h3>
+{% if completed_jobs %}
+<table class="table">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Client</th>
+      <th>Job Description</th>
+      <th>Completed At</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for job in completed_jobs %}
+    <tr>
+      <td>{{ job.id }}</td>
+      <td>{{ job.client.name }}</td>
+      <td>{{ job.job_description|truncatewords:10 }}</td>
+      <td>{{ job.completed_at|date:"Y-m-d H:i" }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No completed jobs yet.</p>
+{% endif %}
+{% endblock %}

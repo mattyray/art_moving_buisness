@@ -1,5 +1,5 @@
 from django.db import models
-from accounts.models import CustomUser  # Assuming you use this for worker assignment
+from accounts.models import CustomUser
 
 class Client(models.Model):
     name = models.CharField(max_length=255)
@@ -18,10 +18,8 @@ class WorkOrder(models.Model):
     ]
     
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='work_orders')
-    # For multiple addresses, consider a separate related model in future iterations
     pickup_address = models.CharField(max_length=255)
     dropoff_address = models.CharField(max_length=255)
-    # Additional fields as per your project goals
     email = models.EmailField(blank=True, null=True)
     phone = models.CharField(max_length=50, blank=True, null=True)
     home_address = models.CharField(max_length=255, blank=True, null=True)
@@ -29,7 +27,8 @@ class WorkOrder(models.Model):
     estimated_cost = models.DecimalField(max_digits=10, decimal_places=2)
     assigned_to = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    deadline = models.DateField(blank=True, null=True)
+    scheduled_date = models.DateField(blank=True, null=True)  # New field for scheduling
+    completed_at = models.DateTimeField(blank=True, null=True)  # New field for completion timestamp
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
