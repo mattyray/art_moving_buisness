@@ -1,46 +1,62 @@
 {% extends "base.html" %}
 {% block title %}Dashboard - Art Moving Business{% endblock %}
-
 {% block content %}
 <div class="row">
-  <!-- Pending Jobs Card -->
-  <div class="col-md-3 mb-3">
-    <div class="card text-white" style="background-color: #3498DB;">
-      <div class="card-header">Pending Jobs</div>
+  <!-- Work Orders Card -->
+  <div class="col-md-3">
+    <div class="card text-white bg-info mb-3">
+      <div class="card-header">Work Orders</div>
       <div class="card-body">
-        <h5 class="card-title">12</h5>
-        <p class="card-text">Jobs awaiting scheduling.</p>
+        <h5 class="card-title">View All</h5>
+        <p class="card-text">Manage work orders and track job progress.</p>
+        <a href="{% url 'workorder_list' %}" class="btn btn-light">Go to Work Orders</a>
       </div>
     </div>
   </div>
-  <!-- Work Orders Card -->
-  <div class="col-md-3 mb-3">
-    <div class="card text-white" style="background-color: #2ECC71;">
-      <div class="card-header">Work Orders</div>
+  <!-- Pending Jobs Card -->
+  <div class="col-md-3">
+    <div class="card text-white bg-secondary mb-3">
+      <div class="card-header">Pending Jobs</div>
       <div class="card-body">
-        <h5 class="card-title">8</h5>
-        <p class="card-text">Active work orders.</p>
+        <h5 class="card-title">Overview</h5>
+        <p class="card-text">Jobs waiting for scheduling.</p>
+        <a href="#" class="btn btn-light">Go to Pending Jobs</a>
       </div>
     </div>
   </div>
   <!-- Clients Card -->
-  <div class="col-md-3 mb-3">
-    <div class="card text-white" style="background-color: #F1C40F;">
+  <div class="col-md-3">
+    <div class="card text-white bg-warning mb-3">
       <div class="card-header">Clients</div>
       <div class="card-body">
-        <h5 class="card-title">20</h5>
-        <p class="card-text">Total clients.</p>
+        <h5 class="card-title">View Clients</h5>
+        <p class="card-text">Client database and details.</p>
+        <a href="#" class="btn btn-light">Go to Clients</a>
       </div>
     </div>
   </div>
   <!-- Invoicing Card -->
-  <div class="col-md-3 mb-3">
-    <div class="card text-white" style="background-color: #E74C3C;">
+  <div class="col-md-3">
+    <div class="card text-white bg-danger mb-3">
       <div class="card-header">Invoicing</div>
       <div class="card-body">
-        <h5 class="card-title">5</h5>
-        <p class="card-text">Pending invoices.</p>
+        <h5 class="card-title">Manage Invoices</h5>
+        <p class="card-text">Generate and review invoices.</p>
+        <a href="#" class="btn btn-light">Go to Invoicing</a>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Calendar Section -->
+<div class="card mt-4">
+  <div class="card-header">
+    Calendar
+  </div>
+  <div class="card-body">
+    <p class="card-text">This is a placeholder for the calendar. Integration coming soon.</p>
+    <div style="height:300px; background-color: #f0f0f0; display: flex; align-items: center; justify-content: center;">
+      <span>Calendar Placeholder</span>
     </div>
   </div>
 </div>

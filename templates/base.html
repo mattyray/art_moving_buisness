@@ -12,17 +12,23 @@
   {% block extra_css %}{% endblock %}
 </head>
 <body>
-  <!-- Navbar with Global Search Placeholder -->
-  <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #2C3E50;">
+  <!-- Navbar with Menu Button on Left -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container">
-      <a class="navbar-brand" href="{% url 'home' %}">Art Moving</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
-              aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="d-flex align-items-center">
+        <!-- Menu Button -->
+        <a class="btn btn-outline-light me-2" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSidebar" role="button" aria-controls="offcanvasSidebar">
+          Menu
+        </a>
+        <!-- Brand -->
+        <a class="navbar-brand" href="{% url 'home' %}">Art Moving</a>
+      </div>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+              aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
-      <div class="collapse navbar-collapse" id="navbarContent">
-        <!-- Navigation Links -->
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
           <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Dashboard</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'workorder_list' %}">Work Orders</a></li>
           <li class="nav-item"><a class="nav-link" href="#">Clients</a></li>
@@ -33,14 +39,37 @@
             <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Login</a></li>
           {% endif %}
         </ul>
-        <!-- Global Search Form Placeholder -->
-        <form class="d-flex" action="#" method="get">
-          <input class="form-control me-2" type="search" name="q" placeholder="Search jobs, clients, orders..." aria-label="Search">
-          <button class="btn btn-outline-light" type="submit">Search</button>
-        </form>
       </div>
     </div>
   </nav>
+
+  <!-- Offcanvas Sidebar -->
+  <div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasSidebar" aria-labelledby="offcanvasSidebarLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="offcanvasSidebarLabel">Navigation</h5>
+      <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+      <ul class="list-group">
+        <li class="list-group-item">
+          <a href="#" class="stretched-link">Pending Jobs</a>
+          <p class="small mb-0">Jobs waiting for scheduling.</p>
+        </li>
+        <li class="list-group-item">
+          <a href="{% url 'workorder_list' %}" class="stretched-link">Work Orders</a>
+          <p class="small mb-0">Manage work orders and job details.</p>
+        </li>
+        <li class="list-group-item">
+          <a href="#" class="stretched-link">Clients</a>
+          <p class="small mb-0">View client profiles and history.</p>
+        </li>
+        <li class="list-group-item">
+          <a href="#" class="stretched-link">Invoicing</a>
+          <p class="small mb-0">Generate and review invoices.</p>
+        </li>
+      </ul>
+    </div>
+  </div>
 
   <!-- Main Content -->
   <main class="container mt-4">
@@ -48,8 +77,8 @@
   </main>
 
   <!-- Footer -->
-  <footer class="mt-4 py-3" style="background-color: #34495E; color: #ECF0F1;">
-    <div class="container text-center">
+  <footer class="mt-4 bg-dark text-white text-center py-3">
+    <div class="container">
       <p class="mb-0">&copy; {% now "Y" %} Art Moving Business Management System</p>
     </div>
   </footer>
