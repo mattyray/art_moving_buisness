@@ -49,6 +49,8 @@
       <td>
         <!-- Link to mark the job as scheduled -->
         <a href="{% url 'mark_scheduled' job.id %}" class="btn btn-sm btn-outline-secondary">Mark Scheduled</a>
+        <!-- Link to view job details -->
+        <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View Details</a>
       </td>
     </tr>
     {% endfor %}
@@ -81,6 +83,8 @@
       <td>
         <!-- Link to mark the job as completed -->
         <a href="{% url 'mark_completed' job.id %}" class="btn btn-sm btn-outline-secondary">Mark Completed</a>
+        <!-- Link to view job details -->
+        <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View Details</a>
       </td>
     </tr>
     {% endfor %}
@@ -100,6 +104,7 @@
       <th>Client</th>
       <th>Job Description</th>
       <th>Completed At</th>
+      <th>Actions</th>
     </tr>
   </thead>
   <tbody>
@@ -109,6 +114,10 @@
       <td>{{ job.client.name }}</td>
       <td>{{ job.job_description|truncatewords:10 }}</td>
       <td>{{ job.completed_at|date:"Y-m-d H:i" }}</td>
+      <td>
+        <!-- Link to view job details -->
+        <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View Details</a>
+      </td>
     </tr>
     {% endfor %}
   </tbody>

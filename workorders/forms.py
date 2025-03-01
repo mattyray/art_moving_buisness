@@ -1,5 +1,5 @@
 from django import forms
-from .models import WorkOrder
+from .models import WorkOrder, JobAttachment, JobNote
 
 class WorkOrderForm(forms.ModelForm):
     class Meta:
@@ -15,5 +15,15 @@ class WorkOrderForm(forms.ModelForm):
             'estimated_cost',
             'assigned_to',
             'status',
-            'scheduled_date',  # Use scheduled_date instead of deadline if desired
+            'scheduled_date',
         ]
+
+class JobAttachmentForm(forms.ModelForm):
+    class Meta:
+        model = JobAttachment
+        fields = ['file']
+
+class JobNoteForm(forms.ModelForm):
+    class Meta:
+        model = JobNote
+        fields = ['note']

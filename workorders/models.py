@@ -27,10 +27,28 @@ class WorkOrder(models.Model):
     estimated_cost = models.DecimalField(max_digits=10, decimal_places=2)
     assigned_to = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    scheduled_date = models.DateField(blank=True, null=True)  # New field for scheduling
-    completed_at = models.DateTimeField(blank=True, null=True)  # New field for completion timestamp
+    scheduled_date = models.DateField(blank=True, null=True)
+    completed_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
         return f"WorkOrder #{self.id} for {self.client.name}"
+
+# New model for file attachments
+class JobAttachment(models.Model):
+    work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='attachments')
+    file = models.FileField(upload_to='job_attachments/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Attachment {self.id} for WorkOrder {self.work_order.id}"
+
+# New model for job notes
+class JobNote(models.Model):
+    work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='notes')
+    note = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Note {self.id} for WorkOrder {self.work_order.id}"
