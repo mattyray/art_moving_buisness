@@ -121,3 +121,14 @@ def completed_jobs_view(request):
         'query': query,
     }
     return render(request, 'workorders/completed_jobs.html', context)
+
+def workorder_edit(request, job_id):
+    job = get_object_or_404(WorkOrder, id=job_id)
+    if request.method == "POST":
+        form = WorkOrderForm(request.POST, instance=job)
+        if form.is_valid():
+            form.save()
+            return redirect("workorder_detail", job_id=job.id)
+    else:
+        form = WorkOrderForm(instance=job)
+    return render(request, "workorders/workorder_form.html", {"form": form, "job": job})

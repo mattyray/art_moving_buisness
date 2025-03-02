@@ -14,9 +14,7 @@
       <p><strong>Scheduled Date:</strong> {{ job.scheduled_date|default:"Not Scheduled" }}</p>
       <p><strong>Completed At:</strong> {{ job.completed_at|default:"Not Completed" }}</p>
     </div>
-    <div class="card-footer">
-      <a href="{% url 'jobs_overview' %}" class="btn btn-secondary">Back to Jobs Overview</a>
-    </div>
+
   </div>
 
   <div class="mt-4">

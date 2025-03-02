@@ -10,28 +10,38 @@
       <button type="submit" class="btn btn-primary">Search</button>
     </div>
   </form>
-  <div class="row">
-    {% for job in jobs %}
-      <div class="col-md-4">
-        <div class="card mb-4 shadow-sm">
-          <div class="card-header bg-info text-white">
-            Scheduled
-          </div>
-          <div class="card-body">
-            <h5 class="card-title">{{ job.client.name }}</h5>
-            <p class="card-text"><strong>ID:</strong> {{ job.id }}</p>
-            <p class="card-text"><strong>Description:</strong> {{ job.job_description|truncatewords:10 }}</p>
-            <p class="card-text"><strong>Scheduled:</strong> {{ job.scheduled_date|date:"Y-m-d" }}</p>
-          </div>
-          <div class="card-footer">
-            <a href="{% url 'mark_completed' job.id %}" class="btn btn-sm btn-outline-secondary">Mark Completed</a>
-            <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View Details</a>
-          </div>
-        </div>
-      </div>
-    {% empty %}
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-info text-white">Scheduled Jobs</div>
+    <div class="card-body">
+      {% if jobs %}
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Client</th>
+            <th>Description</th>
+            <th>Last Edited</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for job in jobs %}
+          <tr>
+            <td>{{ job.id }}</td>
+            <td>{{ job.client.name }}</td>
+            <td>{{ job.job_description|truncatewords:10 }}</td>
+            <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
+            <td>
+              <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
       <p>No scheduled jobs found.</p>
-    {% endfor %}
+      {% endif %}
+    </div>
   </div>
 </div>
 {% endblock %}
