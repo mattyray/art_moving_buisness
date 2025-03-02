@@ -6,8 +6,28 @@ from .models import WorkOrder, JobAttachment, JobNote
 from .forms import WorkOrderForm, JobAttachmentForm, JobNoteForm
 
 def workorder_list(request):
-    orders = WorkOrder.objects.all().order_by('-created_at')
-    return render(request, 'workorders/workorder_list.html', {'orders': orders})
+    query = request.GET.get('q', '')
+    pending_jobs = WorkOrder.objects.filter(status='pending', scheduled_date__isnull=True)
+    scheduled_jobs = WorkOrder.objects.filter(status__in=['pending', 'in_progress'], scheduled_date__isnull=False)
+    completed_jobs = WorkOrder.objects.filter(status='completed')
+    
+    if query:
+        pending_jobs = pending_jobs.filter(client__name__icontains=query)
+        scheduled_jobs = scheduled_jobs.filter(client__name__icontains=query)
+        completed_jobs = completed_jobs.filter(client__name__icontains=query)
+    
+    pending_jobs = pending_jobs.order_by('-updated_at')[:3]
+    scheduled_jobs = scheduled_jobs.order_by('-updated_at')[:3]
+    completed_jobs = completed_jobs.order_by('-updated_at')[:3]
+    
+    context = {
+        'query': query,
+        'pending_jobs': pending_jobs,
+        'scheduled_jobs': scheduled_jobs,
+        'completed_jobs': completed_jobs,
+    }
+    return render(request, 'workorders/workorder_list.html', context)
+
 
 def workorder_create(request):
     if request.method == 'POST':
@@ -18,32 +38,6 @@ def workorder_create(request):
     else:
         form = WorkOrderForm()
     return render(request, 'workorders/workorder_form.html', {'form': form})
-
-def jobs_overview(request):
-    query = request.GET.get('q', '')
-    
-    # Base querysets for each category
-    pending_jobs = WorkOrder.objects.filter(status='pending', scheduled_date__isnull=True)
-    scheduled_jobs = WorkOrder.objects.filter(status__in=['pending', 'in_progress'], scheduled_date__isnull=False)
-    completed_jobs = WorkOrder.objects.filter(status='completed')
-    
-    if query:
-        pending_jobs = pending_jobs.filter(client__name__icontains=query)
-        scheduled_jobs = scheduled_jobs.filter(client__name__icontains=query)
-        completed_jobs = completed_jobs.filter(client__name__icontains=query)
-    
-    # Get the most recently updated/created job for each category
-    latest_pending = pending_jobs.order_by('-updated_at').first()
-    latest_scheduled = scheduled_jobs.order_by('-updated_at').first()
-    latest_completed = completed_jobs.order_by('-updated_at').first()
-    
-    context = {
-        'query': query,
-        'latest_pending': latest_pending,
-        'latest_scheduled': latest_scheduled,
-        'latest_completed': latest_completed,
-    }
-    return render(request, 'workorders/jobs_overview.html', context)
 
 def mark_scheduled(request, job_id):
     job = get_object_or_404(WorkOrder, id=job_id)
