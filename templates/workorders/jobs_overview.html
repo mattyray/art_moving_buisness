@@ -19,14 +19,12 @@
     <a href="{% url 'completed_jobs' %}" class="btn btn-outline-primary">View All Completed Jobs</a>
   </div>
 
-  <!-- (Optionally, you can also show a summary card here as before) -->
+  <!-- Latest Job Summary Card (Optional) -->
   <div class="card shadow-sm">
     <div class="card-header">
       <h4 class="mb-0">Latest Job Activity</h4>
     </div>
     <div class="card-body">
-      <!-- You can include a brief summary of the latest job for each category if desired -->
-      <!-- For example: -->
       <div class="mb-4">
         <h5>Latest Pending Job</h5>
         {% if latest_pending %}

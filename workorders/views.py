@@ -27,7 +27,6 @@ def jobs_overview(request):
     scheduled_jobs = WorkOrder.objects.filter(status__in=['pending', 'in_progress'], scheduled_date__isnull=False)
     completed_jobs = WorkOrder.objects.filter(status='completed')
     
-    # Apply filtering by client name if query provided
     if query:
         pending_jobs = pending_jobs.filter(client__name__icontains=query)
         scheduled_jobs = scheduled_jobs.filter(client__name__icontains=query)
@@ -96,7 +95,6 @@ def workorder_detail(request, job_id):
     }
     return render(request, 'workorders/workorder_detail.html', context)
 
-# New view for Pending Jobs page
 def pending_jobs_view(request):
     query = request.GET.get('q', '')
     jobs = WorkOrder.objects.filter(status='pending', scheduled_date__isnull=True)
@@ -108,7 +106,6 @@ def pending_jobs_view(request):
     }
     return render(request, 'workorders/pending_jobs.html', context)
 
-# New view for Scheduled Jobs page
 def scheduled_jobs_view(request):
     query = request.GET.get('q', '')
     jobs = WorkOrder.objects.filter(status__in=['pending', 'in_progress'], scheduled_date__isnull=False)
@@ -120,7 +117,6 @@ def scheduled_jobs_view(request):
     }
     return render(request, 'workorders/scheduled_jobs.html', context)
 
-# New view for Completed Jobs page
 def completed_jobs_view(request):
     query = request.GET.get('q', '')
     jobs = WorkOrder.objects.filter(status='completed')

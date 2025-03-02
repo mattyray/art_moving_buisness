@@ -35,7 +35,6 @@ class WorkOrder(models.Model):
     def __str__(self):
         return f"WorkOrder #{self.id} for {self.client.name}"
 
-# New model for file attachments
 class JobAttachment(models.Model):
     work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='attachments')
     file = models.FileField(upload_to='job_attachments/')
@@ -44,7 +43,6 @@ class JobAttachment(models.Model):
     def __str__(self):
         return f"Attachment {self.id} for WorkOrder {self.work_order.id}"
 
-# New model for job notes
 class JobNote(models.Model):
     work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='notes')
     note = models.TextField()

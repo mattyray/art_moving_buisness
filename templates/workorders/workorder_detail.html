@@ -2,50 +2,59 @@
 {% load crispy_forms_tags %}
 {% block title %}Work Order Detail{% endblock %}
 {% block content %}
-<h2>Work Order #{{ job.id }} Details</h2>
-<p><strong>Client:</strong> {{ job.client.name }}</p>
-<p><strong>Description:</strong> {{ job.job_description }}</p>
-<p><strong>Status:</strong> {{ job.get_status_display }}</p>
-<p><strong>Scheduled Date:</strong> {{ job.scheduled_date|default:"Not Scheduled" }}</p>
-<p><strong>Completed At:</strong> {{ job.completed_at|default:"Not Completed" }}</p>
+<div class="container">
+  <div class="card shadow-sm">
+    <div class="card-header">
+      <h2>Work Order #{{ job.id }} Details</h2>
+    </div>
+    <div class="card-body">
+      <p><strong>Client:</strong> {{ job.client.name }}</p>
+      <p><strong>Description:</strong> {{ job.job_description }}</p>
+      <p><strong>Status:</strong> {{ job.get_status_display }}</p>
+      <p><strong>Scheduled Date:</strong> {{ job.scheduled_date|default:"Not Scheduled" }}</p>
+      <p><strong>Completed At:</strong> {{ job.completed_at|default:"Not Completed" }}</p>
+    </div>
+    <div class="card-footer">
+      <a href="{% url 'jobs_overview' %}" class="btn btn-secondary">Back to Jobs Overview</a>
+    </div>
+  </div>
 
-<hr>
-
-<h3>Attachments</h3>
-<ul>
-    {% for attachment in attachments %}
-    <li>
+  <div class="mt-4">
+    <h3>Attachments</h3>
+    <ul class="list-group">
+      {% for attachment in attachments %}
+      <li class="list-group-item">
         <a href="{{ attachment.file.url }}">{{ attachment.file.name }}</a>
-        (Uploaded: {{ attachment.uploaded_at|date:"Y-m-d H:i" }})
-    </li>
-    {% empty %}
-    <p>No attachments.</p>
-    {% endfor %}
-</ul>
-<form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ attachment_form|crispy }}
-    <button type="submit" name="attachment_submit" class="btn btn-primary">Add Attachment</button>
-</form>
+        <small class="text-muted">(Uploaded: {{ attachment.uploaded_at|date:"Y-m-d H:i" }})</small>
+      </li>
+      {% empty %}
+      <li class="list-group-item">No attachments.</li>
+      {% endfor %}
+    </ul>
+    <form method="post" enctype="multipart/form-data" class="mt-3">
+      {% csrf_token %}
+      {{ attachment_form|crispy }}
+      <button type="submit" name="attachment_submit" class="btn btn-primary">Add Attachment</button>
+    </form>
+  </div>
 
-<hr>
-
-<h3>Notes</h3>
-<ul>
-    {% for note in notes %}
-    <li>
-        {{ note.note }} 
+  <div class="mt-4">
+    <h3>Notes</h3>
+    <ul class="list-group">
+      {% for note in notes %}
+      <li class="list-group-item">
+        {{ note.note }}
         <small class="text-muted">({{ note.created_at|date:"Y-m-d H:i" }})</small>
-    </li>
-    {% empty %}
-    <p>No notes.</p>
-    {% endfor %}
-</ul>
-<form method="post">
-    {% csrf_token %}
-    {{ note_form|crispy }}
-    <button type="submit" name="note_submit" class="btn btn-primary">Add Note</button>
-</form>
-
-<a href="{% url 'jobs_overview' %}" class="btn btn-secondary mt-3">Back to Jobs Overview</a>
+      </li>
+      {% empty %}
+      <li class="list-group-item">No notes.</li>
+      {% endfor %}
+    </ul>
+    <form method="post" class="mt-3">
+      {% csrf_token %}
+      {{ note_form|crispy }}
+      <button type="submit" name="note_submit" class="btn btn-primary">Add Note</button>
+    </form>
+  </div>
+</div>
 {% endblock %}

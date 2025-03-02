@@ -1,35 +1,45 @@
 {% extends "base.html" %}
 {% block title %}Work Orders{% endblock %}
 {% block content %}
-<h2>Work Orders</h2>
-<a href="{% url 'workorder_create' %}" class="btn btn-primary mb-3">Create Work Order</a>
-<table class="table table-bordered">
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Client</th>
-      <th>Status</th>
-      <th>Created At</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for order in orders %}
-    <tr>
-      <td>{{ order.id }}</td>
-      <td>{{ order.client.name }}</td>
-      <td>{{ order.get_status_display }}</td>
-      <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
-      <td>
-        <!-- Future actions: View, Edit, Delete -->
-        <a href="#" class="btn btn-sm btn-info">View</a>
-      </td>
-    </tr>
-    {% empty %}
-    <tr>
-      <td colspan="5">No work orders available.</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="container">
+  <h2>Work Orders</h2>
+
+  <!-- Navigation Links to Job Pages -->
+  <div class="mb-4 text-center">
+    <a href="{% url 'pending_jobs' %}" class="btn btn-outline-primary me-2">Pending Jobs</a>
+    <a href="{% url 'scheduled_jobs' %}" class="btn btn-outline-primary me-2">Scheduled Jobs</a>
+    <a href="{% url 'completed_jobs' %}" class="btn btn-outline-primary">Completed Jobs</a>
+  </div>
+
+  <a href="{% url 'workorder_create' %}" class="btn btn-primary mb-3">Create Work Order</a>
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Client</th>
+        <th>Status</th>
+        <th>Created At</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for order in orders %}
+      <tr>
+        <td>{{ order.id }}</td>
+        <td>{{ order.client.name }}</td>
+        <td>{{ order.get_status_display }}</td>
+        <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
+        <td>
+          <!-- Future actions: View, Edit, Delete -->
+          <a href="{% url 'workorder_detail' order.id %}" class="btn btn-sm btn-info">View</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5">No work orders available.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}
