@@ -1,14 +1,6 @@
 from django.db import models
 from accounts.models import CustomUser
-
-class Client(models.Model):
-    name = models.CharField(max_length=255)
-    email = models.EmailField()
-    phone = models.CharField(max_length=50)
-    address = models.CharField(max_length=255)
-
-    def __str__(self):
-        return self.name
+from clients.models import Client  # Only import the Client model from the clients app
 
 class WorkOrder(models.Model):
     STATUS_CHOICES = [
@@ -20,9 +12,6 @@ class WorkOrder(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='work_orders')
     pickup_address = models.CharField(max_length=255)
     dropoff_address = models.CharField(max_length=255)
-    email = models.EmailField(blank=True, null=True)
-    phone = models.CharField(max_length=50, blank=True, null=True)
-    home_address = models.CharField(max_length=255, blank=True, null=True)
     job_description = models.TextField()
     estimated_cost = models.DecimalField(max_digits=10, decimal_places=2)
     assigned_to = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True)
