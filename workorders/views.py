@@ -46,7 +46,7 @@ def mark_scheduled(request, job_id):
         if not job.scheduled_date:
             job.scheduled_date = timezone.now().date()
         job.save()
-    return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('jobs_overview')))
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('workorder_list')))
 
 def mark_completed(request, job_id):
     job = get_object_or_404(WorkOrder, id=job_id)
@@ -54,7 +54,7 @@ def mark_completed(request, job_id):
         job.status = 'completed'
         job.completed_at = timezone.now()
         job.save()
-    return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('jobs_overview')))
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('workorder_list')))
 
 def workorder_detail(request, job_id):
     job = get_object_or_404(WorkOrder, id=job_id)

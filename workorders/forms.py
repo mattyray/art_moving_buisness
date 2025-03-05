@@ -2,6 +2,15 @@ from django import forms
 from .models import WorkOrder, JobAttachment, JobNote
 
 class WorkOrderForm(forms.ModelForm):
+    scheduled_date = forms.DateField(
+        widget=forms.DateInput(
+            attrs={
+                'class': 'form-control datepicker',  # This class will trigger Flatpickr
+                'placeholder': 'YYYY-MM-DD'
+            }
+        )
+    )
+    
     class Meta:
         model = WorkOrder
         fields = [
