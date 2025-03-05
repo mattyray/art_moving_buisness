@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Overdue Invoices{% endblock %}
+{% block content %}
+<div class="container">
+  <h2 class="mb-4">Overdue Invoices</h2>
+  <!-- Search Bar -->
+  <form method="get" class="mb-4">
+    <div class="input-group">
+      <input type="text" name="q" class="form-control" placeholder="Search by invoice number or client name..." value="{{ query }}">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </div>
+  </form>
+  <div class="card shadow-sm">
+    <div class="card-header bg-info text-white">
+      Overdue Invoices
+    </div>
+    <div class="card-body">
+      {% if invoices %}
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Invoice Number</th>
+            <th>Client</th>
+            <th>Amount</th>
+            <th>Date Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in invoices %}
+          <tr>
+            <td>{{ inv.invoice_number }}</td>
+            <td>{{ inv.client.name }}</td>
+            <td>${{ inv.amount }}</td>
+            <td>{{ inv.date_created|date:"Y-m-d" }}</td>
+            <td>
+              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p>No overdue invoices found.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

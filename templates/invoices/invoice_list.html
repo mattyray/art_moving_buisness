@@ -1,8 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Invoice List{% endblock %}
+{% block title %}Invoice Overview{% endblock %}
 {% block content %}
 <div class="container">
-  <h2 class="mb-4">Invoices</h2>
+  <h2 class="mb-4">Invoice Overview</h2>
+  
   <!-- Search Bar -->
   <form method="get" class="mb-4">
     <div class="input-group">
@@ -10,28 +11,117 @@
       <button type="submit" class="btn btn-primary">Search</button>
     </div>
   </form>
-  <div class="row">
-    {% for invoice in invoices %}
-      <div class="col-md-4">
-        <div class="card mb-4 shadow-sm">
-          <div class="card-header bg-info text-white">
-            Invoice {{ invoice.invoice_number }}
-          </div>
-          <div class="card-body">
-            <p><strong>Client:</strong> {{ invoice.client.name }}</p>
-            <p><strong>Amount:</strong> ${{ invoice.amount }}</p>
-            <p><strong>Status:</strong> {{ invoice.get_status_display }}</p>
-            <p><strong>Due:</strong> {{ invoice.due_date|date:"Y-m-d" }}</p>
-          </div>
-          <div class="card-footer">
-            <a href="{% url 'invoice_detail' invoice.id %}" class="btn btn-sm btn-info">View Details</a>
-          </div>
-        </div>
-      </div>
-    {% empty %}
-      <p>No invoices found.</p>
-    {% endfor %}
+  
+  <!-- Navigation Buttons for Invoice Category Pages -->
+  <div class="mb-4 text-center">
+    <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger me-2">Unpaid Invoices</a>
+    <a href="{% url 'invoice_paid' %}" class="btn btn-outline-danger me-2">Paid Invoices</a>
+    <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue Invoices</a>
+    <a href="{% url 'invoice_create' %}" class="btn btn-danger">New Invoice</a>
   </div>
-  <a href="{% url 'invoice_create' %}" class="btn btn-primary">Create New Invoice</a>
+  
+  <!-- Unified Card with Latest Edited Invoices -->
+  <div class="card shadow-sm">
+    <div class="card-header">
+      <h4>Latest Edited Invoices</h4>
+    </div>
+    <div class="card-body">
+      <!-- Unpaid Invoices Section -->
+      <h5>Unpaid Invoices</h5>
+      {% if unpaid_invoices %}
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Invoice Number</th>
+            <th>Client</th>
+            <th>Amount</th>
+            <th>Date Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in unpaid_invoices %}
+          <tr>
+            <td>{{ inv.invoice_number }}</td>
+            <td>{{ inv.client.name }}</td>
+            <td>${{ inv.amount }}</td>
+            <td>{{ inv.date_created|date:"Y-m-d" }}</td>
+            <td>
+              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p>No unpaid invoices found.</p>
+      {% endif %}
+      <hr>
+      <!-- Paid Invoices Section -->
+      <h5>Paid Invoices</h5>
+      {% if paid_invoices %}
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Invoice Number</th>
+            <th>Client</th>
+            <th>Amount</th>
+            <th>Date Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in paid_invoices %}
+          <tr>
+            <td>{{ inv.invoice_number }}</td>
+            <td>{{ inv.client.name }}</td>
+            <td>${{ inv.amount }}</td>
+            <td>{{ inv.date_created|date:"Y-m-d" }}</td>
+            <td>
+              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p>No paid invoices found.</p>
+      {% endif %}
+      <hr>
+      <!-- Overdue Invoices Section -->
+      <h5>Overdue Invoices</h5>
+      {% if overdue_invoices %}
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Invoice Number</th>
+            <th>Client</th>
+            <th>Amount</th>
+            <th>Date Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in overdue_invoices %}
+          <tr>
+            <td>{{ inv.invoice_number }}</td>
+            <td>{{ inv.client.name }}</td>
+            <td>${{ inv.amount }}</td>
+            <td>{{ inv.date_created|date:"Y-m-d" }}</td>
+            <td>
+              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p>No overdue invoices found.</p>
+      {% endif %}
+    </div>
+  </div>
 </div>
 {% endblock %}

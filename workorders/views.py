@@ -2,9 +2,12 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.http import HttpResponseRedirect
 from django.urls import reverse
+from django.db.models import Q
+from django.contrib.auth.decorators import login_required
 from .models import WorkOrder, JobAttachment, JobNote
 from .forms import WorkOrderForm, JobAttachmentForm, JobNoteForm
 
+@login_required
 def workorder_list(request):
     query = request.GET.get('q', '')
     pending_jobs = WorkOrder.objects.filter(status='pending', scheduled_date__isnull=True)
@@ -28,7 +31,7 @@ def workorder_list(request):
     }
     return render(request, 'workorders/workorder_list.html', context)
 
-
+@login_required
 def workorder_create(request):
     if request.method == 'POST':
         form = WorkOrderForm(request.POST)
@@ -39,6 +42,7 @@ def workorder_create(request):
         form = WorkOrderForm()
     return render(request, 'workorders/workorder_form.html', {'form': form})
 
+@login_required
 def mark_scheduled(request, job_id):
     job = get_object_or_404(WorkOrder, id=job_id)
     if job.status == 'pending':
@@ -48,6 +52,7 @@ def mark_scheduled(request, job_id):
         job.save()
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('workorder_list')))
 
+@login_required
 def mark_completed(request, job_id):
     job = get_object_or_404(WorkOrder, id=job_id)
     if job.status in ['pending', 'in_progress']:
@@ -56,6 +61,7 @@ def mark_completed(request, job_id):
         job.save()
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('workorder_list')))
 
+@login_required
 def workorder_detail(request, job_id):
     job = get_object_or_404(WorkOrder, id=job_id)
     attachments = job.attachments.all()
@@ -89,6 +95,7 @@ def workorder_detail(request, job_id):
     }
     return render(request, 'workorders/workorder_detail.html', context)
 
+@login_required
 def pending_jobs_view(request):
     query = request.GET.get('q', '')
     jobs = WorkOrder.objects.filter(status='pending', scheduled_date__isnull=True)
@@ -100,6 +107,7 @@ def pending_jobs_view(request):
     }
     return render(request, 'workorders/pending_jobs.html', context)
 
+@login_required
 def scheduled_jobs_view(request):
     query = request.GET.get('q', '')
     jobs = WorkOrder.objects.filter(status__in=['pending', 'in_progress'], scheduled_date__isnull=False)
@@ -111,6 +119,7 @@ def scheduled_jobs_view(request):
     }
     return render(request, 'workorders/scheduled_jobs.html', context)
 
+@login_required
 def completed_jobs_view(request):
     query = request.GET.get('q', '')
     jobs = WorkOrder.objects.filter(status='completed')
@@ -122,6 +131,7 @@ def completed_jobs_view(request):
     }
     return render(request, 'workorders/completed_jobs.html', context)
 
+@login_required
 def workorder_edit(request, job_id):
     job = get_object_or_404(WorkOrder, id=job_id)
     if request.method == "POST":
