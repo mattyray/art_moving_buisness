@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Invoice List{% endblock %}
+{% block content %}
+<div class="container">
+  <h2 class="mb-4">Invoices</h2>
+  <!-- Search Bar -->
+  <form method="get" class="mb-4">
+    <div class="input-group">
+      <input type="text" name="q" class="form-control" placeholder="Search by invoice number or client name..." value="{{ query }}">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </div>
+  </form>
+  <div class="row">
+    {% for invoice in invoices %}
+      <div class="col-md-4">
+        <div class="card mb-4 shadow-sm">
+          <div class="card-header bg-info text-white">
+            Invoice {{ invoice.invoice_number }}
+          </div>
+          <div class="card-body">
+            <p><strong>Client:</strong> {{ invoice.client.name }}</p>
+            <p><strong>Amount:</strong> ${{ invoice.amount }}</p>
+            <p><strong>Status:</strong> {{ invoice.get_status_display }}</p>
+            <p><strong>Due:</strong> {{ invoice.due_date|date:"Y-m-d" }}</p>
+          </div>
+          <div class="card-footer">
+            <a href="{% url 'invoice_detail' invoice.id %}" class="btn btn-sm btn-info">View Details</a>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <p>No invoices found.</p>
+    {% endfor %}
+  </div>
+  <a href="{% url 'invoice_create' %}" class="btn btn-primary">Create New Invoice</a>
+</div>
+{% endblock %}

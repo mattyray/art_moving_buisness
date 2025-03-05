@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Invoice Detail{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="card shadow-sm">
+    <div class="card-header">
+      <h2>Invoice {{ invoice.invoice_number }} Details</h2>
+    </div>
+    <div class="card-body">
+      <p><strong>Client:</strong> {{ invoice.client.name }}</p>
+      <p><strong>Work Order:</strong> {% if invoice.work_order %}{{ invoice.work_order.id }}{% else %}N/A{% endif %}</p>
+      <p><strong>Amount:</strong> ${{ invoice.amount }}</p>
+      <p><strong>Status:</strong> {{ invoice.get_status_display }}</p>
+      <p><strong>Date Created:</strong> {{ invoice.date_created|date:"Y-m-d" }}</p>
+      <p><strong>Due Date:</strong> {{ invoice.due_date|date:"Y-m-d" }}</p>
+      {% if invoice.notes %}
+      <p><strong>Notes:</strong> {{ invoice.notes }}</p>
+      {% endif %}
+    </div>
+    <div class="card-footer">
+      <a href="{% url 'invoice_update' invoice.id %}" class="btn btn-secondary">Edit Invoice</a>
+      <a href="{% url 'invoice_list' %}" class="btn btn-secondary">Back to Invoice List</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
