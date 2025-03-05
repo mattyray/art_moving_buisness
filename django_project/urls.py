@@ -7,5 +7,7 @@ urlpatterns = [
     path("accounts/", include("django.contrib.auth.urls")),  # Login, password reset, etc.
     path("", include("pages.urls")),           
     path("workorders/", include("workorders.urls")),  # Work Orders routes
+    path("clients/", include("clients.urls")),
+
              # Home and other pages
 ]

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Client Detail{% endblock %}
+{% block content %}
+<div class="container">
+  <h2 class="mb-4">Client: {{ client.name }}</h2>
+  <div class="card shadow-sm mb-4">
+    <div class="card-header">
+      <h4>Contact Information</h4>
+    </div>
+    <div class="card-body">
+      <p><strong>Email:</strong> {{ client.email }}</p>
+      <p><strong>Phone:</strong> {{ client.phone }}</p>
+      <p><strong>Address:</strong> {{ client.address }}</p>
+    </div>
+    <div class="card-footer">
+      <a href="{% url 'client_edit' client.id %}" class="btn btn-warning">Edit Client</a>
+    </div>
+  </div>
+
+  <!-- You can optionally add sections to display related work orders and invoices -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header">
+      <h4>Work Orders</h4>
+    </div>
+    <div class="card-body">
+      {% if client.work_orders.all %}
+        <ul class="list-group">
+          {% for order in client.work_orders.all %}
+          <li class="list-group-item">
+            <a href="{% url 'workorder_detail' order.id %}">Work Order #{{ order.id }}</a> - {{ order.get_status_display }}
+          </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No work orders available.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

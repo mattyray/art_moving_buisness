@@ -30,7 +30,6 @@
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ms-auto">
           <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Dashboard</a></li>
-          <!-- New Jobs Overview Link -->
           <li class="nav-item"><a class="nav-link" href="{% url 'workorder_list' %}">Work Orders</a></li>
           <li class="nav-item"><a class="nav-link" href="#">Clients</a></li>
           <li class="nav-item"><a class="nav-link" href="#">Invoicing</a></li>
@@ -52,21 +51,33 @@
     </div>
     <div class="offcanvas-body">
       <ul class="list-group">
-        <!-- Jobs Overview Link -->
-        <li class="list-group-item">
-          <p class="small mb-0">View pending, scheduled, and completed jobs.</p>
-        </li>
-        <!-- Work Orders -->
+        <!-- Work Orders Section with Nested Links -->
         <li class="list-group-item">
           <a href="{% url 'workorder_list' %}" class="stretched-link">Work Orders</a>
           <p class="small mb-0">Manage work orders and job details.</p>
+          <ul class="list-group mt-2">
+            <li class="list-group-item">
+              <a href="{% url 'pending_jobs' %}" class="stretched-link">Pending Jobs</a>
+            </li>
+            <li class="list-group-item">
+              <a href="{% url 'scheduled_jobs' %}" class="stretched-link">Scheduled Jobs</a>
+            </li>
+            <li class="list-group-item">
+              <a href="{% url 'completed_jobs' %}" class="stretched-link">Completed Jobs</a>
+            </li>
+          </ul>
         </li>
-        <!-- Clients -->
+        <!-- Clients Section with Add New Client -->
         <li class="list-group-item">
-          <a href="#" class="stretched-link">Clients</a>
+          <a href="{% url 'client_list' %}" class="stretched-link">Clients</a>
           <p class="small mb-0">View client profiles and history.</p>
+          <ul class="list-group mt-2">
+            <li class="list-group-item">
+              <a href="{% url 'client_create' %}" class="stretched-link">Add New Client</a>
+            </li>
+          </ul>
         </li>
-        <!-- Invoicing -->
+        <!-- Invoicing Section (Placeholder) -->
         <li class="list-group-item">
           <a href="#" class="stretched-link">Invoicing</a>
           <p class="small mb-0">Generate and review invoices.</p>
