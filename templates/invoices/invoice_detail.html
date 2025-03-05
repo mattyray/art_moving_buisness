@@ -2,25 +2,40 @@
 {% block title %}Invoice Detail{% endblock %}
 {% block content %}
 <div class="container">
-  <div class="card shadow-sm">
+  <div class="card shadow-sm mb-4">
     <div class="card-header">
       <h2>Invoice {{ invoice.invoice_number }} Details</h2>
     </div>
     <div class="card-body">
+      <h4>Invoice Information</h4>
       <p><strong>Client:</strong> {{ invoice.client.name }}</p>
-      <p><strong>Work Order:</strong> {% if invoice.work_order %}{{ invoice.work_order.id }}{% else %}N/A{% endif %}</p>
-      <p><strong>Amount:</strong> ${{ invoice.amount }}</p>
-      <p><strong>Status:</strong> {{ invoice.get_status_display }}</p>
       <p><strong>Date Created:</strong> {{ invoice.date_created|date:"Y-m-d" }}</p>
       <p><strong>Due Date:</strong> {{ invoice.due_date|date:"Y-m-d" }}</p>
+      <p><strong>Amount:</strong> ${{ invoice.amount }}</p>
+      <p><strong>Status:</strong> {{ invoice.get_status_display }}</p>
       {% if invoice.notes %}
       <p><strong>Notes:</strong> {{ invoice.notes }}</p>
       {% endif %}
+      
+      {% if invoice.work_order %}
+      <hr>
+      <h4>Associated Work Order Details</h4>
+      <p><strong>Work Order ID:</strong> {{ invoice.work_order.id }}</p>
+      <p><strong>Description:</strong> {{ invoice.work_order.job_description }}</p>
+      <p><strong>Pickup Address:</strong> {{ invoice.work_order.pickup_address }}</p>
+      <p><strong>Dropoff Address:</strong> {{ invoice.work_order.dropoff_address }}</p>
+      <p><strong>Estimated Cost:</strong> ${{ invoice.work_order.estimated_cost }}</p>
+      <p><strong>Status:</strong> {{ invoice.work_order.get_status_display }}</p>
+      {% else %}
+      <p><strong>Work Order:</strong> Not linked</p>
+      {% endif %}
     </div>
-    <div class="card-footer">
+    <div class="card-footer d-flex justify-content-between align-items-center">
       <a href="{% url 'invoice_update' invoice.id %}" class="btn btn-secondary">Edit Invoice</a>
-      <a href="{% url 'invoice_list' %}" class="btn btn-secondary">Back to Invoice List</a>
+      <button class="btn btn-primary" onclick="window.print();">Print Invoice</button>
     </div>
   </div>
+  
+  <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">Back to Invoice List</a>
 </div>
 {% endblock %}

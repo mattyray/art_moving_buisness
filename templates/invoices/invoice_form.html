@@ -4,11 +4,34 @@
 {% block content %}
 <div class="container">
   <h2>{% if invoice %}Edit Invoice{% else %}Create Invoice{% endif %}</h2>
-  <form method="post">
+  <form method="post" id="invoice-form">
     {% csrf_token %}
     {{ form|crispy }}
     <button type="submit" class="btn btn-success">{% if invoice %}Update Invoice{% else %}Create Invoice{% endif %}</button>
   </form>
-  <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">Back to Invoice List</a>
 </div>
+
+<!-- Optional JavaScript to dynamically load work orders for a client -->
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const clientField = document.querySelector("#id_client");
+    const workOrderField = document.querySelector("#id_work_order");
+    if (clientField && workOrderField) {
+      clientField.addEventListener("change", function() {
+        fetch(`/invoices/ajax/get_workorders/?client_id=${clientField.value}`)
+          .then(response => response.json())
+          .then(data => {
+            // Clear current options
+            workOrderField.innerHTML = '<option value="">---------</option>';
+            data.forEach(order => {
+              let option = document.createElement("option");
+              option.value = order.id;
+              option.text = `Order #${order.id} - ${order.job_description}`;
+              workOrderField.appendChild(option);
+            });
+          });
+      });
+    }
+  });
+</script>
 {% endblock %}
