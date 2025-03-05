@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Dashboard - Art Moving Business{% endblock %}
 {% block content %}
-<div class="row">
+<div class="row justify-content-center">
   <!-- Work Orders Card -->
   <div class="col-md-3">
     <div class="card text-white bg-info mb-3">
@@ -31,7 +31,7 @@
       <div class="card-body">
         <h5 class="card-title">Manage Invoices</h5>
         <p class="card-text">Generate and review invoices.</p>
-        <a href="#" class="btn btn-light">Go to Invoicing</a>
+        <a href="{% url 'invoice_list' %}" class="btn btn-light">Go to Invoicing</a>
       </div>
     </div>
   </div>
