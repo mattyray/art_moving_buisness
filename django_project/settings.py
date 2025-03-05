@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'pages.apps.PagesConfig',
     'workorders',  # Add this line
     'clients',     # Add this line
+    'invoices',
 
     #crispy
     'crispy_forms',
