@@ -13,17 +13,6 @@
       </div>
     </div>
   </div>
-  <!-- Pending Jobs Card -->
-  <div class="col-md-3">
-    <div class="card text-white bg-secondary mb-3">
-      <div class="card-header">Jobs Overview</div>
-      <div class="card-body">
-        <h5 class="card-title">All Jobs</h5>
-        <p class="card-text">View pending, scheduled, and completed jobs.</p>
-      </div>
-    </div>
-  </div>
-  
   <!-- Clients Card -->
   <div class="col-md-3">
     <div class="card text-white bg-warning mb-3">
@@ -31,7 +20,7 @@
       <div class="card-body">
         <h5 class="card-title">View Clients</h5>
         <p class="card-text">Client database and details.</p>
-        <a href="#" class="btn btn-light">Go to Clients</a>
+        <a href="{% url 'client_list' %}" class="btn btn-light">Go to Clients</a>
       </div>
     </div>
   </div>
