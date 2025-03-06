@@ -12,7 +12,7 @@
     </div>
   </form>
   
-  <!-- Navigation Buttons for Invoice Category Pages -->
+  <!-- Navigation Buttons for Invoice Categories -->
   <div class="mb-4 text-center">
     <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger me-2">Unpaid Invoices</a>
     <a href="{% url 'invoice_paid' %}" class="btn btn-outline-danger me-2">Paid Invoices</a>
@@ -123,5 +123,7 @@
       {% endif %}
     </div>
   </div>
+  <!-- Optional: Back to Dashboard or other navigation -->
+  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
 </div>
 {% endblock %}

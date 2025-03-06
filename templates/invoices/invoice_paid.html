@@ -11,9 +11,7 @@
     </div>
   </form>
   <div class="card shadow-sm">
-    <div class="card-header bg-info text-white">
-      Paid Invoices
-    </div>
+    <div class="card-header bg-info text-white">Paid Invoices</div>
     <div class="card-body">
       {% if invoices %}
       <table class="table table-sm">
@@ -46,5 +44,6 @@
       {% endif %}
     </div>
   </div>
+  <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">Back to Invoice Overview</a>
 </div>
 {% endblock %}

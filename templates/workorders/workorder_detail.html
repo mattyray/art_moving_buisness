@@ -7,8 +7,10 @@
   <div class="card shadow-sm mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
       <h2>Work Order #{{ job.id }} Details</h2>
-      <!-- Edit Button -->
-      <a href="{% url 'workorder_edit' job.id %}" class="btn btn-warning">Edit Work Order</a>
+      <div>
+        <a href="{% url 'workorder_edit' job.id %}" class="btn btn-warning btn-sm me-2">Edit Work Order</a>
+        <a href="{% url 'workorder_list' %}" class="btn btn-secondary btn-sm">Back to Work Orders</a>
+      </div>
     </div>
     <div class="card-body">
       <h4>Work Order Information</h4>
@@ -22,19 +24,6 @@
       <p><strong>Completed At:</strong> {{ job.completed_at|default:"Not Completed" }}</p>
       <p><strong>Created At:</strong> {{ job.created_at|date:"Y-m-d H:i" }}</p>
       <p><strong>Last Edited:</strong> {{ job.updated_at|date:"Y-m-d H:i" }}</p>
-    </div>
-  </div>
-  
-  <!-- Client Information Card -->
-  <div class="card shadow-sm mb-4">
-    <div class="card-header">
-      <h3>Client Information</h3>
-    </div>
-    <div class="card-body">
-      <p><strong>Name:</strong> {{ job.client.name }}</p>
-      <p><strong>Email:</strong> {{ job.client.email }}</p>
-      <p><strong>Phone:</strong> {{ job.client.phone }}</p>
-      <p><strong>Address:</strong> {{ job.client.address }}</p>
     </div>
   </div>
   
@@ -85,7 +74,5 @@
       </form>
     </div>
   </div>
-  
-  <a href="{% url 'workorder_list' %}" class="btn btn-secondary mt-3">Back to Work Orders</a>
 </div>
 {% endblock %}

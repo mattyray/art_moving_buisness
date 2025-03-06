@@ -1,13 +1,14 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
-{% block title %}Create Work Order{% endblock %}
+{% block title %}{% if job %}Edit Work Order{% else %}Create Work Order{% endif %}{% endblock %}
 {% block content %}
 <div class="container">
-  <h2>Create Work Order</h2>
+  <h2 class="mb-4">{% if job %}Edit Work Order #{{ job.id }}{% else %}Create Work Order{% endif %}</h2>
   <form method="post">
     {% csrf_token %}
     {{ form|crispy }}
-    <button type="submit" class="btn btn-success">Save</button>
+    <button type="submit" class="btn btn-success">{% if job %}Update Work Order{% else %}Save Work Order{% endif %}</button>
   </form>
+  <a href="{% url 'workorder_list' %}" class="btn btn-secondary mt-3">Back to Work Orders</a>
 </div>
 {% endblock %}
