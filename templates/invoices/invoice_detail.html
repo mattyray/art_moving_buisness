@@ -2,6 +2,14 @@
 {% block title %}Invoice Detail{% endblock %}
 {% block content %}
 <div class="container">
+  <!-- Navigation Buttons for Invoice Categories -->
+  <div class="mb-4 text-center">
+    <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger me-2">Unpaid Invoices</a>
+    <a href="{% url 'invoice_paid' %}" class="btn btn-outline-danger me-2">Paid Invoices</a>
+    <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue Invoices</a>
+    <a href="{% url 'invoice_create' %}" class="btn btn-danger">New Invoice</a>
+  </div>
+  
   <div class="card shadow-sm mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
       <h2>Invoice {{ invoice.invoice_number }} Details</h2>
@@ -39,5 +47,6 @@
     </div>
   </div>
   <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">Back to Invoice Overview</a>
+  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
 </div>
 {% endblock %}

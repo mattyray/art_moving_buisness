@@ -3,6 +3,15 @@
 {% block content %}
 <div class="container">
   <h2 class="mb-4">Overdue Invoices</h2>
+  
+  <!-- Navigation Buttons for Invoice Categories -->
+  <div class="mb-4 text-center">
+    <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger me-2">Unpaid Invoices</a>
+    <a href="{% url 'invoice_paid' %}" class="btn btn-outline-danger me-2">Paid Invoices</a>
+    <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue Invoices</a>
+    <a href="{% url 'invoice_create' %}" class="btn btn-danger">New Invoice</a>
+  </div>
+  
   <!-- Search Bar -->
   <form method="get" class="mb-4">
     <div class="input-group">
@@ -10,6 +19,7 @@
       <button type="submit" class="btn btn-primary">Search</button>
     </div>
   </form>
+  
   <div class="card shadow-sm">
     <div class="card-header bg-info text-white">Overdue Invoices</div>
     <div class="card-body">
@@ -45,5 +55,6 @@
     </div>
   </div>
   <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">Back to Invoice Overview</a>
+  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
 </div>
 {% endblock %}

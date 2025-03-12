@@ -3,6 +3,15 @@
 {% block content %}
 <div class="container">
   <h2 class="mb-4">Completed Jobs</h2>
+  
+  <!-- Navigation Buttons -->
+  <div class="mb-4 text-center">
+    <a href="{% url 'pending_jobs' %}" class="btn btn-outline-primary me-2">Pending Jobs</a>
+    <a href="{% url 'scheduled_jobs' %}" class="btn btn-outline-primary me-2">Scheduled Jobs</a>
+    <a href="{% url 'completed_jobs' %}" class="btn btn-outline-primary me-2">Completed Jobs</a>
+    <a href="{% url 'workorder_create' %}" class="btn btn-outline-primary">New Work Order</a>
+  </div>
+  
   <!-- Search Bar -->
   <form method="get" class="mb-4">
     <div class="input-group">
@@ -10,6 +19,7 @@
       <button type="submit" class="btn btn-primary">Search</button>
     </div>
   </form>
+  
   <div class="card shadow-sm mb-4">
     <div class="card-header bg-success text-white">Completed Jobs</div>
     <div class="card-body">
@@ -44,6 +54,8 @@
       {% endif %}
     </div>
   </div>
+  
   <a href="{% url 'workorder_list' %}" class="btn btn-secondary mt-3">Back to Work Orders</a>
+  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
 </div>
 {% endblock %}

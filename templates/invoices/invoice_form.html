@@ -4,12 +4,22 @@
 {% block content %}
 <div class="container">
   <h2 class="mb-4">{% if invoice %}Edit Invoice{% else %}Create Invoice{% endif %}</h2>
+  
+  <!-- Navigation Buttons for Invoice Categories -->
+  <div class="mb-4 text-center">
+    <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger me-2">Unpaid Invoices</a>
+    <a href="{% url 'invoice_paid' %}" class="btn btn-outline-danger me-2">Paid Invoices</a>
+    <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue Invoices</a>
+    <a href="{% url 'invoice_create' %}" class="btn btn-danger">New Invoice</a>
+  </div>
+  
   <form method="post" id="invoice-form">
     {% csrf_token %}
     {{ form|crispy }}
     <button type="submit" class="btn btn-success">{% if invoice %}Update Invoice{% else %}Create Invoice{% endif %}</button>
   </form>
   <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">Back to Invoice Overview</a>
+  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
 </div>
 
 <!-- Optional JavaScript to dynamically load work orders for a client -->
