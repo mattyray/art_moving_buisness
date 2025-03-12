@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
 {% block title %}{% if job %}Edit Work Order{% else %}Create Work Order{% endif %}{% endblock %}
+
 {% block content %}
 <div class="container">
   <h2 class="mb-4">{% if job %}Edit Work Order #{{ job.id }}{% else %}Create Work Order{% endif %}</h2>
@@ -24,9 +25,16 @@
     <div id="address-formset">
       {{ address_formset.management_form }}
       {% for form in address_formset %}
-        <div class="card mb-3">
+        <div class="address-form card mb-3">
           <div class="card-body">
             {{ form|crispy }}
+            {% if form.instance.pk %}
+              <!-- If editing an existing address, show the delete checkbox -->
+              <div class="form-check">
+                {{ form.DELETE }} <label class="form-check-label">Delete</label>
+              </div>
+            {% endif %}
+            <!-- Removed dynamic "Remove" button since we rely on delete checkbox -->
           </div>
         </div>
       {% endfor %}

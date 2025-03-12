@@ -6,7 +6,7 @@ class WorkOrderForm(forms.ModelForm):
     scheduled_date = forms.DateField(
         widget=forms.DateInput(
             attrs={
-                'class': 'form-control datepicker',  # This will trigger Flatpickr
+                'class': 'form-control datepicker',  # This triggers Flatpickr
                 'placeholder': 'YYYY-MM-DD'
             }
         ),
@@ -32,10 +32,11 @@ class WorkOrderAddressForm(forms.ModelForm):
             'address': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
+# Set extra=4 to display four blank address forms by default.
 WorkOrderAddressFormSet = inlineformset_factory(
     WorkOrder, WorkOrderAddress,
     form=WorkOrderAddressForm,
-    extra=1,  # Adjust as needed
+    extra=4,
     can_delete=True
 )
 

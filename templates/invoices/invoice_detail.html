@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load crispy_forms_tags %}
 {% block title %}Invoice Detail{% endblock %}
 {% block content %}
 <div class="container">
@@ -34,10 +35,30 @@
       <h4>Associated Work Order Details</h4>
       <p><strong>ID:</strong> {{ invoice.work_order.id }}</p>
       <p><strong>Description:</strong> {{ invoice.work_order.job_description }}</p>
-      <p><strong>Pickup Address:</strong> {{ invoice.work_order.pickup_address }}</p>
-      <p><strong>Dropoff Address:</strong> {{ invoice.work_order.dropoff_address }}</p>
       <p><strong>Estimated Cost:</strong> ${{ invoice.work_order.estimated_cost }}</p>
       <p><strong>Status:</strong> {{ invoice.work_order.get_status_display }}</p>
+      
+      {% if invoice.work_order.addresses.all %}
+        <h5>Pickup Addresses</h5>
+        <ul>
+          {% for addr in invoice.work_order.addresses.all %}
+            {% if addr.address_type|lower == "pickup" %}
+              <li>{{ addr.address }}</li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+        <h5>Dropoff Addresses</h5>
+        <ul>
+          {% for addr in invoice.work_order.addresses.all %}
+            {% if addr.address_type|lower == "dropoff" %}
+              <li>{{ addr.address }}</li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No addresses associated with this work order.</p>
+      {% endif %}
+      
       {% else %}
         <p><strong>Work Order:</strong> Not linked</p>
       {% endif %}

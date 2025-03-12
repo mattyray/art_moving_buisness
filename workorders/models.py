@@ -8,7 +8,6 @@ class WorkOrder(models.Model):
         ('in_progress', 'In Progress'),
         ('completed', 'Completed'),
     ]
-    
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='work_orders')
     job_description = models.TextField()
     estimated_cost = models.DecimalField(max_digits=10, decimal_places=2)

@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
-from .models import WorkOrder, JobAttachment, JobNote
+from .models import WorkOrder, WorkOrderAddress, JobAttachment, JobNote
 from .forms import WorkOrderForm, WorkOrderAddressFormSet, JobAttachmentForm, JobNoteForm
 
 @login_required
@@ -30,7 +30,7 @@ def workorder_list(request):
 def workorder_create(request):
     if request.method == 'POST':
         form = WorkOrderForm(request.POST)
-        address_formset = WorkOrderAddressFormSet(request.POST)
+        address_formset = WorkOrderAddressFormSet(request.POST, prefix="addresses")
         if form.is_valid() and address_formset.is_valid():
             workorder = form.save()
             address_formset.instance = workorder
@@ -38,7 +38,7 @@ def workorder_create(request):
             return redirect('workorder_list')
     else:
         form = WorkOrderForm()
-        address_formset = WorkOrderAddressFormSet()
+        address_formset = WorkOrderAddressFormSet(prefix="addresses")
     context = {
         'form': form,
         'address_formset': address_formset,
@@ -50,14 +50,14 @@ def workorder_edit(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
     if request.method == 'POST':
         form = WorkOrderForm(request.POST, instance=workorder)
-        address_formset = WorkOrderAddressFormSet(request.POST, instance=workorder)
+        address_formset = WorkOrderAddressFormSet(request.POST, instance=workorder, prefix="addresses")
         if form.is_valid() and address_formset.is_valid():
             form.save()
             address_formset.save()
             return redirect("workorder_detail", job_id=workorder.id)
     else:
         form = WorkOrderForm(instance=workorder)
-        address_formset = WorkOrderAddressFormSet(instance=workorder)
+        address_formset = WorkOrderAddressFormSet(instance=workorder, prefix="addresses")
     context = {
         'form': form,
         'address_formset': address_formset,

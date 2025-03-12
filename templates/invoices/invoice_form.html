@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
 {% block title %}{% if invoice %}Edit Invoice{% else %}Create Invoice{% endif %}{% endblock %}
+
 {% block content %}
 <div class="container">
   <h2 class="mb-4">{% if invoice %}Edit Invoice{% else %}Create Invoice{% endif %}</h2>
@@ -13,19 +14,43 @@
     <a href="{% url 'invoice_create' %}" class="btn btn-danger">New Invoice</a>
   </div>
   
+  <!-- Display Work Order Addresses if provided -->
+  {% if pickup_addresses %}
+    <h4>Pickup Addresses</h4>
+    <ul>
+      {% for address in pickup_addresses %}
+        <li>{{ address.address }}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No pickup addresses found.</p>
+  {% endif %}
+  
+  {% if dropoff_addresses %}
+    <h4>Dropoff Addresses</h4>
+    <ul>
+      {% for address in dropoff_addresses %}
+        <li>{{ address.address }}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No dropoff addresses found.</p>
+  {% endif %}
+  
   <form method="post" id="invoice-form">
     {% csrf_token %}
     {{ form|crispy }}
     <button type="submit" class="btn btn-success">{% if invoice %}Update Invoice{% else %}Create Invoice{% endif %}</button>
   </form>
+  
   <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">Back to Invoice Overview</a>
   <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
 </div>
 
-<!-- JavaScript for dynamic work orders and Flatpickr date picker -->
+<!-- JavaScript for dynamic work order loading and Flatpickr initialization -->
 <script>
   document.addEventListener("DOMContentLoaded", function() {
-    // Dynamic work order loading for selected client
+    // Dynamic work order loading for selected client, if the fields exist.
     const clientField = document.querySelector("#id_client");
     const workOrderField = document.querySelector("#id_work_order");
     if (clientField && workOrderField) {
