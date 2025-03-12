@@ -1,6 +1,6 @@
 from django.db import models
 from accounts.models import CustomUser
-from clients.models import Client  # Only import the Client model from the clients app
+from clients.models import Client
 
 class WorkOrder(models.Model):
     STATUS_CHOICES = [
@@ -10,8 +10,6 @@ class WorkOrder(models.Model):
     ]
     
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='work_orders')
-    pickup_address = models.CharField(max_length=255)
-    dropoff_address = models.CharField(max_length=255)
     job_description = models.TextField()
     estimated_cost = models.DecimalField(max_digits=10, decimal_places=2)
     assigned_to = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True)
@@ -23,6 +21,18 @@ class WorkOrder(models.Model):
     
     def __str__(self):
         return f"WorkOrder #{self.id} for {self.client.name}"
+
+class WorkOrderAddress(models.Model):
+    ADDRESS_TYPE_CHOICES = [
+        ('pickup', 'Pickup'),
+        ('dropoff', 'Dropoff'),
+    ]
+    work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='addresses')
+    address_type = models.CharField(max_length=10, choices=ADDRESS_TYPE_CHOICES)
+    address = models.CharField(max_length=255)
+    
+    def __str__(self):
+        return f"{self.get_address_type_display()} Address for WorkOrder #{self.work_order.id}"
 
 class JobAttachment(models.Model):
     work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='attachments')

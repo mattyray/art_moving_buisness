@@ -7,7 +7,6 @@
   <div class="card shadow-sm mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
       <h2>Work Order #{{ job.id }} Details</h2>
-      <!-- Edit and Back Buttons -->
       <div>
         <a href="{% url 'workorder_edit' job.id %}" class="btn btn-warning btn-sm me-2">Edit Work Order</a>
         <a href="{% url 'workorder_list' %}" class="btn btn-secondary btn-sm">Back to Work Orders</a>
@@ -18,8 +17,16 @@
       <p><strong>ID:</strong> {{ job.id }}</p>
       <p><strong>Description:</strong> {{ job.job_description }}</p>
       <p><strong>Status:</strong> {{ job.get_status_display }}</p>
-      <p><strong>Pickup Address:</strong> {{ job.pickup_address }}</p>
-      <p><strong>Dropoff Address:</strong> {{ job.dropoff_address }}</p>
+      
+      <h5>Addresses</h5>
+      {% if job.addresses.all %}
+        {% for address in job.addresses.all %}
+          <p><strong>{{ address.get_address_type_display }} Address:</strong> {{ address.address }}</p>
+        {% endfor %}
+      {% else %}
+        <p>No addresses provided.</p>
+      {% endif %}
+      
       <p><strong>Estimated Cost:</strong> ${{ job.estimated_cost }}</p>
       <p><strong>Scheduled Date:</strong> {{ job.scheduled_date|default:"Not Scheduled" }}</p>
       <p><strong>Completed At:</strong> {{ job.completed_at|default:"Not Completed" }}</p>
@@ -89,7 +96,6 @@
     </div>
   </div>
   
-  <!-- Back Button to Dashboard -->
   <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
 </div>
 {% endblock %}

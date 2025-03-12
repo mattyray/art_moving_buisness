@@ -15,9 +15,26 @@
   
   <form method="post">
     {% csrf_token %}
-    {{ form|crispy }}
+    <div class="mb-4">
+      {{ form|crispy }}
+    </div>
+    
+    <!-- Inline formset for pickup and dropoff addresses -->
+    <h4>Pickup and Dropoff Addresses</h4>
+    <div id="address-formset">
+      {{ address_formset.management_form }}
+      {% for form in address_formset %}
+        <div class="card mb-3">
+          <div class="card-body">
+            {{ form|crispy }}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    
     <button type="submit" class="btn btn-success">{% if job %}Update Work Order{% else %}Save Work Order{% endif %}</button>
   </form>
+  
   <a href="{% url 'workorder_list' %}" class="btn btn-secondary mt-3">Back to Work Orders</a>
   <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
 </div>
