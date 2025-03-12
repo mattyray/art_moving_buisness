@@ -10,6 +10,8 @@
   <!-- Custom CSS -->
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   {% block extra_css %}{% endblock %}
+  <!-- Flatpickr CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 <body>
   <!-- Navbar with Offcanvas Menu Toggle -->
@@ -99,5 +101,14 @@
   <!-- Bootstrap JS Bundle -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
   {% block extra_js %}{% endblock %}
+  <!-- Flatpickr JS -->
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      flatpickr(".datepicker", {
+        dateFormat: "Y-m-d"
+      });
+    });
+  </script>
 </body>
 </html>

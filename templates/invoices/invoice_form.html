@@ -22,9 +22,10 @@
   <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
 </div>
 
-<!-- Optional JavaScript to dynamically load work orders for a client -->
+<!-- JavaScript for dynamic work orders and Flatpickr date picker -->
 <script>
   document.addEventListener("DOMContentLoaded", function() {
+    // Dynamic work order loading for selected client
     const clientField = document.querySelector("#id_client");
     const workOrderField = document.querySelector("#id_work_order");
     if (clientField && workOrderField) {
@@ -43,6 +44,11 @@
           });
       });
     }
+    
+    // Initialize Flatpickr on datepicker fields with format "F j, y" (e.g., "January 1, 23")
+    flatpickr(".datepicker", {
+      dateFormat: "F j, y"
+    });
   });
 </script>
 {% endblock %}
