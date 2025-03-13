@@ -42,12 +42,12 @@ def workorder_list(request):
     pending_jobs = WorkOrder.objects.filter(status='pending', scheduled_date__isnull=True)
     scheduled_jobs = WorkOrder.objects.filter(status__in=['pending', 'in_progress'], scheduled_date__isnull=False)
     completed_jobs = WorkOrder.objects.filter(status='completed')
-    
+
     if query:
         pending_jobs = pending_jobs.filter(client__name__icontains=query)
         scheduled_jobs = scheduled_jobs.filter(client__name__icontains=query)
         completed_jobs = completed_jobs.filter(client__name__icontains=query)
-    
+
     context = {
         'query': query,
         'pending_jobs': pending_jobs.order_by('-updated_at')[:3],
@@ -112,7 +112,11 @@ def mark_completed(request, job_id):
         workorder.status = 'completed'
         workorder.completed_at = timezone.now()
         workorder.save()
+        messages.success(request, "Work order marked as completed.")
+    
+    # Redirect back to referring page
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('workorder_list')))
+
 
 @login_required
 def workorder_detail(request, job_id):

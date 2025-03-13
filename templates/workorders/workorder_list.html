@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Pending Jobs{% endblock %}
+{% block title %}Work Orders{% endblock %}
 {% block content %}
 <div class="container">
-  <h2 class="mb-4">Pending Jobs</h2>
+  <h2 class="mb-4">Work Orders</h2>
   
   <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
@@ -20,126 +20,126 @@
     </div>
   </form>
   
-  <div class="card shadow-sm mb-4">
-    <div class="card-header bg-secondary text-white">Pending Jobs</div>
-    <div class="card-body">
-      {% if pending_jobs %}
-      <table class="table table-sm">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Client</th>
-            <th>Description</th>
-            <th>Last Edited</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for job in pending_jobs %}
-          <tr>
-            <td>{{ job.id }}</td>
-            <td>{{ job.client.name }}</td>
-            <td>{{ job.job_description|truncatewords:10 }}</td>
-            <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
-            <td>
-              <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
-              <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
-              <!-- Schedule button for pending jobs -->
-              <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#scheduleModal" data-job-id="{{ job.id }}">
-                Schedule
-              </button>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <p>No pending jobs found.</p>
-      {% endif %}
-      
-      <hr>
-      <!-- Scheduled Jobs Section -->
-      <h5>Scheduled Jobs</h5>
-      {% if scheduled_jobs %}
-      <table class="table table-sm">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Client</th>
-            <th>Description</th>
-            <th>Last Edited</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for job in scheduled_jobs %}
-          <tr>
-            <td>{{ job.id }}</td>
-            <td>{{ job.client.name }}</td>
-            <td>{{ job.job_description|truncatewords:10 }}</td>
-            <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
-            <td>
-              <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
-              <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <p>No scheduled jobs found.</p>
-      {% endif %}
-      
-      <hr>
-      <!-- Completed Jobs Section -->
-      <h5>Completed Jobs</h5>
-      {% if completed_jobs %}
-      <table class="table table-sm">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Client</th>
-            <th>Description</th>
-            <th>Last Edited</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for job in completed_jobs %}
-          <tr>
-            <td>{{ job.id }}</td>
-            <td>{{ job.client.name }}</td>
-            <td>{{ job.job_description|truncatewords:10 }}</td>
-            <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
-            <td>
-              <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
-              <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <p>No completed jobs found.</p>
-      {% endif %}
-      
-    </div>
-  </div>
+  <!-- Pending Jobs Section -->
+  <h5>Pending Jobs</h5>
+  {% if pending_jobs %}
+  <table class="table table-sm">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Client</th>
+        <th>Description</th>
+        <th>Last Edited</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for job in pending_jobs %}
+      <tr>
+        <td>{{ job.id }}</td>
+        <td>{{ job.client.name }}</td>
+        <td>{{ job.job_description|truncatewords:10 }}</td>
+        <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
+        <td>
+          <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
+          <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
+          <!-- Schedule button for pending jobs -->
+          <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#scheduleModal" data-job-id="{{ job.id }}">
+            Schedule
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No pending jobs found.</p>
+  {% endif %}
+  
+  <hr>
+  
+  <!-- Scheduled Jobs Section -->
+  <h5>Scheduled Jobs</h5>
+  {% if scheduled_jobs %}
+  <table class="table table-sm">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Client</th>
+        <th>Description</th>
+        <th>Last Edited</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for job in scheduled_jobs %}
+      <tr>
+        <td>{{ job.id }}</td>
+        <td>{{ job.client.name }}</td>
+        <td>{{ job.job_description|truncatewords:10 }}</td>
+        <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
+        <td>
+          <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
+          <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
+          <!-- Mark as Completed Button -->
+          <form method="post" action="{% url 'mark_completed' job.id %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-success">Mark Completed</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No scheduled jobs found.</p>
+  {% endif %}
+  
+  <hr>
+  
+  <!-- Completed Jobs Section -->
+  <h5>Completed Jobs</h5>
+  {% if completed_jobs %}
+  <table class="table table-sm">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Client</th>
+        <th>Description</th>
+        <th>Last Edited</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for job in completed_jobs %}
+      <tr>
+        <td>{{ job.id }}</td>
+        <td>{{ job.client.name }}</td>
+        <td>{{ job.job_description|truncatewords:10 }}</td>
+        <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
+        <td>
+          <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
+          <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No completed jobs found.</p>
+  {% endif %}
   
   <!-- Back to Dashboard Button -->
   <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
 </div>
-{% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-  // Initialize Flatpickr on datepicker fields (used in the schedule modal)
-  flatpickr(".datepicker", {
-    dateFormat: "Y-m-d"
-  });
+  // Initialize Flatpickr for date inputs in the schedule modal
+  flatpickr(".datepicker", { dateFormat: "Y-m-d" });
   
-  // When the schedule modal is shown, update the form action with the correct work order id.
+  // Set the action URL for the schedule modal based on the job ID
   var scheduleModal = document.getElementById('scheduleModal');
   scheduleModal.addEventListener('show.bs.modal', function (event) {
     var button = event.relatedTarget; // Button that triggered the modal
@@ -173,3 +173,4 @@ document.addEventListener("DOMContentLoaded", function() {
     </form>
   </div>
 </div>
+{% endblock %}
