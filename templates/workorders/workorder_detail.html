@@ -9,6 +9,7 @@
       <h2>Work Order #{{ job.id }} Details</h2>
       <div>
         <a href="{% url 'workorder_edit' job.id %}" class="btn btn-warning btn-sm me-2">Edit Work Order</a>
+        <a href="{% url 'workorder_delete' job.id %}" class="btn btn-danger btn-sm me-2">Delete Work Order</a>
         <a href="{% url 'workorder_list' %}" class="btn btn-secondary btn-sm">Back to Work Orders</a>
       </div>
     </div>

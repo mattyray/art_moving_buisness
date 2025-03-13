@@ -3,8 +3,20 @@ from django.utils import timezone
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from .models import WorkOrder, WorkOrderAddress, JobAttachment, JobNote
 from .forms import WorkOrderForm, WorkOrderAddressFormSet, JobAttachmentForm, JobNoteForm
+
+@login_required
+def workorder_delete(request, job_id):
+    workorder = get_object_or_404(WorkOrder, id=job_id)
+    if request.method == 'POST':
+        workorder.delete()
+        messages.success(request, "Work order deleted successfully.")
+        return redirect('workorder_list')
+    # If GET, render a confirmation page.
+    context = {'workorder': workorder}
+    return render(request, 'workorders/workorder_confirm_delete.html', context)
 
 @login_required
 def workorder_list(request):
