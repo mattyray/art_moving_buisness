@@ -7,6 +7,24 @@ from django.contrib import messages
 from .models import WorkOrder, WorkOrderAddress, JobAttachment, JobNote
 from .forms import WorkOrderForm, WorkOrderAddressFormSet, JobAttachmentForm, JobNoteForm
 
+# ... [other view functions remain unchanged] ...
+
+@login_required
+def schedule_workorder(request, job_id):
+    workorder = get_object_or_404(WorkOrder, id=job_id)
+    if request.method == "POST":
+        scheduled_date = request.POST.get("scheduled_date")
+        if scheduled_date:
+            workorder.scheduled_date = scheduled_date
+            # Update status to indicate scheduled; adjust status as desired
+            workorder.status = "in_progress"
+            workorder.save()
+            messages.success(request, "Work order scheduled successfully.")
+        else:
+            messages.error(request, "Please select a valid date.")
+    return redirect('pending_jobs')
+
+
 @login_required
 def workorder_delete(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
@@ -165,3 +183,18 @@ def completed_jobs_view(request):
         'query': query,
     }
     return render(request, 'workorders/completed_jobs.html', context)
+
+
+@login_required
+def schedule_workorder(request, job_id):
+    workorder = get_object_or_404(WorkOrder, id=job_id)
+    if request.method == "POST":
+        scheduled_date = request.POST.get("scheduled_date")
+        if scheduled_date:
+            workorder.scheduled_date = scheduled_date
+            workorder.status = "in_progress"  # Change status to scheduled (or in_progress)
+            workorder.save()
+            messages.success(request, "Work order scheduled successfully.")
+        else:
+            messages.error(request, "Please select a valid date.")
+    return redirect('pending_jobs')
