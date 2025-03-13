@@ -4,9 +4,15 @@
 
 {% block content %}
 <div class="container">
-  <h2 class="mb-4">{% if job %}Edit Work Order #{{ job.id }}{% else %}Create Work Order{% endif %}</h2>
+  <h2 class="mb-4">
+    {% if job %}
+      Edit Work Order #{{ job.id }}
+    {% else %}
+      Create Work Order
+    {% endif %}
+  </h2>
   
-  <!-- Navigation Buttons -->
+  <!-- Navigation Buttons (top) -->
   <div class="mb-4 text-center">
     <a href="{% url 'pending_jobs' %}" class="btn btn-outline-primary me-2">Pending Jobs</a>
     <a href="{% url 'scheduled_jobs' %}" class="btn btn-outline-primary me-2">Scheduled Jobs</a>
@@ -34,16 +40,28 @@
                 {{ form.DELETE }} <label class="form-check-label">Delete</label>
               </div>
             {% endif %}
-            <!-- Removed dynamic "Remove" button since we rely on delete checkbox -->
           </div>
         </div>
       {% endfor %}
     </div>
     
-    <button type="submit" class="btn btn-success">{% if job %}Update Work Order{% else %}Save Work Order{% endif %}</button>
+    <!-- Update button always available -->
+    <button type="submit" class="btn btn-success">
+      {% if job %}Update Work Order{% else %}Save Work Order{% endif %}
+    </button>
   </form>
   
-  <a href="{% url 'workorder_list' %}" class="btn btn-secondary mt-3">Back to Work Orders</a>
-  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+  <!-- Separate row for navigation and deletion -->
+  <div class="mt-4 d-flex justify-content-between">
+    <div>
+      <a href="{% url 'workorder_list' %}" class="btn btn-secondary">Back to Work Orders</a>
+      <a href="{% url 'home' %}" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+    {% if job %}
+      <div>
+        <a href="{% url 'workorder_delete' job.id %}" class="btn btn-danger">Delete Work Order</a>
+      </div>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}

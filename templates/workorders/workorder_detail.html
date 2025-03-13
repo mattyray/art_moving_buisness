@@ -9,7 +9,6 @@
       <h2>Work Order #{{ job.id }} Details</h2>
       <div>
         <a href="{% url 'workorder_edit' job.id %}" class="btn btn-warning btn-sm me-2">Edit Work Order</a>
-        <a href="{% url 'workorder_delete' job.id %}" class="btn btn-danger btn-sm me-2">Delete Work Order</a>
         <a href="{% url 'workorder_list' %}" class="btn btn-secondary btn-sm">Back to Work Orders</a>
       </div>
     </div>
@@ -97,6 +96,15 @@
     </div>
   </div>
   
-  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+  <!-- Separated Navigation Row for Delete and Back Buttons -->
+  <div class="mt-4 d-flex justify-content-between">
+    <div>
+      <a href="{% url 'home' %}" class="btn btn-secondary">Back to Dashboard</a>
+      <a href="{% url 'workorder_list' %}" class="btn btn-secondary">Back to Work Orders</a>
+    </div>
+    <div>
+      <a href="{% url 'workorder_delete' job.id %}" class="btn btn-danger">Delete Work Order</a>
+    </div>
+  </div>
 </div>
 {% endblock %}
