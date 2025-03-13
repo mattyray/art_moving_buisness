@@ -21,113 +21,127 @@
   </form>
   
   <!-- Pending Jobs Section -->
-  <h5>Pending Jobs</h5>
-  {% if pending_jobs %}
-  <table class="table table-sm">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Client</th>
-        <th>Description</th>
-        <th>Last Edited</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for job in pending_jobs %}
-      <tr>
-        <td>{{ job.id }}</td>
-        <td>{{ job.client.name }}</td>
-        <td>{{ job.job_description|truncatewords:10 }}</td>
-        <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
-        <td>
-          <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
-          <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
-          <!-- Schedule button for pending jobs -->
-          <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#scheduleModal" data-job-id="{{ job.id }}">
-            Schedule
-          </button>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p>No pending jobs found.</p>
-  {% endif %}
-  
-  <hr>
+  <div class="card mb-4">
+    <div class="card-header bg-secondary text-white">
+      <h5 class="mb-0">Pending Jobs</h5>
+    </div>
+    <div class="card-body">
+      {% if pending_jobs %}
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Client</th>
+            <th>Description</th>
+            <th>Last Edited</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for job in pending_jobs %}
+          <tr>
+            <td>{{ job.id }}</td>
+            <td>{{ job.client.name }}</td>
+            <td>{{ job.job_description|truncatewords:10 }}</td>
+            <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
+            <td>
+              <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
+              <!-- Schedule button -->
+              <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#scheduleModal" data-job-id="{{ job.id }}">
+                Schedule
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p>No pending jobs found.</p>
+      {% endif %}
+    </div>
+  </div>
   
   <!-- Scheduled Jobs Section -->
-  <h5>Scheduled Jobs</h5>
-  {% if scheduled_jobs %}
-  <table class="table table-sm">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Client</th>
-        <th>Description</th>
-        <th>Last Edited</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for job in scheduled_jobs %}
-      <tr>
-        <td>{{ job.id }}</td>
-        <td>{{ job.client.name }}</td>
-        <td>{{ job.job_description|truncatewords:10 }}</td>
-        <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
-        <td>
-          <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
-          <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
-          <!-- Mark as Completed Button -->
-          <form method="post" action="{% url 'mark_completed' job.id %}" style="display:inline;">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-sm btn-success">Mark Completed</button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p>No scheduled jobs found.</p>
-  {% endif %}
-  
-  <hr>
+  <div class="card mb-4">
+    <div class="card-header bg-info text-white">
+      <h5 class="mb-0">Scheduled Jobs</h5>
+    </div>
+    <div class="card-body">
+      {% if scheduled_jobs %}
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Client</th>
+            <th>Description</th>
+            <th>Last Edited</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for job in scheduled_jobs %}
+          <tr>
+            <td>{{ job.id }}</td>
+            <td>{{ job.client.name }}</td>
+            <td>{{ job.job_description|truncatewords:10 }}</td>
+            <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
+            <td>
+              <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
+              <!-- Mark as Completed Button -->
+              <form method="post" action="{% url 'mark_completed' job.id %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-success">Mark Completed</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p>No scheduled jobs found.</p>
+      {% endif %}
+    </div>
+  </div>
   
   <!-- Completed Jobs Section -->
-  <h5>Completed Jobs</h5>
-  {% if completed_jobs %}
-  <table class="table table-sm">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Client</th>
-        <th>Description</th>
-        <th>Last Edited</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for job in completed_jobs %}
-      <tr>
-        <td>{{ job.id }}</td>
-        <td>{{ job.client.name }}</td>
-        <td>{{ job.job_description|truncatewords:10 }}</td>
-        <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
-        <td>
-          <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
-          <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p>No completed jobs found.</p>
-  {% endif %}
+  <div class="card mb-4">
+    <div class="card-header bg-success text-white">
+      <h5 class="mb-0">Completed Jobs</h5>
+    </div>
+    <div class="card-body">
+      {% if completed_jobs %}
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Client</th>
+            <th>Description</th>
+            <th>Last Edited</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for job in completed_jobs %}
+          <tr>
+            <td>{{ job.id }}</td>
+            <td>{{ job.client.name }}</td>
+            <td>{{ job.job_description|truncatewords:10 }}</td>
+            <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
+            <td>
+              <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p>No completed jobs found.</p>
+      {% endif %}
+    </div>
+  </div>
   
   <!-- Back to Dashboard Button -->
   <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
@@ -174,3 +188,4 @@ document.addEventListener("DOMContentLoaded", function() {
   </div>
 </div>
 {% endblock %}
+  
