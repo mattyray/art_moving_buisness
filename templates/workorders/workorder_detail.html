@@ -38,7 +38,10 @@
   <!-- Create Invoice Button for Completed Work Orders -->
   {% if job.status == "completed" %}
   <div class="mb-4">
-    <button type="button" class="btn btn-primary" onclick="createInvoice({{ job.id }})">Create Invoice</button>
+    <!-- Button styled red (btn-danger) with direct redirect -->
+    <button type="button" class="btn btn-danger" onclick="window.location.href='/invoices/create/?work_order={{ job.id }}'">
+      Create Invoice
+    </button>
   </div>
   {% endif %}
   
@@ -114,18 +117,7 @@
     </div>
   </div>
 </div>
-
 {% block extra_js %}
-<script>
-// Function to handle Create Invoice button click (used here as well)
-function createInvoice(jobId) {
-  var review = confirm("Would you like to review and edit the details of this job before creating an invoice?");
-  if (review) {
-    window.location.href = "/workorders/edit/" + jobId + "/";
-  } else {
-    window.location.href = "/invoices/create/?work_order=" + jobId;
-  }
-}
-</script>
+<!-- No extra JavaScript is needed for the Create Invoice button -->
 {% endblock %}
 {% endblock %}

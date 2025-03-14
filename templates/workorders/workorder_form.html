@@ -3,9 +3,7 @@
 {% block title %}Edit Work Order{% endblock %}
 {% block content %}
 <div class="container">
-  <h2 class="mb-4">
-    Edit Work Order #{{ job.id }}
-  </h2>
+  <h2 class="mb-4">Edit Work Order #{{ job.id }}</h2>
   
   <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
@@ -39,12 +37,10 @@
       {% endfor %}
     </div>
     
-    <button type="submit" class="btn btn-success">Update Work Order</button>
-    
-    <!-- Create Invoice Button for Completed Work Orders -->
-    {% if job.status == "completed" %}
-    <button type="button" class="btn btn-primary ms-2" onclick="createInvoice({{ job.id }})">Create Invoice</button>
-    {% endif %}
+    <div class="d-flex">
+      <button type="submit" name="update_only" class="btn btn-success">Update Work Order</button>
+      <button type="submit" name="create_invoice" class="btn btn-danger ms-2">Update and Create Invoice</button>
+    </div>
   </form>
   
   <div class="mt-4 d-flex justify-content-between">
@@ -62,15 +58,7 @@
 
 {% block extra_js %}
 <script>
-function createInvoice(jobId) {
-  var review = confirm("Would you like to review and edit the details of this job before creating an invoice?");
-  if (review) {
-    // Already on the edit page, so simply alert the user to review the details
-    alert("Please review and update the details, then use the Create Invoice button on the Work Order Detail page.");
-  } else {
-    window.location.href = "/invoices/create/?work_order=" + jobId;
-  }
-}
+/* No extra JavaScript is needed on the edit page; the view will handle the redirect based on which button is pressed. */
 </script>
 {% endblock %}
 {% endblock %}

@@ -84,7 +84,11 @@ def workorder_edit(request, job_id):
         if form.is_valid() and address_formset.is_valid():
             form.save()
             address_formset.save()
-            return redirect("workorder_detail", job_id=workorder.id)
+            # Check which submit button was pressed
+            if 'create_invoice' in request.POST:
+                return redirect('/invoices/create/?work_order=' + str(workorder.id))
+            else:
+                return redirect("workorder_detail", job_id=workorder.id)
     else:
         form = WorkOrderForm(instance=workorder)
         address_formset = WorkOrderAddressFormSet(instance=workorder, prefix="addresses")

@@ -46,18 +46,20 @@ def invoice_detail(request, invoice_id):
 @login_required
 def invoice_create(request):
     work_order_id = request.GET.get('work_order')
+    pickup_addresses = None
+    dropoff_addresses = None
+    initial_data = {}
+
     if work_order_id:
         work_order = get_object_or_404(WorkOrder, id=work_order_id)
         pickup_addresses = work_order.addresses.filter(address_type='pickup')
         dropoff_addresses = work_order.addresses.filter(address_type='dropoff')
-        # Debug prints:
-        print("Work Order ID:", work_order_id)
-        print("Work Order:", work_order)
-        print("Pickup addresses count:", pickup_addresses.count())
-        print("Dropoff addresses count:", dropoff_addresses.count())
-    else:
-        pickup_addresses = None
-        dropoff_addresses = None
+        initial_data = {
+            'client': work_order.client.id,
+            'work_order': work_order.id,
+            'amount': work_order.estimated_cost,
+            # Add additional fields if needed
+        }
 
     if request.method == 'POST':
         form = InvoiceForm(request.POST)
@@ -65,7 +67,8 @@ def invoice_create(request):
             invoice = form.save()
             return redirect('invoice_list')
     else:
-        form = InvoiceForm()
+        form = InvoiceForm(initial=initial_data)
+
     context = {
         'form': form,
         'pickup_addresses': pickup_addresses,
