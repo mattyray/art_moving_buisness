@@ -36,6 +36,7 @@
             <th>Client</th>
             <th>Amount</th>
             <th>Date Created</th>
+            <th>Due Date</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -46,9 +47,15 @@
             <td>{{ inv.client.name }}</td>
             <td>${{ inv.amount }}</td>
             <td>{{ inv.date_created|date:"Y-m-d" }}</td>
+            <td>{{ inv.due_date|date:"Y-m-d" }}</td>
             <td>
               <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
               <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+              <!-- Mark as Paid Button -->
+              <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-success">Mark as Paid</button>
+              </form>
             </td>
           </tr>
           {% endfor %}
@@ -68,6 +75,7 @@
             <th>Client</th>
             <th>Amount</th>
             <th>Date Created</th>
+            <th>Due Date</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -78,6 +86,7 @@
             <td>{{ inv.client.name }}</td>
             <td>${{ inv.amount }}</td>
             <td>{{ inv.date_created|date:"Y-m-d" }}</td>
+            <td>{{ inv.due_date|date:"Y-m-d" }}</td>
             <td>
               <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
               <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
@@ -100,6 +109,7 @@
             <th>Client</th>
             <th>Amount</th>
             <th>Date Created</th>
+            <th>Due Date</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -110,9 +120,14 @@
             <td>{{ inv.client.name }}</td>
             <td>${{ inv.amount }}</td>
             <td>{{ inv.date_created|date:"Y-m-d" }}</td>
+            <td>{{ inv.due_date|date:"Y-m-d" }}</td>
             <td>
               <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
               <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+              <!-- Set Paid Date Button -->
+              <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#dueDateModal" data-invoice-id="{{ inv.id }}">
+                Set Paid Date
+              </button>
             </td>
           </tr>
           {% endfor %}
@@ -126,4 +141,45 @@
   <!-- Back Navigation -->
   <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
 </div>
+
+<!-- Due Date Modal -->
+<div class="modal fade" id="dueDateModal" tabindex="-1" aria-labelledby="dueDateModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="post" id="dueDateForm">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="dueDateModalLabel">Set Paid Date</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>Select the paid date:</p>
+          <input type="text" name="new_due_date" class="form-control datepicker" placeholder="YYYY-MM-DD" required>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success">Update Due Date</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  // Initialize Flatpickr for date inputs in the modal
+  flatpickr(".datepicker", { dateFormat: "Y-m-d" });
+  
+  // Set the action URL for the due date modal based on the invoice ID
+  var dueDateModal = document.getElementById('dueDateModal');
+  dueDateModal.addEventListener('show.bs.modal', function (event) {
+    var button = event.relatedTarget;
+    var invoiceId = button.getAttribute('data-invoice-id');
+    var form = document.getElementById('dueDateForm');
+    form.action = '/invoices/' + invoiceId + '/update_due_date/';
+  });
+});
+</script>
+{% endblock %}
 {% endblock %}

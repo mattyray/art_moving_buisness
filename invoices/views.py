@@ -1,11 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from .models import Invoice
 from .forms import InvoiceForm
 from clients.models import Client
 from workorders.models import WorkOrder
+from django.utils import timezone
 
 @login_required
 def invoice_list(request):
@@ -58,7 +60,6 @@ def invoice_create(request):
             'client': work_order.client.id,
             'work_order': work_order.id,
             'amount': work_order.estimated_cost,
-            # Add additional fields if needed
         }
 
     if request.method == 'POST':
@@ -89,7 +90,33 @@ def invoice_update(request, invoice_id):
     context = {'form': form, 'invoice': invoice}
     return render(request, 'invoices/invoice_form.html', context)
 
-# Optional: AJAX view to get work orders for a selected client
+# New view to mark an invoice as paid (for unpaid invoices)
+@login_required
+def mark_invoice_paid(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    invoice.status = 'paid'
+    invoice.save()
+    messages.success(request, "Invoice marked as paid.")
+    return redirect('invoice_list')
+
+# N@login_required
+def update_due_date(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    if request.method == 'POST':
+        new_due_date = request.POST.get('new_due_date')
+        if new_due_date:
+            invoice.due_date = new_due_date
+            # Optionally, mark as paid:
+            invoice.status = 'paid'
+            invoice.save()
+            messages.success(request, "Invoice due date updated and marked as paid.")
+            return redirect('invoice_list')
+        else:
+            messages.error(request, "Please select a valid date.")
+    context = {'invoice': invoice}
+    return render(request, 'invoices/update_due_date.html', context)
+
+# AJAX view to get work orders for a selected client (unchanged)
 @login_required
 def get_workorders_for_client(request):
     client_id = request.GET.get('client_id')
