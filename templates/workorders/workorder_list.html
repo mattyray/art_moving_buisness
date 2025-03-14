@@ -47,7 +47,6 @@
             <td>
               <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
               <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
-              <!-- Schedule button -->
               <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#scheduleModal" data-job-id="{{ job.id }}">
                 Schedule
               </button>
@@ -89,7 +88,6 @@
             <td>
               <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
               <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
-              <!-- Mark as Completed Button -->
               <form method="post" action="{% url 'mark_completed' job.id %}" style="display:inline;">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-success">Mark Completed</button>
@@ -132,6 +130,8 @@
             <td>
               <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
               <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
+              <!-- Create Invoice Button with confirmation dialog -->
+              <button type="button" class="btn btn-sm btn-primary" onclick="createInvoice({{ job.id }})">Create Invoice</button>
             </td>
           </tr>
           {% endfor %}
@@ -162,6 +162,18 @@ document.addEventListener("DOMContentLoaded", function() {
     form.action = '/workorders/schedule/' + jobId + '/';
   });
 });
+
+// Function to handle Create Invoice button click
+function createInvoice(jobId) {
+  var review = confirm("Would you like to review and edit the details of this job before creating an invoice?");
+  if (review) {
+    // Redirect to the edit details page for the job
+    window.location.href = "/workorders/edit/" + jobId + "/";
+  } else {
+    // Redirect directly to the invoice creation page with work order id as a query parameter
+    window.location.href = "/invoices/create/?work_order=" + jobId;
+  }
+}
 </script>
 {% endblock %}
 
@@ -188,4 +200,3 @@ document.addEventListener("DOMContentLoaded", function() {
   </div>
 </div>
 {% endblock %}
-  

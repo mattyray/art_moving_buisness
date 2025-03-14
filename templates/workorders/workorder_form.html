@@ -1,18 +1,13 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
-{% block title %}{% if job %}Edit Work Order{% else %}Create Work Order{% endif %}{% endblock %}
-
+{% block title %}Edit Work Order{% endblock %}
 {% block content %}
 <div class="container">
   <h2 class="mb-4">
-    {% if job %}
-      Edit Work Order #{{ job.id }}
-    {% else %}
-      Create Work Order
-    {% endif %}
+    Edit Work Order #{{ job.id }}
   </h2>
   
-  <!-- Navigation Buttons (top) -->
+  <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
     <a href="{% url 'pending_jobs' %}" class="btn btn-outline-primary me-2">Pending Jobs</a>
     <a href="{% url 'scheduled_jobs' %}" class="btn btn-outline-primary me-2">Scheduled Jobs</a>
@@ -26,16 +21,15 @@
       {{ form|crispy }}
     </div>
     
-    <!-- Inline formset for pickup and dropoff addresses -->
+    <!-- Inline formset for addresses -->
     <h4>Pickup and Dropoff Addresses</h4>
     <div id="address-formset">
       {{ address_formset.management_form }}
       {% for form in address_formset %}
-        <div class="address-form card mb-3">
+        <div class="card mb-3">
           <div class="card-body">
             {{ form|crispy }}
             {% if form.instance.pk %}
-              <!-- If editing an existing address, show the delete checkbox -->
               <div class="form-check">
                 {{ form.DELETE }} <label class="form-check-label">Delete</label>
               </div>
@@ -45,13 +39,14 @@
       {% endfor %}
     </div>
     
-    <!-- Update button always available -->
-    <button type="submit" class="btn btn-success">
-      {% if job %}Update Work Order{% else %}Save Work Order{% endif %}
-    </button>
+    <button type="submit" class="btn btn-success">Update Work Order</button>
+    
+    <!-- Create Invoice Button for Completed Work Orders -->
+    {% if job.status == "completed" %}
+    <button type="button" class="btn btn-primary ms-2" onclick="createInvoice({{ job.id }})">Create Invoice</button>
+    {% endif %}
   </form>
   
-  <!-- Separate row for navigation and deletion -->
   <div class="mt-4 d-flex justify-content-between">
     <div>
       <a href="{% url 'workorder_list' %}" class="btn btn-secondary">Back to Work Orders</a>
@@ -64,4 +59,18 @@
     {% endif %}
   </div>
 </div>
+
+{% block extra_js %}
+<script>
+function createInvoice(jobId) {
+  var review = confirm("Would you like to review and edit the details of this job before creating an invoice?");
+  if (review) {
+    // Already on the edit page, so simply alert the user to review the details
+    alert("Please review and update the details, then use the Create Invoice button on the Work Order Detail page.");
+  } else {
+    window.location.href = "/invoices/create/?work_order=" + jobId;
+  }
+}
+</script>
+{% endblock %}
 {% endblock %}
