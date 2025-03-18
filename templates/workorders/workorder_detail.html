@@ -67,7 +67,7 @@
       <ul class="list-group">
         {% for attachment in attachments %}
           <li class="list-group-item">
-            <a href="{{ attachment.file.url }}">{{ attachment.file.name }}</a>
+            <a href="{{ attachment.file.url }}">{{ attachment.file.url }}</a>
             <small class="text-muted">(Uploaded: {{ attachment.uploaded_at|date:"Y-m-d H:i" }})</small>
           </li>
         {% empty %}
