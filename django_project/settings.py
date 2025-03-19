@@ -83,8 +83,9 @@ WSGI_APPLICATION = 'django_project.wsgi.application'
 
 # ✅ Database Configuration
 DATABASES = {
-    "default": env.dj_db_url("DATABASE_URL")
+    "default": env.db_url("DATABASE_URL")
 }
+
 
 # ✅ Authentication
 AUTH_USER_MODEL = 'accounts.CustomUser'
