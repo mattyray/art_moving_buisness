@@ -1,12 +1,12 @@
-
 services:
   web:
     build: .
-    command: gunicorn django_project.wsgi --bind 0.0.0.0:8000
+    command: gunicorn django_project.wsgi --bind 0.0.0.0:$PORT
     ports:
       - "8000:8000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       - "DJANGO_DEBUG=False"
       - "DJANGO_SECURE_SSL_REDIRECT=True"
@@ -15,12 +15,19 @@ services:
       - "DJANGO_SECURE_HSTS_PRELOAD=True"
       - "DJANGO_SESSION_COOKIE_SECURE=True"
       - "DJANGO_CSRF_COOKIE_SECURE=True"
+      - "PORT=8000"  # Needed for Heroku
+      - "DATABASE_URL=${DATABASE_URL}"
   db:
     image: postgres:15
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
       - POSTGRES_HOST_AUTH_METHOD=trust
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      retries: 5
+      timeout: 5s
 
 volumes:
   postgres_data:
