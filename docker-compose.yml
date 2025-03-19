@@ -1,13 +1,13 @@
 
-
 services:
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8080  # Run the Django dev server locally
+    command: python manage.py runserver 0.0.0.0:8080  # Run Django on port 8080
     ports:
-      - "8000:8000"
+      - "8080:8080"  # Maps container port 8080 to localhost:8080
     depends_on:
-      - db
+      db:
+        condition: service_healthy  # Ensures DB is ready before Django starts
     environment:
       - "DJANGO_DEBUG=True"
       - "DJANGO_SECURE_SSL_REDIRECT=False"
@@ -16,12 +16,29 @@ services:
       - "DJANGO_SECURE_HSTS_PRELOAD=False"
       - "DJANGO_SESSION_COOKIE_SECURE=False"
       - "DJANGO_CSRF_COOKIE_SECURE=False"
+      - "DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
+    networks:
+      - art_moving_network
+
   db:
-    image: postgres:13
+    image: postgres:15  # Upgraded to latest stable version
+    container_name: art_moving_db
+    restart: always
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data/
     environment:
-      - POSTGRES_HOST_AUTH_METHOD=trust
+      POSTGRES_DB: art_moving
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres  # ✅ Secure authentication
+    healthcheck:  # Ensures DB is ready before Django starts
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 5
+    networks:
+      - art_moving_network
 
 volumes:
   postgres_data:
+
+networks:
+  art_moving_network:
