@@ -87,15 +87,9 @@ WSGI_APPLICATION = 'django_project.wsgi.application'
 
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'art_moving',   # Must match POSTGRES_DB
-        'USER': 'postgres',      # Must match POSTGRES_USER
-        'PASSWORD': 'postgres',  # Must match POSTGRES_PASSWORD
-        'HOST': 'db',            # Matches the service name in docker-compose
-        'PORT': '5432',
-    }
+    "default": env.dj_db_url("DATABASE_URL")
 }
+
 
 
 
