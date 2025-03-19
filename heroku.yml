@@ -9,4 +9,4 @@ release:
     - python manage.py collectstatic --noinput  # Collects static files
 
 run:
-  web: gunicorn django_project.wsgi --bind 0.0.0.0:8080  # Starts the app
+  web: gunicorn django_project.wsgi --bind 0.0.0.0:8000  # Starts the app
