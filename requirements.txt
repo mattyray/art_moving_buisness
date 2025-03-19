@@ -6,3 +6,4 @@ django-crispy-forms
 crispy-bootstrap5
 whitenoise
 gunicorn
+django-environ 
