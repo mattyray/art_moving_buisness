@@ -1,16 +1,12 @@
-setup:
-  addons:
-    - plan: heroku-postgresql
-
 build:
   docker:
-    web: Dockerfile
+    web: Dockerfile  # Tells Heroku to use the Dockerfile to build your app
 
 release:
   image: web
   command:
-    - python manage.py migrate  # Ensure DB migrations are applied
-    - python manage.py collectstatic --noinput
+    - python manage.py migrate  # Runs database migrations
+    - python manage.py collectstatic --noinput  # Collects static files
 
 run:
-  web: gunicorn django_project.wsgi
+  web: gunicorn django_project.wsgi --bind 0.0.0.0:8080  # Starts the app
