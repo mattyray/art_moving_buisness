@@ -1,11 +1,13 @@
 
-
+from environ import Env
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")  # Required for Heroku
+SECRET_KEY = env("DJANGO_SECRET_KEY", default="No Secret Key Found")
+DEBUG = env.bool("DJANGO_DEBUG", default=False)
 
 
 
@@ -18,7 +20,13 @@ SECRET_KEY = 'django-insecure-ny0l%4x-fk@qj)57qb%@t-55e_o!5k%v)x)#rvgz$hi0t$h7e+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=[
+    "localhost",
+    "127.0.0.1",
+    "art-moving-buisness-95e6113078cd.herokuapp.com",
+    #"your-custom-domain.com",
+    #"www.your-custom-domain.com"
+])
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
