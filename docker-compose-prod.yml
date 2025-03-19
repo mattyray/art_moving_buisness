@@ -1,0 +1,26 @@
+
+services:
+  web:
+    build: .
+    command: gunicorn django_project.wsgi --bind 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - "DJANGO_DEBUG=False"
+      - "DJANGO_SECURE_SSL_REDIRECT=True"
+      - "DJANGO_SECURE_HSTS_SECONDS=2592000"  # 30 days
+      - "DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS=True"
+      - "DJANGO_SECURE_HSTS_PRELOAD=True"
+      - "DJANGO_SESSION_COOKIE_SECURE=True"
+      - "DJANGO_CSRF_COOKIE_SECURE=True"
+  db:
+    image: postgres:13
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+
+volumes:
+  postgres_data:
