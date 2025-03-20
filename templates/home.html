@@ -43,10 +43,33 @@
     Calendar
   </div>
   <div class="card-body">
-    <p class="card-text">This is a placeholder for the calendar. Integration coming soon.</p>
-    <div style="height:300px; background-color: #f0f0f0; display: flex; align-items: center; justify-content: center;">
-      <span>Calendar Placeholder</span>
-    </div>
+    <div id="calendar"></div>
   </div>
 </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    var calendarEl = document.getElementById("calendar");
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: "dayGridMonth",
+        events: async function(fetchInfo, successCallback, failureCallback) {
+            try {
+                let workorders = await fetch("/calendar-data/workorders/").then(res => res.json());
+                let invoices = await fetch("/calendar-data/invoices/").then(res => res.json());
+                successCallback([...workorders, ...invoices]);
+            } catch (error) {
+                failureCallback(error);
+            }
+        },
+        eventClick: function(info) {
+            window.location.href = info.event.url;
+            info.jsEvent.preventDefault();
+        }
+    });
+    calendar.render();
+});
+</script>
 {% endblock %}
