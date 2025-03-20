@@ -55,38 +55,68 @@ def workorder_list(request):
     }
     return render(request, 'workorders/workorder_list.html', context)
 
-# Create a new work order along with its addresses
-@login_required
+#@login_required
 def workorder_create(request):
     if request.method == 'POST':
         form = WorkOrderForm(request.POST)
         address_formset = WorkOrderAddressFormSet(request.POST, prefix="addresses")
+        attachment_form = JobAttachmentForm(request.POST, request.FILES)
+        note_form = JobNoteForm(request.POST)
+
         if form.is_valid() and address_formset.is_valid():
             workorder = form.save()
             address_formset.instance = workorder
             address_formset.save()
+
+            if attachment_form.is_valid():
+                attachment = attachment_form.save(commit=False)
+                attachment.work_order = workorder
+                attachment.save()
+
+            if note_form.is_valid():
+                note = note_form.save(commit=False)
+                note.work_order = workorder
+                note.save()
+
             return redirect('workorder_list')
     else:
         form = WorkOrderForm()
         address_formset = WorkOrderAddressFormSet(prefix="addresses")
+        attachment_form = JobAttachmentForm()
+        note_form = JobNoteForm()
+
     context = {
         'form': form,
         'address_formset': address_formset,
+        'attachment_form': attachment_form,
+        'note_form': note_form,
     }
     return render(request, 'workorders/workorder_form.html', context)
 
-# Edit an existing work order; supports two actions:
-#   - Update only, redirecting to detail page.
-#   - Update and create invoice, redirecting to invoice creation page with work_order data.
+
 @login_required
 def workorder_edit(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
     if request.method == 'POST':
         form = WorkOrderForm(request.POST, instance=workorder)
         address_formset = WorkOrderAddressFormSet(request.POST, instance=workorder, prefix="addresses")
+        attachment_form = JobAttachmentForm(request.POST, request.FILES)
+        note_form = JobNoteForm(request.POST)
+
         if form.is_valid() and address_formset.is_valid():
             form.save()
             address_formset.save()
+
+            if attachment_form.is_valid():
+                attachment = attachment_form.save(commit=False)
+                attachment.work_order = workorder
+                attachment.save()
+
+            if note_form.is_valid():
+                note = note_form.save(commit=False)
+                note.work_order = workorder
+                note.save()
+
             if 'create_invoice' in request.POST:
                 return redirect('/invoices/create/?work_order=' + str(workorder.id))
             else:
@@ -94,9 +124,14 @@ def workorder_edit(request, job_id):
     else:
         form = WorkOrderForm(instance=workorder)
         address_formset = WorkOrderAddressFormSet(instance=workorder, prefix="addresses")
+        attachment_form = JobAttachmentForm()
+        note_form = JobNoteForm()
+
     context = {
         'form': form,
         'address_formset': address_formset,
+        'attachment_form': attachment_form,
+        'note_form': note_form,
         'job': workorder,
     }
     return render(request, "workorders/workorder_form.html", context)
