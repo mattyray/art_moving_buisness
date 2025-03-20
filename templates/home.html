@@ -52,15 +52,31 @@
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+    console.log("Initializing FullCalendar...");
     var calendarEl = document.getElementById("calendar");
+    if (!calendarEl) {
+        console.error("Calendar element not found!");
+        return;
+    }
     var calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: "dayGridMonth",
+        height: 500,  // Set a fixed height for the calendar container
         events: async function(fetchInfo, successCallback, failureCallback) {
+            console.log("Fetching events for calendar...");
             try {
-                let workorders = await fetch("/calendar-data/workorders/").then(res => res.json());
-                let invoices = await fetch("/calendar-data/invoices/").then(res => res.json());
-                successCallback([...workorders, ...invoices]);
+                let workordersResponse = await fetch("/workorders/calendar-data/workorders/");
+                console.log("Workorders response status:", workordersResponse.status);
+                let workorders = await workordersResponse.json();
+                
+                let invoicesResponse = await fetch("/invoices/calendar-data/invoices/");
+                console.log("Invoices response status:", invoicesResponse.status);
+                let invoices = await invoicesResponse.json();
+                
+                let events = [...workorders, ...invoices];
+                console.log("Fetched events:", events);
+                successCallback(events);
             } catch (error) {
+                console.error("Calendar fetch error:", error);
                 failureCallback(error);
             }
         },
@@ -70,6 +86,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
     calendar.render();
+    console.log("FullCalendar rendered.");
 });
 </script>
 {% endblock %}
