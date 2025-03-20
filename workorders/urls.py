@@ -1,6 +1,5 @@
 from django.urls import path
-from . import views
-
+from . import views, workorder_calendar_data
 urlpatterns = [
     path('', views.workorder_list, name='workorder_list'),
     path('create/', views.workorder_create, name='workorder_create'),
@@ -13,4 +12,6 @@ urlpatterns = [
     path('mark_completed/<int:job_id>/', views.mark_completed, name='mark_completed'),
     path('detail/<int:job_id>/', views.workorder_detail, name='workorder_detail'),
     path('schedule/<int:job_id>/', views.schedule_workorder, name='schedule_workorder'),
+    path("calendar-data/workorders/", workorder_calendar_data, name="workorder_calendar_data"),
+
 ]
