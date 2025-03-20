@@ -6,6 +6,37 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import WorkOrder, WorkOrderAddress, JobAttachment, JobNote
 from .forms import WorkOrderForm, WorkOrderAddressFormSet, JobAttachmentForm, JobNoteForm
+from django.http import JsonResponse
+
+def workorder_calendar_data(request):
+    """Fetch work orders for the calendar (pending, scheduled, completed)."""
+    work_orders = WorkOrder.objects.all()
+    events = []
+
+    for wo in work_orders:
+        if wo.status == "pending":
+            events.append({
+                "title": f"Pending: {wo.client.name}",
+                "start": wo.created_at.date().isoformat(),
+                "color": "gray",
+                "url": f"/workorders/{wo.id}/",
+            })
+        elif wo.status == "in_progress":
+            events.append({
+                "title": f"Scheduled: {wo.client.name}",
+                "start": wo.scheduled_date.isoformat() if wo.scheduled_date else "",
+                "color": "blue",
+                "url": f"/workorders/{wo.id}/",
+            })
+        elif wo.status == "completed":
+            events.append({
+                "title": f"Completed: {wo.client.name}",
+                "start": wo.completed_at.date().isoformat(),
+                "color": "green",
+                "url": f"/workorders/{wo.id}/",
+            })
+
+    return JsonResponse(events, safe=False)
 
 # Schedule a work order by setting a scheduled date and marking it as "in_progress"
 @login_required

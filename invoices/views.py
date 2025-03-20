@@ -8,6 +8,38 @@ from .forms import InvoiceForm
 from clients.models import Client
 from workorders.models import WorkOrder
 from django.utils import timezone
+from django.http import JsonResponse
+
+def invoice_calendar_data(request):
+    """Fetch invoices for the calendar (unpaid, overdue, paid)."""
+    invoices = Invoice.objects.all()
+    events = []
+
+    for invoice in invoices:
+        if invoice.status == "unpaid":
+            events.append({
+                "title": f"Unpaid Invoice: {invoice.client.name}",
+                "start": invoice.due_date.isoformat(),
+                "color": "red",
+                "url": f"/invoices/{invoice.id}/",
+            })
+        elif invoice.status == "overdue":
+            events.append({
+                "title": f"Overdue Invoice: {invoice.client.name}",
+                "start": invoice.due_date.isoformat(),
+                "color": "darkred",
+                "url": f"/invoices/{invoice.id}/",
+            })
+        elif invoice.status == "paid":
+            events.append({
+                "title": f"Paid Invoice: {invoice.client.name}",
+                "start": invoice.paid_date.isoformat() if invoice.paid_date else "",
+                "color": "green",
+                "url": f"/invoices/{invoice.id}/",
+            })
+
+    return JsonResponse(events, safe=False)
+
 
 @login_required
 def invoice_list(request):
