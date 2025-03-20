@@ -11,6 +11,8 @@ urlpatterns = [
     path("workorders/", include("workorders.urls")),  # Work Orders routes
     path("clients/", include("clients.urls")),
     path("invoices/", include("invoices.urls")),
+    path("workorders/", include("workorders.urls")),
+    path("invoices/", include("invoices.urls")),
 
 
              # Home and other pages
