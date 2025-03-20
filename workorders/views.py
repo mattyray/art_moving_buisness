@@ -1,14 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import WorkOrder, WorkOrderAddress, JobAttachment, JobNote
 from .forms import WorkOrderForm, WorkOrderAddressFormSet, JobAttachmentForm, JobNoteForm
 
-# ... [other view functions remain unchanged] ...
-
+# Schedule a work order by setting a scheduled date and marking it as "in_progress"
 @login_required
 def schedule_workorder(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
@@ -16,7 +15,7 @@ def schedule_workorder(request, job_id):
         scheduled_date = request.POST.get("scheduled_date")
         if scheduled_date:
             workorder.scheduled_date = scheduled_date
-            # Update status to indicate scheduled; adjust status as desired
+            # Update status to indicate scheduled; adjust as desired
             workorder.status = "in_progress"
             workorder.save()
             messages.success(request, "Work order scheduled successfully.")
@@ -24,7 +23,7 @@ def schedule_workorder(request, job_id):
             messages.error(request, "Please select a valid date.")
     return redirect('pending_jobs')
 
-
+# Delete a work order
 @login_required
 def workorder_delete(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
@@ -32,10 +31,10 @@ def workorder_delete(request, job_id):
         workorder.delete()
         messages.success(request, "Work order deleted successfully.")
         return redirect('workorder_list')
-    # If GET, render a confirmation page.
     context = {'workorder': workorder}
     return render(request, 'workorders/workorder_confirm_delete.html', context)
 
+# List work orders with filtering for pending, scheduled, and completed
 @login_required
 def workorder_list(request):
     query = request.GET.get('q', '')
@@ -56,6 +55,7 @@ def workorder_list(request):
     }
     return render(request, 'workorders/workorder_list.html', context)
 
+# Create a new work order along with its addresses
 @login_required
 def workorder_create(request):
     if request.method == 'POST':
@@ -75,6 +75,9 @@ def workorder_create(request):
     }
     return render(request, 'workorders/workorder_form.html', context)
 
+# Edit an existing work order; supports two actions:
+#   - Update only, redirecting to detail page.
+#   - Update and create invoice, redirecting to invoice creation page with work_order data.
 @login_required
 def workorder_edit(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
@@ -84,7 +87,6 @@ def workorder_edit(request, job_id):
         if form.is_valid() and address_formset.is_valid():
             form.save()
             address_formset.save()
-            # Check which submit button was pressed
             if 'create_invoice' in request.POST:
                 return redirect('/invoices/create/?work_order=' + str(workorder.id))
             else:
@@ -99,6 +101,7 @@ def workorder_edit(request, job_id):
     }
     return render(request, "workorders/workorder_form.html", context)
 
+# Mark a pending work order as scheduled by setting its status and scheduled date (if not already set)
 @login_required
 def mark_scheduled(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
@@ -109,6 +112,7 @@ def mark_scheduled(request, job_id):
         workorder.save()
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('workorder_list')))
 
+# Mark a work order as completed
 @login_required
 def mark_completed(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
@@ -117,17 +121,14 @@ def mark_completed(request, job_id):
         workorder.completed_at = timezone.now()
         workorder.save()
         messages.success(request, "Work order marked as completed.")
-    
-    # Redirect back to referring page
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('workorder_list')))
 
-
+# Display the details for a single work order, along with attachments and notes
 @login_required
 def workorder_detail(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
     attachments = workorder.attachments.all()
     notes = workorder.notes.all()
-
     if request.method == 'POST':
         if 'attachment_submit' in request.POST:
             attachment_form = JobAttachmentForm(request.POST, request.FILES)
@@ -146,7 +147,6 @@ def workorder_detail(request, job_id):
     else:
         attachment_form = JobAttachmentForm()
         note_form = JobNoteForm()
-
     context = {
         'job': workorder,
         'attachments': attachments,
@@ -156,6 +156,7 @@ def workorder_detail(request, job_id):
     }
     return render(request, 'workorders/workorder_detail.html', context)
 
+# View for pending jobs
 @login_required
 def pending_jobs_view(request):
     query = request.GET.get('q', '')
@@ -168,6 +169,7 @@ def pending_jobs_view(request):
     }
     return render(request, 'workorders/pending_jobs.html', context)
 
+# View for scheduled jobs
 @login_required
 def scheduled_jobs_view(request):
     query = request.GET.get('q', '')
@@ -180,6 +182,7 @@ def scheduled_jobs_view(request):
     }
     return render(request, 'workorders/scheduled_jobs.html', context)
 
+# View for completed jobs
 @login_required
 def completed_jobs_view(request):
     query = request.GET.get('q', '')
@@ -191,18 +194,3 @@ def completed_jobs_view(request):
         'query': query,
     }
     return render(request, 'workorders/completed_jobs.html', context)
-
-
-@login_required
-def schedule_workorder(request, job_id):
-    workorder = get_object_or_404(WorkOrder, id=job_id)
-    if request.method == "POST":
-        scheduled_date = request.POST.get("scheduled_date")
-        if scheduled_date:
-            workorder.scheduled_date = scheduled_date
-            workorder.status = "in_progress"  # Change status to scheduled (or in_progress)
-            workorder.save()
-            messages.success(request, "Work order scheduled successfully.")
-        else:
-            messages.error(request, "Please select a valid date.")
-    return redirect('pending_jobs')

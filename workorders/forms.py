@@ -6,7 +6,7 @@ class WorkOrderForm(forms.ModelForm):
     scheduled_date = forms.DateField(
         widget=forms.DateInput(
             attrs={
-                'class': 'form-control datepicker',  # This triggers Flatpickr
+                'class': 'form-control datepicker',  # Triggers Flatpickr
                 'placeholder': 'YYYY-MM-DD'
             }
         ),
@@ -15,12 +15,12 @@ class WorkOrderForm(forms.ModelForm):
     
     class Meta:
         model = WorkOrder
+        # Removed 'status' so it auto-updates based on scheduled_date
         fields = [
             'client',
             'job_description',
             'estimated_cost',
             'assigned_to',
-            'status',
             'scheduled_date',
         ]
 
@@ -32,7 +32,6 @@ class WorkOrderAddressForm(forms.ModelForm):
             'address': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
-# Set extra=4 to display four blank address forms by default.
 WorkOrderAddressFormSet = inlineformset_factory(
     WorkOrder, WorkOrderAddress,
     form=WorkOrderAddressForm,

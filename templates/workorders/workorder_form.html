@@ -3,7 +3,6 @@
 {% block title %}Edit Work Order{% endblock %}
 {% block content %}
 <div class="container">
-  <h2 class="mb-4">Edit Work Order #{{ job.id }}</h2>
   
   <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
@@ -38,7 +37,7 @@
     </div>
     
     <div class="d-flex">
-      <button type="submit" name="update_only" class="btn btn-success">Update Work Order</button>
+      <button type="submit" name="update_only" class="btn btn-success">Create / Update</button>
       <button type="submit" name="create_invoice" class="btn btn-danger ms-2">Update and Create Invoice</button>
     </div>
   </form>
@@ -55,10 +54,9 @@
     {% endif %}
   </div>
 </div>
-
 {% block extra_js %}
 <script>
-/* No extra JavaScript is needed on the edit page; the view will handle the redirect based on which button is pressed. */
+  // No extra JavaScript is needed on this page.
 </script>
 {% endblock %}
 {% endblock %}
