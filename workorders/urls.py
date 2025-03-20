@@ -1,5 +1,6 @@
 from django.urls import path
-from . import views, workorder_calendar_data
+from . import views
+from .views import workorder_calendar_data
 urlpatterns = [
     path('', views.workorder_list, name='workorder_list'),
     path('create/', views.workorder_create, name='workorder_create'),
