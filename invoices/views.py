@@ -86,6 +86,12 @@ def invoice_create(request):
 
     if work_order_id:
         work_order = get_object_or_404(WorkOrder, id=work_order_id)
+        # Check if an invoice already exists for this work order
+        existing_invoice = Invoice.objects.filter(work_order=work_order).first()
+        if existing_invoice:
+            messages.error(request, "An invoice has already been created for this job.")
+            return redirect('invoice_detail', invoice_id=existing_invoice.id)
+        
         pickup_addresses = work_order.addresses.filter(address_type='pickup')
         dropoff_addresses = work_order.addresses.filter(address_type='dropoff')
         initial_data = {
@@ -95,7 +101,12 @@ def invoice_create(request):
         }
 
     if request.method == 'POST':
-        form = InvoiceForm(request.POST)
+        # Copy POST data to modify it
+        data = request.POST.copy()
+        if work_order_id:
+            # Force the work_order field into POST data so the form always associates this invoice with the work order
+            data['work_order'] = work_order.id
+        form = InvoiceForm(data)
         if form.is_valid():
             invoice = form.save()
             return redirect('invoice_list')
@@ -108,6 +119,8 @@ def invoice_create(request):
         'dropoff_addresses': dropoff_addresses,
     }
     return render(request, 'invoices/invoice_form.html', context)
+
+
 
 @login_required
 def invoice_update(request, invoice_id):
