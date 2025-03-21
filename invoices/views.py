@@ -10,6 +10,17 @@ from workorders.models import WorkOrder
 from django.utils import timezone
 from django.http import JsonResponse
 
+
+@login_required
+def invoice_delete(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    if request.method == "POST":
+        invoice.delete()
+        messages.success(request, "Invoice deleted successfully.")
+        return redirect('invoice_list')
+    return render(request, 'invoices/invoice_confirm_delete.html', {'invoice': invoice})
+
+
 def invoice_calendar_data(request):
     """Fetch invoices for the calendar (unpaid, overdue, paid)."""
     invoices = Invoice.objects.all()

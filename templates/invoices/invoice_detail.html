@@ -67,7 +67,16 @@
       <button class="btn btn-primary" onclick="window.print();">Print Invoice</button>
     </div>
   </div>
-  <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">Back to Invoice Overview</a>
-  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+  
+  <!-- Navigation Row -->
+  <div class="mt-4 d-flex justify-content-between">
+    <div>
+      <a href="{% url 'invoice_list' %}" class="btn btn-secondary">Back to Invoice Overview</a>
+      <a href="{% url 'home' %}" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+    <div>
+      <a href="{% url 'invoice_delete' invoice.id %}" class="btn btn-danger">Delete Invoice</a>
+    </div>
+  </div>
 </div>
 {% endblock %}
