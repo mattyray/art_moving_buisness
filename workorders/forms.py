@@ -48,7 +48,11 @@ class JobAttachmentForm(forms.ModelForm):
         fields = ['file']
 
 
+
 class JobNoteForm(forms.ModelForm):
+    note = forms.CharField(required=False, widget=forms.Textarea, label="Note")
+
     class Meta:
         model = JobNote
         fields = ['note']
+
