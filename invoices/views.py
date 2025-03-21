@@ -21,6 +21,7 @@ def invoice_delete(request, invoice_id):
     return render(request, 'invoices/invoice_confirm_delete.html', {'invoice': invoice})
 
 
+@login_required
 def invoice_calendar_data(request):
     """Fetch invoices for the calendar (unpaid, overdue, paid)."""
     invoices = Invoice.objects.all()
@@ -44,11 +45,10 @@ def invoice_calendar_data(request):
         elif invoice.status == "paid":
             events.append({
                 "title": f"Paid Invoice: {invoice.client.name}",
-                "start": invoice.paid_date.isoformat() if invoice.paid_date else "",
+                "start": invoice.due_date.isoformat(),  # Use due_date as a fallback
                 "color": "green",
                 "url": f"/invoices/{invoice.id}/",
             })
-
     return JsonResponse(events, safe=False)
 
 
