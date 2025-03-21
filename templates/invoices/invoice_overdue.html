@@ -44,6 +44,10 @@
             <td>
               <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
               <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+              <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-success">Mark as Paid</button>
+              </form>
             </td>
           </tr>
           {% endfor %}
