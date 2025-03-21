@@ -39,10 +39,14 @@ WorkOrderAddressFormSet = inlineformset_factory(
     can_delete=True
 )
 
+
 class JobAttachmentForm(forms.ModelForm):
+    file = forms.FileField(required=False)  # Make file upload optional
+
     class Meta:
         model = JobAttachment
         fields = ['file']
+
 
 class JobNoteForm(forms.ModelForm):
     class Meta:
