@@ -1,52 +1,41 @@
 {% extends "base.html" %}
 {% block title %}Dashboard - Art Moving Business{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-  <!-- Work Orders Card -->
-  <div class="col-md-3">
-    <div class="card text-white bg-info mb-3">
-      <div class="card-header">Work Orders</div>
-      <div class="card-body">
-        <h5 class="card-title">View All</h5>
-        <p class="card-text">Manage work orders and track job progress.</p>
-        <a href="{% url 'workorder_list' %}" class="btn btn-light">Go to Work Orders</a>
-      </div>
+<div class="container my-4">
+  <div class="row justify-content-center">
+    <!-- Work Orders Button -->
+    <div class="col-md-3 col-12 text-center mb-3">
+      <a href="{% url 'workorder_list' %}" class="btn btn-info btn-lg w-100">
+        Work Orders<br>
+        <small>Manage and track job progress</small>
+      </a>
+    </div>
+    <!-- Clients Button -->
+    <div class="col-md-3 col-12 text-center mb-3">
+      <a href="{% url 'client_list' %}" class="btn btn-warning btn-lg w-100">
+        Clients<br>
+        <small>View client database</small>
+      </a>
+    </div>
+    <!-- Invoicing Button -->
+    <div class="col-md-3 col-12 text-center mb-3">
+      <a href="{% url 'invoice_list' %}" class="btn btn-danger btn-lg w-100">
+        Invoicing<br>
+        <small>Generate and review invoices</small>
+      </a>
     </div>
   </div>
-  <!-- Clients Card -->
-  <div class="col-md-3">
-    <div class="card text-white bg-warning mb-3">
-      <div class="card-header">Clients</div>
-      <div class="card-body">
-        <h5 class="card-title">View Clients</h5>
-        <p class="card-text">Client database and details.</p>
-        <a href="{% url 'client_list' %}" class="btn btn-light">Go to Clients</a>
-      </div>
+
+  <!-- Calendar Section -->
+  <div class="card mt-4">
+    <div class="card-header">
+      Calendar
     </div>
-  </div>
-  <!-- Invoicing Card -->
-  <div class="col-md-3">
-    <div class="card text-white bg-danger mb-3">
-      <div class="card-header">Invoicing</div>
-      <div class="card-body">
-        <h5 class="card-title">Manage Invoices</h5>
-        <p class="card-text">Generate and review invoices.</p>
-        <a href="{% url 'invoice_list' %}" class="btn btn-light">Go to Invoicing</a>
-      </div>
+    <div class="card-body">
+      <div id="calendar"></div>
     </div>
   </div>
 </div>
-
-<!-- Calendar Section -->
-<div class="card mt-4">
-  <div class="card-header">
-    Calendar
-  </div>
-  <div class="card-body">
-    <div id="calendar"></div>
-  </div>
-</div>
-
 {% endblock %}
 
 {% block extra_js %}
@@ -60,20 +49,16 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     var calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: "dayGridMonth",
-        height: 500,  // Set a fixed height for the calendar container
+        height: 500,
         events: async function(fetchInfo, successCallback, failureCallback) {
-            console.log("Fetching events for calendar...");
             try {
                 let workordersResponse = await fetch("/workorders/calendar-data/workorders/");
-                console.log("Workorders response status:", workordersResponse.status);
                 let workorders = await workordersResponse.json();
                 
                 let invoicesResponse = await fetch("/invoices/calendar-data/invoices/");
-                console.log("Invoices response status:", invoicesResponse.status);
                 let invoices = await invoicesResponse.json();
                 
                 let events = [...workorders, ...invoices];
-                console.log("Fetched events:", events);
                 successCallback(events);
             } catch (error) {
                 console.error("Calendar fetch error:", error);
