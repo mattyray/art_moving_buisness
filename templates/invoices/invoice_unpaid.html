@@ -31,6 +31,7 @@
             <th>Client</th>
             <th>Amount</th>
             <th>Date Created</th>
+            <th>Due Date</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -40,7 +41,8 @@
             <td>{{ inv.invoice_number }}</td>
             <td>{{ inv.client.name }}</td>
             <td>${{ inv.amount }}</td>
-            <td>{{ inv.date_created|date:"Y-m-d" }}</td>
+            <td>{{ inv.date_created|date:"m-d-y" }}</td>
+            <td>{{ inv.due_date|date:"m-d-y" }}</td>
             <td>
               <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
               <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
