@@ -5,7 +5,7 @@
 <div class="container">
   <!-- Work Order Information Card -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #00bcd4; color: white;">
       <h2>Work Order #{{ job.id }} Details</h2>
       <div>
         <a href="{% url 'workorder_edit' job.id %}" class="btn btn-warning btn-sm me-2">Edit Work Order</a>
@@ -46,7 +46,7 @@
   
   <!-- Client Information Card -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header">
+    <div class="card-header" style="background-color: #03a9f4; color: white;">
       <h3>Client Information</h3>
     </div>
     <div class="card-body">
@@ -59,7 +59,7 @@
   
   <!-- Attachments Card -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header">
+    <div class="card-header" style="background-color: #388e3c; color: white;">
       <h3>Attachments</h3>
     </div>
     <div class="card-body">
@@ -87,7 +87,7 @@
   
   <!-- Notes Card -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header">
+    <div class="card-header" style="background-color: #8bc34a; color: white;">
       <h3>Notes</h3>
     </div>
     <div class="card-body">
