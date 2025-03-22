@@ -19,21 +19,21 @@ def workorder_calendar_data(request):
                 "title": f"Pending: {wo.client.name}",
                 "start": wo.created_at.date().isoformat(),
                 "color": "gray",
-                "url": f"/workorders/{wo.id}/",
+                "url": f"/workorders/detail/{wo.id}/",
             })
         elif wo.status == "in_progress":
             events.append({
                 "title": f"Scheduled: {wo.client.name}",
                 "start": wo.scheduled_date.isoformat() if wo.scheduled_date else "",
                 "color": "blue",
-                "url": f"/workorders/{wo.id}/",
+                "url": f"/workorders/detail/{wo.id}/",
             })
         elif wo.status == "completed":
             events.append({
                 "title": f"Completed: {wo.client.name}",
                 "start": wo.completed_at.date().isoformat(),
                 "color": "green",
-                "url": f"/workorders/{wo.id}/",
+                "url": f"/workorders/detail/{wo.id}/",
             })
 
     return JsonResponse(events, safe=False)
@@ -86,7 +86,7 @@ def workorder_list(request):
     }
     return render(request, 'workorders/workorder_list.html', context)
 
-#@login_required
+@login_required
 def workorder_create(request):
     if request.method == 'POST':
         form = WorkOrderForm(request.POST)
