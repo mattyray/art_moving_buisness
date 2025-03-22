@@ -12,14 +12,6 @@
     <a href="{% url 'workorder_create' %}" class="btn btn-outline-primary">New Work Order</a>
   </div>
   
-  <!-- Search Bar -->
-  <form method="get" class="mb-4">
-    <div class="input-group">
-      <input type="text" name="q" class="form-control" placeholder="Search by client name..." value="{{ query }}">
-      <button type="submit" class="btn btn-primary">Search</button>
-    </div>
-  </form>
-  
   <!-- Pending Jobs Section -->
   <div class="card mb-4">
     <div class="card-header bg-secondary text-white">
@@ -43,7 +35,7 @@
             <td>{{ job.id }}</td>
             <td>{{ job.client.name }}</td>
             <td>{{ job.job_description|truncatewords:10 }}</td>
-            <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
+            <td>{{ job.updated_at|date:"m-d-y" }}</td>
             <td>
               <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
               <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
@@ -74,7 +66,7 @@
             <th>ID</th>
             <th>Client</th>
             <th>Description</th>
-            <th>Last Edited</th>
+            <th>Scheduled Date</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -84,7 +76,7 @@
             <td>{{ job.id }}</td>
             <td>{{ job.client.name }}</td>
             <td>{{ job.job_description|truncatewords:10 }}</td>
-            <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
+            <td>{{ job.scheduled_date|date:"m-d-y" }}</td>
             <td>
               <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
               <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
@@ -116,7 +108,7 @@
             <th>ID</th>
             <th>Client</th>
             <th>Description</th>
-            <th>Last Edited</th>
+            <th>Completed Date</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -126,12 +118,13 @@
             <td>{{ job.id }}</td>
             <td>{{ job.client.name }}</td>
             <td>{{ job.job_description|truncatewords:10 }}</td>
-            <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
+            <td>{{ job.completed_at|date:"m-d-y" }}</td>
             <td>
               <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
               <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
-              <!-- Create Invoice Button with confirmation dialog -->
-              <button type="button" class="btn btn-sm btn-primary" onclick="createInvoice({{ job.id }})">Create Invoice</button>
+              <button type="button" class="btn btn-sm btn-primary" onclick="createInvoice({{ job.id }})">
+                Create Invoice
+              </button>
             </td>
           </tr>
           {% endfor %}
@@ -156,7 +149,7 @@ document.addEventListener("DOMContentLoaded", function() {
   // Set the action URL for the schedule modal based on the job ID
   var scheduleModal = document.getElementById('scheduleModal');
   scheduleModal.addEventListener('show.bs.modal', function (event) {
-    var button = event.relatedTarget; // Button that triggered the modal
+    var button = event.relatedTarget;
     var jobId = button.getAttribute('data-job-id');
     var form = document.getElementById('scheduleForm');
     form.action = '/workorders/schedule/' + jobId + '/';
@@ -167,10 +160,8 @@ document.addEventListener("DOMContentLoaded", function() {
 function createInvoice(jobId) {
   var review = confirm("Would you like to review and edit the details of this job before creating an invoice?");
   if (review) {
-    // Redirect to the edit details page for the job
     window.location.href = "/workorders/edit/" + jobId + "/";
   } else {
-    // Redirect directly to the invoice creation page with work order id as a query parameter
     window.location.href = "/invoices/create/?work_order=" + jobId;
   }
 }
@@ -189,7 +180,7 @@ function createInvoice(jobId) {
         </div>
         <div class="modal-body">
           <p>Select a scheduled date:</p>
-          <input type="text" name="scheduled_date" class="form-control datepicker" placeholder="YYYY-MM-DD" required>
+          <input type="text" name="scheduled_date" class="form-control datepicker" placeholder="Y-m-d" required>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
