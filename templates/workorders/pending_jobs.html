@@ -40,7 +40,7 @@
             <td>{{ job.id }}</td>
             <td>{{ job.client.name }}</td>
             <td>{{ job.job_description|truncatewords:10 }}</td>
-            <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
+            <td>{{ job.updated_at|date:"m-d-y" }}</td>
             <td>
               <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
               <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
@@ -61,7 +61,6 @@
 
 <!-- Back to Dashboard Button -->
 <a href="{% url 'workorder_list' %}" class="btn btn-secondary mt-3">Back to Work Orders</a>
-
 <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
 
 <!-- Schedule Modal -->
@@ -76,7 +75,7 @@
         </div>
         <div class="modal-body">
           <p>Select a scheduled date:</p>
-          <input type="text" name="scheduled_date" class="form-control datepicker" placeholder="YYYY-MM-DD" required>
+          <input type="text" name="scheduled_date" class="form-control datepicker" placeholder="Y-m-d" required>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -91,7 +90,7 @@
 <script>
 document.addEventListener("DOMContentLoaded", function() {
   flatpickr(".datepicker", { dateFormat: "Y-m-d" });
-
+  
   var scheduleModal = document.getElementById('scheduleModal');
   scheduleModal.addEventListener('show.bs.modal', function (event) {
     var button = event.relatedTarget;
