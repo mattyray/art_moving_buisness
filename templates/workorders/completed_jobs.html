@@ -30,7 +30,7 @@
             <th>ID</th>
             <th>Client</th>
             <th>Description</th>
-            <th>Last Edited</th>
+            <th>Completed Date</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -40,14 +40,11 @@
             <td>{{ job.id }}</td>
             <td>{{ job.client.name }}</td>
             <td>{{ job.job_description|truncatewords:10 }}</td>
-            <td>{{ job.updated_at|date:"Y-m-d H:i" }}</td>
+            <td>{{ job.completed_at|date:"m-d-y" }}</td>
             <td>
               <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
               <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
-              <!-- Create Invoice Button -->
-              <button type="button" class="btn btn-sm btn-primary" onclick="createInvoice({{ job.id }})">
-                Create Invoice
-              </button>
+              <button type="button" class="btn btn-sm btn-primary" onclick="createInvoice({{ job.id }})">Create Invoice</button>
             </td>
           </tr>
           {% endfor %}
@@ -62,19 +59,17 @@
   <a href="{% url 'workorder_list' %}" class="btn btn-secondary mt-3">Back to Work Orders</a>
   <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
 </div>
-{% endblock %}
 
 {% block extra_js %}
 <script>
 function createInvoice(jobId) {
   var review = confirm("Would you like to review and edit the details of this job before creating an invoice?");
   if (review) {
-    // Redirect to the work order edit page
     window.location.href = "/workorders/edit/" + jobId + "/";
   } else {
-    // Redirect directly to the invoice creation page with the work order id as a query parameter
     window.location.href = "/invoices/create/?work_order=" + jobId;
   }
 }
 </script>
+{% endblock %}
 {% endblock %}
