@@ -20,14 +20,12 @@
     <a href="{% url 'invoice_create' %}" class="btn btn-danger">New Invoice</a>
   </div>
   
-  <!-- Unified Card with Latest Edited Invoices -->
-  <div class="card shadow-sm">
+  <!-- Unpaid Invoices Card -->
+  <div class="card shadow-sm mb-4">
     <div class="card-header">
-      <h4>Latest Edited Invoices</h4>
+      <h4>Unpaid Invoices</h4>
     </div>
     <div class="card-body">
-      <!-- Unpaid Invoices Section -->
-      <h5>Unpaid Invoices</h5>
       {% if unpaid_invoices %}
       <table class="table table-sm">
         <thead>
@@ -46,12 +44,11 @@
             <td>{{ inv.invoice_number }}</td>
             <td>{{ inv.client.name }}</td>
             <td>${{ inv.amount }}</td>
-            <td>{{ inv.date_created|date:"Y-m-d" }}</td>
-            <td>{{ inv.due_date|date:"Y-m-d" }}</td>
+            <td>{{ inv.date_created|date:"m-d-y" }}</td>
+            <td>{{ inv.due_date|date:"m-d-y" }}</td>
             <td>
               <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
               <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
-              <!-- Mark as Paid Button -->
               <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" style="display:inline;">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-success">Mark as Paid</button>
@@ -64,9 +61,15 @@
       {% else %}
       <p>No unpaid invoices found.</p>
       {% endif %}
-      <hr>
-      <!-- Paid Invoices Section -->
-      <h5>Paid Invoices</h5>
+    </div>
+  </div>
+  
+  <!-- Paid Invoices Card -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header">
+      <h4>Paid Invoices</h4>
+    </div>
+    <div class="card-body">
       {% if paid_invoices %}
       <table class="table table-sm">
         <thead>
@@ -85,8 +88,8 @@
             <td>{{ inv.invoice_number }}</td>
             <td>{{ inv.client.name }}</td>
             <td>${{ inv.amount }}</td>
-            <td>{{ inv.date_created|date:"Y-m-d" }}</td>
-            <td>{{ inv.due_date|date:"Y-m-d" }}</td>
+            <td>{{ inv.date_created|date:"m-d-y" }}</td>
+            <td>{{ inv.due_date|date:"m-d-y" }}</td>
             <td>
               <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
               <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
@@ -98,9 +101,15 @@
       {% else %}
       <p>No paid invoices found.</p>
       {% endif %}
-      <hr>
-      <!-- Overdue Invoices Section -->
-      <h5>Overdue Invoices</h5>
+    </div>
+  </div>
+  
+  <!-- Overdue Invoices Card -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header">
+      <h4>Overdue Invoices</h4>
+    </div>
+    <div class="card-body">
       {% if overdue_invoices %}
       <table class="table table-sm">
         <thead>
@@ -119,12 +128,11 @@
             <td>{{ inv.invoice_number }}</td>
             <td>{{ inv.client.name }}</td>
             <td>${{ inv.amount }}</td>
-            <td>{{ inv.date_created|date:"Y-m-d" }}</td>
-            <td>{{ inv.due_date|date:"Y-m-d" }}</td>
+            <td>{{ inv.date_created|date:"m-d-y" }}</td>
+            <td>{{ inv.due_date|date:"m-d-y" }}</td>
             <td>
               <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
               <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
-              <!-- Set Paid Date Button -->
               <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#dueDateModal" data-invoice-id="{{ inv.id }}">
                 Set Paid Date
               </button>
@@ -138,6 +146,7 @@
       {% endif %}
     </div>
   </div>
+  
   <!-- Back Navigation -->
   <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
 </div>
@@ -154,7 +163,7 @@
         </div>
         <div class="modal-body">
           <p>Select the paid date:</p>
-          <input type="text" name="new_due_date" class="form-control datepicker" placeholder="YYYY-MM-DD" required>
+          <input type="text" name="new_due_date" class="form-control datepicker" placeholder="m-d-y" required>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -168,7 +177,7 @@
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-  // Initialize Flatpickr for date inputs in the modal
+  // Initialize Flatpickr for date inputs in the modal (Flatpickr remains configured as before)
   flatpickr(".datepicker", { dateFormat: "Y-m-d" });
   
   // Set the action URL for the due date modal based on the invoice ID
