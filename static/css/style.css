@@ -46,8 +46,8 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Increase the font size and weight of navbar links */
 .navbar .nav-link {
-  font-size: 18px !important;
-  font-weight: 500 !important;
+  font-size: 20px !important;
+  font-weight: 700 !important;  /* Increased from 500 to 700 for a thicker font */
 }
 
 /* Enhance navbar brand styling */
