@@ -35,3 +35,29 @@ h1, h2, h3, h4, h5, h6 {
 .card-header h6 {
   color: white !important;
 }
+
+/* ===== New Navigation Bar Styling ===== */
+
+/* Adjust navbar padding to modify thickness */
+.navbar {
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+}
+
+/* Increase the font size and weight of navbar links */
+.navbar .nav-link {
+  font-size: 18px !important;
+  font-weight: 500 !important;
+}
+
+/* Enhance navbar brand styling */
+.navbar-brand {
+  font-size: 1.5rem !important;
+  font-weight: 600 !important;
+}
+
+/* Adjust nav-icon size and spacing (if needed) */
+.nav-icon {
+  height: 60px !important;
+  margin-right: 10px !important;
+}

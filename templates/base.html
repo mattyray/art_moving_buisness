@@ -3,6 +3,7 @@
 <html lang="en">
 <head>
 
+  <!-- Favicon remains unchanged -->
   <link rel="icon" type="image/png" sizes="64x64" href="{% static 'images/icon-64x64.png' %}">
 
   <!-- FullCalendar v5 CSS & JS -->
@@ -38,6 +39,12 @@
       background-color: transparent;
       border: none;
     }
+    
+    /* Custom class for the nav icon */
+    .nav-icon {
+      height: 60px; /* Adjust as needed */
+      margin-right: 10px;
+    }
   </style>
   {% endblock %}
   <!-- Flatpickr CSS -->
@@ -48,9 +55,9 @@
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container">
       <div class="d-flex align-items-center">
-        <!-- Icon to the left -->
+        <!-- Navigation Icon (new, larger icon) placed to the left of the Menu button -->
         <a href="{% url 'home' %}">
-          <img src="{% static 'images/icon-64x64.png' %}" alt="Site Icon" style="height: 40px; margin-right: 10px;">
+          <img src="{% static 'images/nav-icon-128x128.png' %}" alt="Site Icon" class="nav-icon">
         </a>
         <!-- Offcanvas Toggle Button -->
         <a class="btn btn-outline-light me-2" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSidebar" role="button" aria-controls="offcanvasSidebar">
