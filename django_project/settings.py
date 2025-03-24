@@ -19,7 +19,7 @@ DEBUG = env.bool("DJANGO_DEBUG", default=False)
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=[
     "localhost",
     "127.0.0.1",
-    "art-moving-buisness-95e6113078cd.herokuapp.com",
+    "art-moving-buisness-0a734245a61f.herokuapp.com",
     # "your-custom-domain.com",
     # "www.your-custom-domain.com"
 ])
