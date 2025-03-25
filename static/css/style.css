@@ -1,31 +1,30 @@
 
 /* Base typography */
-body {
+/*body {
   font-family: 'Roboto', sans-serif !important;
   font-size: 16px !important;
   font-weight: 400 !important;
   line-height: 1.6 !important;
   color: #333 !important;
 }
-
+*/
 /* Headings */
-h1, h2, h3, h4, h5, h6 {
+/*h1, h2, h3, h4, h5, h6 {
   font-family: 'Roboto', sans-serif !important;
-  font-weight: 500 !important;
-  color: #222 !important;
+  color: #ffffff !important;
 }
 
-/* Improve table readability */
+/* 
 .table {
   font-size: 0.9rem !important;
 }
 
-/* Optional: Increase padding and spacing for cards and content */
+/* Optional: Increase padding and spacing for cards and cont
 .card, .container {
   padding: 1.5rem !important;
 }
 
-/* Override heading color in card headers */
+/* Override heading color in card headers 
 .card-header h1,
 .card-header h2,
 .card-header h3,
@@ -37,25 +36,23 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ===== New Navigation Bar Styling ===== */
 
-/* Adjust navbar padding to modify thickness */
+/* Adjust navbar padding to modify thickness 
 .navbar {
   padding-top: 0.75rem !important;
   padding-bottom: 0.75rem !important;
 }
 
-/* Increase the font size and weight of navbar links */
+/* Increase the font size and weight of navbar links 
 .navbar .nav-link {
   font-size: 20px !important;
-  font-weight: 700 !important;  /* Increased from 500 to 700 for a thicker font */
 }
 
-/* Enhance navbar brand styling */
+/* Enhance navbar brand styling 
 .navbar-brand {
   font-size: 1.5rem !important;
-  font-weight: 600 !important;
 }
 
-/* Adjust nav-icon size and spacing (if needed) */
+/* Adjust nav-icon size and spacing (if needed) 
 .nav-icon {
   height: 60px !important;
   margin-right: 10px !important;
