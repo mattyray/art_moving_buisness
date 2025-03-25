@@ -64,8 +64,8 @@
         <a class="btn btn-outline-light me-2" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSidebar" role="button" aria-controls="offcanvasSidebar">
           Menu
         </a>
-        <!-- Brand -->
-        <a class="navbar-brand" href="{% url 'home' %}">EJ Art Mover</a>
+        <!-- Brand with thicker text -->
+        <a class="navbar-brand fw-bold" href="{% url 'home' %}">EJ Art Mover</a>
       </div>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
               aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -73,14 +73,14 @@
       </button>
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ms-auto">
-          <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Dashboard</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'workorder_list' %}">Work Orders</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'client_list' %}">Clients</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'invoice_list' %}">Invoices</a></li>
+          <li class="nav-item"><a class="nav-link fw-bold" href="{% url 'home' %}">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link fw-bold" href="{% url 'workorder_list' %}">Work Orders</a></li>
+          <li class="nav-item"><a class="nav-link fw-bold" href="{% url 'client_list' %}">Clients</a></li>
+          <li class="nav-item"><a class="nav-link fw-bold" href="{% url 'invoice_list' %}">Invoices</a></li>
           {% if user.is_authenticated %}
-            <li class="nav-item"><a class="nav-link" href="{% url 'logout' %}">Logout</a></li>
+            <li class="nav-item"><a class="nav-link fw-bold" href="{% url 'logout' %}">Logout</a></li>
           {% else %}
-            <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Login</a></li>
+            <li class="nav-item"><a class="nav-link fw-bold" href="{% url 'login' %}">Login</a></li>
           {% endif %}
         </ul>
       </div>
