@@ -4,13 +4,13 @@ import pandas as pd
 import os
 
 class Command(BaseCommand):
-    help = "Import clients from Excel file"
+    help = "Import clients from CSV file"
 
     def handle(self, *args, **kwargs):
-        file_path = os.path.join(os.path.dirname(__file__), 'EJ Art Mover LLC_Customer Contact List.xlsx')
+        file_path = os.path.join(os.path.dirname(__file__), 'EJ Art Mover LLC_Customer Contact List.csv')
 
         try:
-            df = pd.read_excel(file_path)
+            df = pd.read_csv(file_path)
 
             created_count = 0
             for _, row in df.iterrows():
