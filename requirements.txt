@@ -7,3 +7,4 @@ crispy-bootstrap5
 whitenoise
 gunicorn
 django-environ 
+pandas
