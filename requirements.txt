@@ -8,3 +8,4 @@ whitenoise
 gunicorn
 django-environ 
 pandas
+django-import-export
