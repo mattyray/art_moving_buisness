@@ -14,6 +14,10 @@ urlpatterns = [
     path("workorders/", include("workorders.urls")),
     path("invoices/", include("invoices.urls")),
 
+]
 
-             # Home and other pages
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+
