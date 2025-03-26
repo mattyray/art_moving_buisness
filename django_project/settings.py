@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     # Third-party packages
     'crispy_forms',
     'crispy_bootstrap5',
+    'import_export',
+
 ]
 
 # ✅ Middleware
@@ -145,3 +147,5 @@ STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 ]
+
+IMPORT_EXPORT_USE_TRANSACTIONS = True
