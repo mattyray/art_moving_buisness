@@ -10,7 +10,8 @@ class Command(BaseCommand):
         csv_path = os.path.join(os.path.dirname(__file__), "clients.csv")
 
         try:
-            df = pd.read_csv(csv_path, encoding='utf-8', errors='ignore')
+            with open(csv_path, mode='rb') as raw_file:
+                df = pd.read_csv(raw_file, encoding='utf-8', errors='replace')
 
             created_count = 0
             for _, row in df.iterrows():
