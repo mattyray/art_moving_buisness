@@ -1,21 +1,30 @@
 from django import forms
 from django.forms import inlineformset_factory
+from clients.models import Client
 from .models import WorkOrder, WorkOrderAddress, JobAttachment, JobNote
 
 class WorkOrderForm(forms.ModelForm):
+    client = forms.ModelChoiceField(
+        queryset=Client.objects.all(),
+        widget=forms.Select(attrs={
+            'class': 'form-control select2',
+            'data-placeholder': 'Search or select a client'
+        }),
+        label="Client"
+    )
+
     scheduled_date = forms.DateField(
         widget=forms.DateInput(
             attrs={
-                'class': 'form-control datepicker',  # Triggers Flatpickr
+                'class': 'form-control datepicker',
                 'placeholder': 'YYYY-MM-DD'
             }
         ),
         required=False
     )
-    
+
     class Meta:
         model = WorkOrder
-        # Removed 'status' so it auto-updates based on scheduled_date
         fields = [
             'client',
             'job_description',
@@ -23,6 +32,7 @@ class WorkOrderForm(forms.ModelForm):
             'assigned_to',
             'scheduled_date',
         ]
+
 
 class WorkOrderAddressForm(forms.ModelForm):
     class Meta:
@@ -41,12 +51,11 @@ WorkOrderAddressFormSet = inlineformset_factory(
 
 
 class JobAttachmentForm(forms.ModelForm):
-    file = forms.FileField(required=False)  # Make file upload optional
+    file = forms.FileField(required=False)
 
     class Meta:
         model = JobAttachment
         fields = ['file']
-
 
 
 class JobNoteForm(forms.ModelForm):
@@ -55,4 +64,3 @@ class JobNoteForm(forms.ModelForm):
     class Meta:
         model = JobNote
         fields = ['note']
-
