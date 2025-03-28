@@ -5,21 +5,21 @@
   <div class="row justify-content-center">
     <!-- Work Orders Button (now white) -->
     <div class="col-md-3 col-12 text-center mb-3">
-      <a href="{% url 'workorder_list' %}" class="btn btn-light btn-lg w-100">
+      <a href="{% url 'workorder_list' %}" class="btn btn-light btn-lg w-100 shadow-sm border">
         Work Orders<br>
         <small>Manage and track job progress</small>
       </a>
     </div>
     <!-- Clients Button (now white) -->
     <div class="col-md-3 col-12 text-center mb-3">
-      <a href="{% url 'client_list' %}" class="btn btn-light btn-lg w-100">
+      <a href="{% url 'client_list' %}" class="btn btn-light btn-lg w-100 shadow-sm border">
         Clients<br>
         <small>View client database</small>
       </a>
     </div>
     <!-- Invoicing Button (now white) -->
     <div class="col-md-3 col-12 text-center mb-3">
-      <a href="{% url 'invoice_list' %}" class="btn btn-light btn-lg w-100">
+      <a href="{% url 'invoice_list' %}" class="btn btn-light btn-lg w-100 shadow-sm border">
         Invoicing<br>
         <small>Generate and review invoices</small>
       </a>
@@ -27,8 +27,8 @@
   </div>
 
   <!-- Calendar Section -->
-  <div class="card mt-4">
-    <div class="card-header">
+  <div class="card mt-4 shadow-sm">
+    <div class="card-header fw-bold">
       Calendar
     </div>
     <div class="card-body">
@@ -41,25 +41,24 @@
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    console.log("Initializing FullCalendar...");
     var calendarEl = document.getElementById("calendar");
     if (!calendarEl) {
         console.error("Calendar element not found!");
         return;
     }
+
     var calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: "dayGridMonth",
-        // Set height to 'auto' so it expands fully
         height: 'auto',
         events: async function(fetchInfo, successCallback, failureCallback) {
             try {
-                let workordersResponse = await fetch("/workorders/calendar-data/workorders/");
-                let workorders = await workordersResponse.json();
-                
-                let invoicesResponse = await fetch("/invoices/calendar-data/invoices/");
-                let invoices = await invoicesResponse.json();
-                
-                let events = [...workorders, ...invoices];
+                const workordersResponse = await fetch("/workorders/calendar-data/workorders/");
+                const workorders = await workordersResponse.json();
+
+                const invoicesResponse = await fetch("/invoices/calendar-data/invoices/");
+                const invoices = await invoicesResponse.json();
+
+                const events = [...workorders, ...invoices];
                 successCallback(events);
             } catch (error) {
                 console.error("Calendar fetch error:", error);
@@ -67,12 +66,14 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         },
         eventClick: function(info) {
-            window.location.href = info.event.url;
-            info.jsEvent.preventDefault();
+            if (info.event.url) {
+                window.location.href = info.event.url;
+                info.jsEvent.preventDefault();
+            }
         }
     });
+
     calendar.render();
-    console.log("FullCalendar rendered.");
 });
 </script>
 {% endblock %}
