@@ -38,8 +38,7 @@
             <td>{{ job.updated_at|date:"m-d-y" }}</td>
             <td>
               <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
-              <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
-              <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-success">Schedule</a>
+              <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit / Schedule</a>
             </td>
           </tr>
           {% endfor %}

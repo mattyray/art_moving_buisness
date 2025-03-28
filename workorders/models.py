@@ -16,7 +16,7 @@ class WorkOrder(models.Model):
     completed_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     def __str__(self):
         return f"WorkOrder #{self.id} for {self.client.name}"
 
@@ -33,9 +33,6 @@ class WorkOrder(models.Model):
         else:
             self.status = 'pending'
 
-    def save(self, *args, **kwargs):
-        self.update_status()
-        super().save(*args, **kwargs)
 
 class WorkOrderAddress(models.Model):
     ADDRESS_TYPE_CHOICES = [
@@ -50,6 +47,7 @@ class WorkOrderAddress(models.Model):
     def __str__(self):
         return f"{self.get_address_type_display()} Address for WorkOrder #{self.work_order.id}"
 
+
 class JobAttachment(models.Model):
     work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='attachments')
     file = models.FileField(upload_to='job_attachments/')
@@ -57,6 +55,7 @@ class JobAttachment(models.Model):
 
     def __str__(self):
         return f"Attachment {self.id} for WorkOrder {self.work_order.id}"
+
 
 class JobNote(models.Model):
     work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='notes')
