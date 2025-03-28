@@ -6,39 +6,41 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import WorkOrder, WorkOrderAddress, JobAttachment, JobNote
 from .forms import WorkOrderForm, WorkOrderAddressFormSet, JobAttachmentForm, JobNoteForm
-from django.http import JsonResponse
+from django.db.models import Q
+
 
 def workorder_calendar_data(request):
-    """Fetch work orders for the calendar (pending, scheduled, completed)."""
-    work_orders = WorkOrder.objects.all()
+    """Updated to return scheduled pickups/dropoffs and pending work orders."""
     events = []
 
-    for wo in work_orders:
-        if wo.status == "pending":
-            events.append({
-                "title": f"Pending: {wo.client.name}",
-                "start": wo.created_at.date().isoformat(),
-                "color": "gray",
-                "url": f"/workorders/detail/{wo.id}/",
-            })
-        elif wo.status == "in_progress":
-            events.append({
-                "title": f"Scheduled: {wo.client.name}",
-                "start": wo.scheduled_date.isoformat() if wo.scheduled_date else "",
-                "color": "blue",
-                "url": f"/workorders/detail/{wo.id}/",
-            })
-        elif wo.status == "completed":
-            events.append({
-                "title": f"Completed: {wo.client.name}",
-                "start": wo.completed_at.date().isoformat(),
-                "color": "green",
-                "url": f"/workorders/detail/{wo.id}/",
-            })
+    # Include scheduled pickups/dropoffs
+    scheduled_addresses = WorkOrderAddress.objects.filter(scheduled_date__isnull=False)
+    for addr in scheduled_addresses:
+        label = "Pickup" if addr.address_type == "pickup" else "Dropoff"
+        events.append({
+            "title": f"{label}: {addr.work_order.client.name}",
+            "start": addr.scheduled_date.isoformat(),
+            "color": "#4a90e2" if label == "Pickup" else "#f39c12",
+            "url": f"/workorders/detail/{addr.work_order.id}/",
+        })
+
+    # Include pending work orders (no address has scheduled_date)
+    pending_orders = WorkOrder.objects.exclude(
+        addresses__scheduled_date__isnull=False
+    )
+    for wo in pending_orders:
+        events.append({
+            "title": f"Pending: {wo.client.name}",
+            "start": wo.created_at.date().isoformat(),
+            "color": "gray",
+            "url": f"/workorders/detail/{wo.id}/",
+        })
 
     return JsonResponse(events, safe=False)
 
-# Schedule a work order by setting a scheduled date and marking it as "in_progress"
+
+# All other views remain unchanged
+
 @login_required
 def schedule_workorder(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
@@ -46,7 +48,6 @@ def schedule_workorder(request, job_id):
         scheduled_date = request.POST.get("scheduled_date")
         if scheduled_date:
             workorder.scheduled_date = scheduled_date
-            # Update status to indicate scheduled; adjust as desired
             workorder.status = "in_progress"
             workorder.save()
             messages.success(request, "Work order scheduled successfully.")
@@ -54,7 +55,7 @@ def schedule_workorder(request, job_id):
             messages.error(request, "Please select a valid date.")
     return redirect('pending_jobs')
 
-# Delete a work order
+
 @login_required
 def workorder_delete(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
@@ -65,7 +66,7 @@ def workorder_delete(request, job_id):
     context = {'workorder': workorder}
     return render(request, 'workorders/workorder_confirm_delete.html', context)
 
-# List work orders with filtering for pending, scheduled, and completed
+
 @login_required
 def workorder_list(request):
     query = request.GET.get('q', '')
@@ -85,6 +86,7 @@ def workorder_list(request):
         'completed_jobs': completed_jobs.order_by('-updated_at')[:3],
     }
     return render(request, 'workorders/workorder_list.html', context)
+
 
 @login_required
 def workorder_create(request):
@@ -167,7 +169,7 @@ def workorder_edit(request, job_id):
     }
     return render(request, "workorders/workorder_form.html", context)
 
-# Mark a pending work order as scheduled by setting its status and scheduled date (if not already set)
+
 @login_required
 def mark_scheduled(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
@@ -178,7 +180,7 @@ def mark_scheduled(request, job_id):
         workorder.save()
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('workorder_list')))
 
-# Mark a work order as completed
+
 @login_required
 def mark_completed(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
@@ -189,7 +191,7 @@ def mark_completed(request, job_id):
         messages.success(request, "Work order marked as completed.")
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('workorder_list')))
 
-# Display the details for a single work order, along with attachments and notes
+
 @login_required
 def workorder_detail(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
@@ -222,7 +224,7 @@ def workorder_detail(request, job_id):
     }
     return render(request, 'workorders/workorder_detail.html', context)
 
-# View for pending jobs
+
 @login_required
 def pending_jobs_view(request):
     query = request.GET.get('q', '')
@@ -235,7 +237,7 @@ def pending_jobs_view(request):
     }
     return render(request, 'workorders/pending_jobs.html', context)
 
-# View for scheduled jobs
+
 @login_required
 def scheduled_jobs_view(request):
     query = request.GET.get('q', '')
@@ -248,7 +250,7 @@ def scheduled_jobs_view(request):
     }
     return render(request, 'workorders/scheduled_jobs.html', context)
 
-# View for completed jobs
+
 @login_required
 def completed_jobs_view(request):
     query = request.GET.get('q', '')

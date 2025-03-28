@@ -29,7 +29,8 @@ class WorkOrderAddress(models.Model):
     work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='addresses')
     address_type = models.CharField(max_length=10, choices=ADDRESS_TYPE_CHOICES)
     address = models.CharField(max_length=255)
-    
+    scheduled_date = models.DateField(blank=True, null=True)  # ✅ New field added
+
     def __str__(self):
         return f"{self.get_address_type_display()} Address for WorkOrder #{self.work_order.id}"
 
