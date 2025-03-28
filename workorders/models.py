@@ -13,13 +13,29 @@ class WorkOrder(models.Model):
     estimated_cost = models.DecimalField(max_digits=10, decimal_places=2)
     assigned_to = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    scheduled_date = models.DateField(blank=True, null=True)
     completed_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
         return f"WorkOrder #{self.id} for {self.client.name}"
+
+    def update_status(self):
+        # Skip if already completed
+        if self.status == 'completed':
+            return
+
+        pickup = self.addresses.filter(address_type='pickup').first()
+        dropoff = self.addresses.filter(address_type='dropoff').first()
+
+        if pickup and pickup.scheduled_date and dropoff and dropoff.scheduled_date:
+            self.status = 'in_progress'
+        else:
+            self.status = 'pending'
+
+    def save(self, *args, **kwargs):
+        self.update_status()
+        super().save(*args, **kwargs)
 
 class WorkOrderAddress(models.Model):
     ADDRESS_TYPE_CHOICES = [
@@ -29,7 +45,7 @@ class WorkOrderAddress(models.Model):
     work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='addresses')
     address_type = models.CharField(max_length=10, choices=ADDRESS_TYPE_CHOICES)
     address = models.CharField(max_length=255)
-    scheduled_date = models.DateField(blank=True, null=True)  # ✅ New field added
+    scheduled_date = models.DateField(blank=True, null=True)  # ✅ Field used for scheduling
 
     def __str__(self):
         return f"{self.get_address_type_display()} Address for WorkOrder #{self.work_order.id}"

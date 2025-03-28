@@ -13,17 +13,6 @@ class WorkOrderForm(forms.ModelForm):
         label="Client"
     )
 
-    # Optional: remove this field if it's no longer needed globally
-    scheduled_date = forms.DateField(
-        widget=forms.DateInput(
-            attrs={
-                'class': 'form-control datepicker',
-                'placeholder': 'YYYY-MM-DD'
-            }
-        ),
-        required=False
-    )
-
     class Meta:
         model = WorkOrder
         fields = [
@@ -31,7 +20,6 @@ class WorkOrderForm(forms.ModelForm):
             'job_description',
             'estimated_cost',
             'assigned_to',
-            'scheduled_date',
         ]
 
 

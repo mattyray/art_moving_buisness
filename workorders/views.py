@@ -20,11 +20,11 @@ def workorder_calendar_data(request):
         events.append({
             "title": f"{label}: {addr.work_order.client.name}",
             "start": addr.scheduled_date.isoformat(),
-            "color": "#4a90e2" if label == "Pickup" else "#f39c12",
+            "color": "#4a90e2" if label == "pickup" else "#f39c12",
             "url": f"/workorders/detail/{addr.work_order.id}/",
         })
 
-    # Include pending work orders (no address has scheduled_date)
+    # Include pending work orders (no address has a scheduled_date)
     pending_orders = WorkOrder.objects.exclude(
         addresses__scheduled_date__isnull=False
     )
@@ -39,39 +39,20 @@ def workorder_calendar_data(request):
     return JsonResponse(events, safe=False)
 
 
-# All other views remain unchanged
-
-@login_required
-def schedule_workorder(request, job_id):
-    workorder = get_object_or_404(WorkOrder, id=job_id)
-    if request.method == "POST":
-        scheduled_date = request.POST.get("scheduled_date")
-        if scheduled_date:
-            workorder.scheduled_date = scheduled_date
-            workorder.status = "in_progress"
-            workorder.save()
-            messages.success(request, "Work order scheduled successfully.")
-        else:
-            messages.error(request, "Please select a valid date.")
-    return redirect('pending_jobs')
-
-
-@login_required
-def workorder_delete(request, job_id):
-    workorder = get_object_or_404(WorkOrder, id=job_id)
-    if request.method == 'POST':
-        workorder.delete()
-        messages.success(request, "Work order deleted successfully.")
-        return redirect('workorder_list')
-    context = {'workorder': workorder}
-    return render(request, 'workorders/workorder_confirm_delete.html', context)
-
-
 @login_required
 def workorder_list(request):
     query = request.GET.get('q', '')
-    pending_jobs = WorkOrder.objects.filter(status='pending', scheduled_date__isnull=True)
-    scheduled_jobs = WorkOrder.objects.filter(status__in=['pending', 'in_progress'], scheduled_date__isnull=False)
+
+    # Pending = no scheduled address
+    pending_jobs = WorkOrder.objects.exclude(
+        addresses__scheduled_date__isnull=False
+    )
+
+    # Scheduled = at least one address has scheduled_date
+    scheduled_jobs = WorkOrder.objects.filter(
+        addresses__scheduled_date__isnull=False
+    ).distinct()
+
     completed_jobs = WorkOrder.objects.filter(status='completed')
 
     if query:
@@ -86,6 +67,11 @@ def workorder_list(request):
         'completed_jobs': completed_jobs.order_by('-updated_at')[:3],
     }
     return render(request, 'workorders/workorder_list.html', context)
+
+
+@login_required
+def schedule_workorder(request, job_id):
+    return redirect('workorder_edit', job_id=job_id)  # Redirect to edit page to set per-address dates
 
 
 @login_required
@@ -171,14 +157,19 @@ def workorder_edit(request, job_id):
 
 
 @login_required
-def mark_scheduled(request, job_id):
+def workorder_delete(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
-    if workorder.status == 'pending':
-        workorder.status = 'in_progress'
-        if not workorder.scheduled_date:
-            workorder.scheduled_date = timezone.now().date()
-        workorder.save()
-    return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('workorder_list')))
+    if request.method == 'POST':
+        workorder.delete()
+        messages.success(request, "Work order deleted successfully.")
+        return redirect('workorder_list')
+    context = {'workorder': workorder}
+    return render(request, 'workorders/workorder_confirm_delete.html', context)
+
+
+@login_required
+def mark_scheduled(request, job_id):
+    return redirect('workorder_edit', job_id=job_id)  # Now handled via editing individual addresses
 
 
 @login_required
@@ -228,7 +219,9 @@ def workorder_detail(request, job_id):
 @login_required
 def pending_jobs_view(request):
     query = request.GET.get('q', '')
-    jobs = WorkOrder.objects.filter(status='pending', scheduled_date__isnull=True)
+    jobs = WorkOrder.objects.exclude(
+        addresses__scheduled_date__isnull=False
+    )
     if query:
         jobs = jobs.filter(client__name__icontains=query)
     context = {
@@ -241,7 +234,9 @@ def pending_jobs_view(request):
 @login_required
 def scheduled_jobs_view(request):
     query = request.GET.get('q', '')
-    jobs = WorkOrder.objects.filter(status__in=['pending', 'in_progress'], scheduled_date__isnull=False)
+    jobs = WorkOrder.objects.filter(
+        addresses__scheduled_date__isnull=False
+    ).distinct()
     if query:
         jobs = jobs.filter(client__name__icontains=query)
     context = {
