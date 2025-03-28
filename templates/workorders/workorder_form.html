@@ -18,12 +18,12 @@
 
     <!-- Custom Client Field with Select2 and Add Client button -->
     <div class="mb-4">
-      <label for="id_client" class="form-label fw-bold">Client</label>
-      {{ form.client }}
+      {{ form.client|as_crispy_field }}
       <a href="{% url 'client_create' %}" class="btn btn-sm btn-outline-primary mt-2" target="_blank">
         + Add New Client
       </a>
     </div>
+
 
     <div class="mb-4">
       {{ form.job_description|as_crispy_field }}
