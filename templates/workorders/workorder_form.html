@@ -3,7 +3,7 @@
 {% block title %}Edit Work Order{% endblock %}
 {% block content %}
 <div class="container">
-  
+
   <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
     <a href="{% url 'pending_jobs' %}" class="btn btn-outline-primary me-2">Pending Jobs</a>
@@ -11,14 +11,28 @@
     <a href="{% url 'completed_jobs' %}" class="btn btn-outline-primary me-2">Completed Jobs</a>
     <a href="{% url 'workorder_create' %}" class="btn btn-outline-primary">New Work Order</a>
   </div>
-  
+
   <!-- Work Order Form -->
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
+
+    <!-- Updated Client Field with Select2 and Add Client button -->
     <div class="mb-4">
-      {{ form|crispy }}
+      <label for="id_client" class="form-label fw-bold">Client</label>
+      {{ form.client }}
+      <a href="{% url 'client_create' %}" class="btn btn-sm btn-outline-primary mt-2" target="_blank">
+        + Add New Client
+      </a>
     </div>
-    
+
+    <div class="mb-4">
+      {{ form.non_field_errors }}
+      {{ form.job_description|as_crispy_field }}
+      {{ form.estimated_cost|as_crispy_field }}
+      {{ form.assigned_to|as_crispy_field }}
+      {{ form.scheduled_date|as_crispy_field }}
+    </div>
+
     <!-- Inline formset for addresses -->
     <h4>Pickup and Dropoff Addresses</h4>
     <div id="address-formset">
@@ -96,4 +110,18 @@
     {% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      $('.select2').select2({
+        width: '100%',
+        placeholder: "Search or select a client",
+        allowClear: true
+      });
+    });
+  </script>
 {% endblock %}
