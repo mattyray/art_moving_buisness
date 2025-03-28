@@ -16,7 +16,7 @@
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
 
-    <!-- Updated Client Field with Select2 and Add Client button -->
+    <!-- Custom Client Field with Select2 and Add Client button -->
     <div class="mb-4">
       <label for="id_client" class="form-label fw-bold">Client</label>
       {{ form.client }}
@@ -26,7 +26,6 @@
     </div>
 
     <div class="mb-4">
-      {{ form.non_field_errors }}
       {{ form.job_description|as_crispy_field }}
       {{ form.estimated_cost|as_crispy_field }}
       {{ form.assigned_to|as_crispy_field }}
@@ -113,15 +112,16 @@
 {% endblock %}
 
 {% block extra_js %}
-  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-  <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      $('.select2').select2({
-        width: '100%',
-        placeholder: "Search or select a client",
-        allowClear: true
-      });
+<!-- Select2 Initialization -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    $('.select2').select2({
+      width: '100%',
+      placeholder: 'Search or select a client',
+      allowClear: true
     });
-  </script>
+  });
+</script>
 {% endblock %}
