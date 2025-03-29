@@ -10,6 +10,7 @@ from .models import WorkOrder, WorkOrderAddress, JobAttachment, JobNote
 from .forms import WorkOrderForm, WorkOrderAddressFormSet, JobAttachmentForm, JobNoteForm
 
 
+@login_required
 def workorder_calendar_data(request):
     """Returns pickup/dropoff events and pending/completed work orders for calendar display."""
     events = []
@@ -93,6 +94,9 @@ def workorder_create(request):
             address_formset.instance = workorder
             address_formset.save()
 
+            workorder.update_status()
+            workorder.save()
+
             if attachment_form.is_valid():
                 attachment = attachment_form.save(commit=False)
                 attachment.work_order = workorder
@@ -131,6 +135,9 @@ def workorder_edit(request, job_id):
         if form.is_valid() and address_formset.is_valid():
             form.save()
             address_formset.save()
+
+            workorder.update_status()
+            workorder.save()
 
             if attachment_form.is_valid():
                 attachment = attachment_form.save(commit=False)

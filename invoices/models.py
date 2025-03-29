@@ -1,8 +1,6 @@
 import random
 from django.db import models
 from django.utils import timezone
-from clients.models import Client
-from workorders.models import WorkOrder
 
 class Invoice(models.Model):
     STATUS_CHOICES = [
@@ -12,9 +10,15 @@ class Invoice(models.Model):
     ]
     
     invoice_number = models.CharField(max_length=50, unique=True, blank=True)
-    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='invoices')
+    client = models.ForeignKey('clients.Client', on_delete=models.CASCADE, related_name='invoices')
     # Optional: link to a work order
-    work_order = models.ForeignKey(WorkOrder, on_delete=models.SET_NULL, null=True, blank=True, related_name='invoices')
+    work_order = models.ForeignKey(
+        'workorders.WorkOrder',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='invoices'
+    )
     date_created = models.DateField(default=timezone.now)
     due_date = models.DateField()
     amount = models.DecimalField(max_digits=10, decimal_places=2)

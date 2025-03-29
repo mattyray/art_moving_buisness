@@ -1,11 +1,12 @@
 from django import forms
 from django.forms import inlineformset_factory
-from clients.models import Client
+from django.apps import apps
 from .models import WorkOrder, WorkOrderAddress, JobAttachment, JobNote
 
 class WorkOrderForm(forms.ModelForm):
+    # Set queryset to None initially; we'll assign it in __init__ using a lazy lookup.
     client = forms.ModelChoiceField(
-        queryset=Client.objects.all(),
+        queryset=None,
         widget=forms.Select(attrs={
             'class': 'form-control select2',
             'data-placeholder': 'Search or select a client'
@@ -21,6 +22,12 @@ class WorkOrderForm(forms.ModelForm):
             'estimated_cost',
             'assigned_to',
         ]
+
+    def __init__(self, *args, **kwargs):
+        super(WorkOrderForm, self).__init__(*args, **kwargs)
+        # Lazy import of Client to avoid circular dependency
+        Client = apps.get_model('clients', 'Client')
+        self.fields['client'].queryset = Client.objects.all()
 
 
 class WorkOrderAddressForm(forms.ModelForm):
@@ -46,14 +53,12 @@ WorkOrderAddressFormSet = inlineformset_factory(
     can_delete=True
 )
 
-
 class JobAttachmentForm(forms.ModelForm):
     file = forms.FileField(required=False)
 
     class Meta:
         model = JobAttachment
         fields = ['file']
-
 
 class JobNoteForm(forms.ModelForm):
     note = forms.CharField(required=False, widget=forms.Textarea, label="Note")

@@ -8,8 +8,6 @@ from .forms import InvoiceForm
 from clients.models import Client
 from workorders.models import WorkOrder
 from django.utils import timezone
-from django.http import JsonResponse
-
 
 @login_required
 def invoice_delete(request, invoice_id):
@@ -19,7 +17,6 @@ def invoice_delete(request, invoice_id):
         messages.success(request, "Invoice deleted successfully.")
         return redirect('invoice_list')
     return render(request, 'invoices/invoice_confirm_delete.html', {'invoice': invoice})
-
 
 @login_required
 def invoice_calendar_data(request):
@@ -50,7 +47,6 @@ def invoice_calendar_data(request):
                 "url": f"/invoices/{invoice.id}/",
             })
     return JsonResponse(events, safe=False)
-
 
 @login_required
 def invoice_list(request):
@@ -131,8 +127,6 @@ def invoice_create(request):
     }
     return render(request, 'invoices/invoice_form.html', context)
 
-
-
 @login_required
 def invoice_update(request, invoice_id):
     invoice = get_object_or_404(Invoice, id=invoice_id)
@@ -146,7 +140,6 @@ def invoice_update(request, invoice_id):
     context = {'form': form, 'invoice': invoice}
     return render(request, 'invoices/invoice_form.html', context)
 
-# New view to mark an invoice as paid (for unpaid invoices)
 @login_required
 def mark_invoice_paid(request, invoice_id):
     invoice = get_object_or_404(Invoice, id=invoice_id)
@@ -155,7 +148,7 @@ def mark_invoice_paid(request, invoice_id):
     messages.success(request, "Invoice marked as paid.")
     return redirect('invoice_list')
 
-# N@login_required
+@login_required
 def update_due_date(request, invoice_id):
     invoice = get_object_or_404(Invoice, id=invoice_id)
     if request.method == 'POST':
@@ -172,7 +165,6 @@ def update_due_date(request, invoice_id):
     context = {'invoice': invoice}
     return render(request, 'invoices/update_due_date.html', context)
 
-# AJAX view to get work orders for a selected client (unchanged)
 @login_required
 def get_workorders_for_client(request):
     client_id = request.GET.get('client_id')
