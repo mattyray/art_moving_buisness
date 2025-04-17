@@ -1,3 +1,4 @@
+<!-- templates/base.html -->
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
@@ -11,72 +12,45 @@
 
   <!-- Bootstrap CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
 
   <!-- FullCalendar CSS -->
   <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
-
   <!-- Flatpickr CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-
   <!-- Select2 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
-  <!-- Custom CSS -->
-  <link rel="stylesheet" href="{% static 'css/style.css' %}">
-
-  {% block extra_css %}
-  <style>
-    #calendar {
-      overflow: hidden;
-    }
-    .fc .fc-daygrid-event {
-      background-color: #4a90e2 !important;
-      border: none !important;
-      border-radius: 4px !important;
-      padding: 2px 4px !important;
-      font-size: 0.85em !important;
-    }
-    .fc .fc-daygrid-event:hover {
-      background-color: #6fb1fc !important;
-    }
-    .fc {
-      background-color: transparent;
-      border: none;
-    }
-    .nav-icon {
-      height: 60px;
-      margin-right: 10px;
-    }
-  </style>
-  {% endblock %}
+  {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100">
   <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark py-2">
     <div class="container">
-      <div class="d-flex align-items-center">
-        <a href="{% url 'home' %}">
-          <img src="{% static 'images/nav-icon-128x128.png' %}" alt="Site Icon" class="nav-icon">
-        </a>
-        <a class="btn btn-outline-light me-2" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSidebar" role="button" aria-controls="offcanvasSidebar">
-          Menu
-        </a>
-        <a class="navbar-brand fw-bold" href="{% url 'home' %}">EJ Art Mover</a>
-      </div>
+      <a href="{% url 'home' %}" class="d-flex align-items-center text-decoration-none">
+        <img src="{% static 'images/nav-icon-128x128.png' %}" alt="Site Icon" class="me-2" style="height:40px;">
+        <span class="navbar-brand mb-0 h4">EJ Art Mover</span>
+      </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
               aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
+
       <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav ms-auto">
-          <li class="nav-item"><a class="nav-link fw-bold" href="{% url 'home' %}">Dashboard</a></li>
-          <li class="nav-item"><a class="nav-link fw-bold" href="{% url 'workorder_list' %}">Work Orders</a></li>
-          <li class="nav-item"><a class="nav-link fw-bold" href="{% url 'client_list' %}">Clients</a></li>
-          <li class="nav-item"><a class="nav-link fw-bold" href="{% url 'invoice_list' %}">Invoices</a></li>
+        <ul class="navbar-nav ms-auto align-items-center">
+          <li class="nav-item"><a class="nav-link px-3" href="{% url 'home' %}"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link px-3" href="{% url 'workorder_list' %}"><i class="bi bi-card-checklist me-1"></i>Work Orders</a></li>
+          <li class="nav-item"><a class="nav-link px-3" href="{% url 'client_list' %}"><i class="bi bi-people-fill me-1"></i>Clients</a></li>
+          <li class="nav-item"><a class="nav-link px-3" href="{% url 'invoice_list' %}"><i class="bi bi-receipt me-1"></i>Invoices</a></li>
           {% if user.is_authenticated %}
-            <li class="nav-item"><a class="nav-link fw-bold" href="{% url 'logout' %}">Logout</a></li>
+            <li class="nav-item"><a class="nav-link px-3" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right me-1"></i>Logout</a></li>
           {% else %}
-            <li class="nav-item"><a class="nav-link fw-bold" href="{% url 'login' %}">Login</a></li>
+            <li class="nav-item"><a class="nav-link px-3" href="{% url 'login' %}"><i class="bi bi-box-arrow-in-right me-1"></i>Login</a></li>
           {% endif %}
         </ul>
       </div>
@@ -85,50 +59,51 @@
 
   <!-- Offcanvas Sidebar -->
   <div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasSidebar" aria-labelledby="offcanvasSidebarLabel">
-    <div class="offcanvas-header">
+    <div class="offcanvas-header border-bottom">
       <h5 class="offcanvas-title" id="offcanvasSidebarLabel">Navigation</h5>
       <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body">
+      {% if user.is_authenticated %}
+        <div class="text-center mb-4">
+          <i class="bi bi-person-circle fs-1 text-secondary"></i>
+          <div class="mt-2 fw-semibold">{{ user.username }}</div>
+        </div>
+      {% endif %}
       <div class="list-group">
-        <div class="mb-3">
-          <h6 class="text-uppercase">Dashboard</h6>
-          <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-sm d-block mb-1">View Dashboard</a>
-        </div>
-        <div class="mb-3">
-          <h6 class="text-uppercase">Work Orders</h6>
-          <a href="{% url 'workorder_list' %}" class="btn btn-outline-primary btn-sm d-block mb-1">View All Work Orders</a>
-          <a href="{% url 'pending_jobs' %}" class="btn btn-outline-primary btn-sm d-block mb-1">Pending Jobs</a>
-          <a href="{% url 'scheduled_jobs' %}" class="btn btn-outline-primary btn-sm d-block mb-1">Scheduled Jobs</a>
-          <a href="{% url 'completed_jobs' %}" class="btn btn-outline-primary btn-sm d-block mb-1">Completed Jobs</a>
-          <a href="{% url 'workorder_create' %}" class="btn btn-success btn-sm d-block">New Work Order</a>
-        </div>
-        <div class="mb-3">
-          <h6 class="text-uppercase">Clients</h6>
-          <a href="{% url 'client_list' %}" class="btn btn-outline-warning btn-sm d-block mb-1">View Clients</a>
-          <a href="{% url 'client_create' %}" class="btn btn-warning btn-sm d-block">Add New Client</a>
-        </div>
-        <div>
-          <h6 class="text-uppercase">Invoicing</h6>
-          <a href="{% url 'invoice_list' %}" class="btn btn-outline-danger btn-sm d-block mb-1">Invoice Overview</a>
-          <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger btn-sm d-block mb-1">Unpaid Invoices</a>
-          <a href="{% url 'invoice_paid' %}" class="btn btn-outline-danger btn-sm d-block mb-1">Paid Invoices</a>
-          <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger btn-sm d-block mb-1">Overdue Invoices</a>
-          <a href="{% url 'invoice_create' %}" class="btn btn-danger btn-sm d-block">New Invoice</a>
-        </div>
+        <h6 class="text-uppercase mb-2">Dashboard</h6>
+        <a href="{% url 'home' %}" class="list-group-item list-group-item-action"><i class="bi bi-speedometer2 me-2"></i>Home</a>
+
+        <h6 class="text-uppercase mt-4 mb-2">Work Orders</h6>
+        <a href="{% url 'workorder_list' %}" class="list-group-item list-group-item-action"><i class="bi bi-card-checklist me-2"></i>All Jobs</a>
+        <a href="{% url 'pending_jobs' %}" class="list-group-item list-group-item-action"><i class="bi bi-hourglass-split me-2"></i>Pending</a>
+        <a href="{% url 'scheduled_jobs' %}" class="list-group-item list-group-item-action"><i class="bi bi-calendar-event me-2"></i>Scheduled</a>
+        <a href="{% url 'completed_jobs' %}" class="list-group-item list-group-item-action"><i class="bi bi-check-circle me-2"></i>Completed</a>
+        <a href="{% url 'workorder_create' %}" class="list-group-item list-group-item-action text-success"><i class="bi bi-plus-circle me-2"></i>New Job</a>
+
+        <h6 class="text-uppercase mt-4 mb-2">Clients</h6>
+        <a href="{% url 'client_list' %}" class="list-group-item list-group-item-action"><i class="bi bi-people-fill me-2"></i>All Clients</a>
+        <a href="{% url 'client_create' %}" class="list-group-item list-group-item-action text-warning"><i class="bi bi-person-plus me-2"></i>New Client</a>
+
+        <h6 class="text-uppercase mt-4 mb-2">Invoicing</h6>
+        <a href="{% url 'invoice_list' %}" class="list-group-item list-group-item-action"><i class="bi bi-receipt me-2"></i>Overview</a>
+        <a href="{% url 'invoice_unpaid' %}" class="list-group-item list-group-item-action text-danger"><i class="bi bi-clock me-2"></i>Unpaid</a>
+        <a href="{% url 'invoice_paid' %}" class="list-group-item list-group-item-action text-success"><i class="bi bi-check2-circle me-2"></i>Paid</a>
+        <a href="{% url 'invoice_overdue' %}" class="list-group-item list-group-item-action text-warning"><i class="bi bi-exclamation-circle me-2"></i>Overdue</a>
+        <a href="{% url 'invoice_create' %}" class="list-group-item list-group-item-action text-danger"><i class="bi bi-plus-circle me-2"></i>New Invoice</a>
       </div>
     </div>
   </div>
 
   <!-- Main Content -->
-  <main class="container mt-4">
+  <main class="container my-4 flex-grow-1">
     {% block content %}{% endblock %}
   </main>
 
   <!-- Footer -->
-  <footer class="mt-4 bg-dark text-white text-center py-3">
+  <footer class="bg-dark text-white text-center py-3 mt-auto">
     <div class="container">
-      <p class="mb-0">&copy; {% now "Y" %} Art Moving Business Management System</p>
+      <small>&copy; {% now "Y" %} Art Moving Business Management System</small>
     </div>
   </footer>
 
@@ -138,18 +113,6 @@
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
   {% block extra_js %}{% endblock %}
-
-  <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      flatpickr(".datepicker", { dateFormat: "Y-m-d" });
-
-      const selects = document.querySelectorAll(".select2");
-      selects.forEach(el => {
-        $(el).select2({ width: "100%" });
-      });
-    });
-  </script>
 </body>
 </html>

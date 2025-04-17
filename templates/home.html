@@ -1,79 +1,80 @@
+<!-- templates/home.html -->
 {% extends "base.html" %}
-{% block title %}Dashboard - Art Moving Business{% endblock %}
+{% block title %}Dashboard – Art Moving Business{% endblock %}
 {% block content %}
-<div class="container my-4">
-  <div class="row justify-content-center">
-    <!-- Work Orders Button (now white) -->
-    <div class="col-md-3 col-12 text-center mb-3">
-      <a href="{% url 'workorder_list' %}" class="btn btn-light btn-lg w-100 shadow-sm border">
-        Work Orders<br>
-        <small>Manage and track job progress</small>
+  <!-- Welcome Hero -->
+  <div class="text-center mb-4">
+    <h2 class="fw-bold">Welcome back, {{ user.username }} 👋</h2>
+    <p class="text-muted">Here’s what’s happening today in your business.</p>
+  </div>
+
+  <!-- Quick Action Buttons -->
+  <div class="row g-3 justify-content-center">
+    <div class="col-lg-3 col-md-4 col-sm-6">
+      <a href="{% url 'workorder_list' %}" class="btn btn-primary w-100 py-4 shadow-sm d-flex flex-column align-items-center">
+        <i class="bi bi-card-checklist fs-1 mb-2"></i>
+        <span>Work Orders</span>
       </a>
     </div>
-    <!-- Clients Button (now white) -->
-    <div class="col-md-3 col-12 text-center mb-3">
-      <a href="{% url 'client_list' %}" class="btn btn-light btn-lg w-100 shadow-sm border">
-        Clients<br>
-        <small>View client database</small>
+    <div class="col-lg-3 col-md-4 col-sm-6">
+      <a href="{% url 'client_list' %}" class="btn btn-warning w-100 py-4 shadow-sm d-flex flex-column align-items-center">
+        <i class="bi bi-people-fill fs-1 mb-2"></i>
+        <span>Clients</span>
       </a>
     </div>
-    <!-- Invoicing Button (now white) -->
-    <div class="col-md-3 col-12 text-center mb-3">
-      <a href="{% url 'invoice_list' %}" class="btn btn-light btn-lg w-100 shadow-sm border">
-        Invoicing<br>
-        <small>Generate and review invoices</small>
+    <div class="col-lg-3 col-md-4 col-sm-6">
+      <a href="{% url 'invoice_list' %}" class="btn btn-danger w-100 py-4 shadow-sm d-flex flex-column align-items-center">
+        <i class="bi bi-receipt fs-1 mb-2"></i>
+        <span>Invoicing</span>
       </a>
     </div>
   </div>
 
-  <!-- Calendar Section -->
-  <div class="card mt-4 shadow-sm">
-    <div class="card-header fw-bold">
-      Calendar
+  <!-- Calendar & Legend -->
+  <div class="card mt-5 shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Calendar</h5>
+      <div>
+        <span class="badge bg-success me-1">Paid Invoice</span>
+        <span class="badge bg-danger me-1">Unpaid Invoice</span>
+        <span class="badge bg-info text-dark">Scheduled Job</span>
+      </div>
     </div>
     <div class="card-body">
       <div id="calendar"></div>
     </div>
   </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    var calendarEl = document.getElementById("calendar");
-    if (!calendarEl) {
-        console.error("Calendar element not found!");
-        return;
+  var calendarEl = document.getElementById("calendar");
+  if (!calendarEl) return console.error("Calendar element not found!");
+
+  var calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: "dayGridMonth",
+    height: 'auto',
+    events: async function(fetchInfo, success, fail) {
+      try {
+        let [wo, inv] = await Promise.all([
+          fetch("/workorders/calendar-data/workorders/").then(r=>r.json()),
+          fetch("/invoices/calendar-data/invoices/").then(r=>r.json())
+        ]);
+        success([...wo, ...inv]);
+      } catch (e) {
+        console.error("Calendar fetch error:", e);
+        fail(e);
+      }
+    },
+    eventClick: info => {
+      if (info.event.url) {
+        window.location.href = info.event.url;
+        info.jsEvent.preventDefault();
+      }
     }
-
-    var calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: "dayGridMonth",
-        height: 'auto',
-        events: async function(fetchInfo, successCallback, failureCallback) {
-            try {
-                const workordersResponse = await fetch("/workorders/calendar-data/workorders/");
-                const workorders = await workordersResponse.json();
-
-                const invoicesResponse = await fetch("/invoices/calendar-data/invoices/");
-                const invoices = await invoicesResponse.json();
-
-                const events = [...workorders, ...invoices];
-                successCallback(events);
-            } catch (error) {
-                console.error("Calendar fetch error:", error);
-                failureCallback(error);
-            }
-        },
-        eventClick: function(info) {
-            if (info.event.url) {
-                window.location.href = info.event.url;
-                info.jsEvent.preventDefault();
-            }
-        }
-    });
-
-    calendar.render();
+  });
+  calendar.render();
 });
 </script>
 {% endblock %}
