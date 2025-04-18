@@ -19,13 +19,13 @@ class WorkOrderForm(forms.ModelForm):
             'client',
             'job_description',
             'estimated_cost',
-            'assigned_to',
         ]
 
     def __init__(self, *args, **kwargs):
         super(WorkOrderForm, self).__init__(*args, **kwargs)
         Client = apps.get_model('clients', 'Client')
         self.fields['client'].queryset = Client.objects.all()
+        self.fields['job_description'].required = False
 
 
 class EventForm(forms.ModelForm):
