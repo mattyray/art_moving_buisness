@@ -7,9 +7,18 @@ class WorkOrder(models.Model):
         ('in_progress', 'In Progress'),
         ('completed', 'Completed'),
     ]
-    client = models.ForeignKey('clients.Client', on_delete=models.CASCADE, related_name='work_orders')
+    client = models.ForeignKey(
+        'clients.Client',
+        on_delete=models.CASCADE,
+        related_name='work_orders'
+    )
     job_description = models.TextField(blank=True, null=True)
-    estimated_cost = models.DecimalField(max_digits=10, decimal_places=2)
+    estimated_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     completed_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -38,7 +47,7 @@ class Event(models.Model):
     ]
     work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='events')
     event_type = models.CharField(max_length=30, choices=EVENT_TYPES)
-    address = models.CharField(max_length=255)
+    address = models.CharField(max_length=255, blank=True)
     date = models.DateField(blank=True, null=True)
 
     def __str__(self):
