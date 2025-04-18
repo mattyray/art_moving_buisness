@@ -28,25 +28,28 @@
         + Add New Client
       </a>
     </div>
+
     <div class="mb-4">
       {{ form.job_description|as_crispy_field }}
-      {{ form.estimated_cost|as_crispy_field }}
+
+      <label for="{{ form.estimated_cost.id_for_label }}" class="form-label fw-bold">Estimated Cost</label>
+      <div class="input-group mb-3">
+        <span class="input-group-text">$</span>
+        {{ form.estimated_cost }}
+      </div>
+      {% if form.estimated_cost.errors %}
+        <div class="text-danger">{{ form.estimated_cost.errors }}</div>
+      {% endif %}
     </div>
-    
 
     <!-- Event Formset Section -->
     <h4>Scheduled Events</h4>
     <div id="event-formset">
       {{ event_formset.management_form }}
-      {% for form in event_formset %}
+      {% for subform in event_formset %}
         <div class="card mb-3 event-form">
           <div class="card-body">
-            {{ form|crispy }}
-            {% if form.instance.pk %}
-              <div class="form-check mt-2">
-                {{ form.DELETE }} <label class="form-check-label">Delete</label>
-              </div>
-            {% endif %}
+            {{ subform|crispy }}
             <button type="button" class="btn btn-sm btn-outline-danger remove-event mt-2">Remove</button>
           </div>
         </div>
@@ -138,64 +141,46 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <script>
-  $(document).ready(function () {
-    $('.select2').select2({
-      width: '100%',
-      placeholder: 'Search or select a client',
-      allowClear: true
+$(function() {
+  $('.select2').select2({ width: '100%', placeholder: 'Search or select a client', allowClear: true });
+  flatpickr('.datepicker', { dateFormat: 'Y-m-d' });
+
+  const formset = $('#event-formset');
+  const totalForms = formset.find('input[name$="-TOTAL_FORMS"]');
+  const emptyTpl = $('#empty-form-template').html();
+
+  function attachRemove(btn) {
+    btn.click(function() {
+      const card = $(this).closest('.event-form');
+      const delInput = card.find('input[type="checkbox"][name$="-DELETE"]');
+      if (delInput.length) {
+        delInput.prop('checked', true);
+        card.hide();
+      } else {
+        card.remove();
+        updateCount(-1);
+      }
     });
+  }
 
-    flatpickr(".datepicker", { dateFormat: "Y-m-d" });
+  function updateCount(delta) {
+    const count = parseInt(totalForms.val(), 10) + delta;
+    totalForms.val(count);
+  }
 
-    const addBtn = document.getElementById('add-event');
-    const formset = document.getElementById('event-formset');
-    const totalFormsInput = formset.querySelector('input[name$="-TOTAL_FORMS"]');
-    const emptyFormTemplate = document.getElementById('empty-form-template').content;
-
-    function updateTotalForms(delta) {
-      const total = parseInt(totalFormsInput.value, 10);
-      totalFormsInput.value = total + delta;
-    }
-
-    function reindexForms() {
-      const forms = formset.querySelectorAll('.event-form');
-      forms.forEach((form, index) => {
-        form.querySelectorAll('input, select, textarea, label').forEach(el => {
-          ['name', 'id', 'for'].forEach(attr => {
-            if (el.hasAttribute(attr)) {
-              el.setAttribute(attr, el.getAttribute(attr).replace(/events-\d+/, `events-${index}`));
-            }
-          });
-        });
-      });
-    }
-
-    function attachRemoveHandler(row) {
-      const removeBtn = row.querySelector('.remove-event');
-      if (!removeBtn) return;
-      removeBtn.addEventListener('click', function () {
-        const deleteInput = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
-        if (deleteInput) {
-          deleteInput.checked = true;
-          row.style.display = 'none';
-        } else {
-          row.remove();
-          updateTotalForms(-1);
-          reindexForms();
-        }
-      });
-    }
-
-    formset.querySelectorAll('.event-form').forEach(attachRemoveHandler);
-
-    addBtn.addEventListener('click', function () {
-      const newForm = emptyFormTemplate.cloneNode(true);
-      formset.appendChild(newForm);
-      updateTotalForms(1);
-      reindexForms();
-      flatpickr(".datepicker", { dateFormat: "Y-m-d" });
-      attachRemoveHandler(formset.lastElementChild);
-    });
+  // initial remove buttons
+  formset.find('.remove-event').each(function() {
+    attachRemove($(this));
   });
+
+  $('#add-event').click(function() {
+    const idx = parseInt(totalForms.val(), 10);
+    let newHtml = emptyTpl.replace(/__prefix__/g, idx);
+    formset.append(newHtml);
+    updateCount(1);
+    flatpickr(formset.find(`.event-form`).last().find('.datepicker'), { dateFormat: 'Y-m-d' });
+    attachRemove(formset.find('.event-form').last().find('.remove-event'));
+  });
+});
 </script>
 {% endblock %}
