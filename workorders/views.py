@@ -12,10 +12,18 @@ from .forms import WorkOrderForm, EventFormSet, JobAttachmentForm, JobNoteForm
 
 @login_required
 def workorder_calendar_data(request):
-    """Returns scheduled events for calendar display."""
+    """Returns scheduled events for calendar display, color‐coding events by work order."""
     events = []
 
-    # Scheduled events for all non-completed jobs
+    # A simple palette to pick a distinct color per work order:
+    palette = [
+        "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+        "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"
+    ]
+    def get_color(wo_id):
+        return palette[wo_id % len(palette)]
+
+    # Scheduled Event objects (only non‐completed jobs)
     scheduled_events = Event.objects.filter(
         date__isnull=False,
         work_order__status__in=["pending", "in_progress"]
@@ -24,12 +32,13 @@ def workorder_calendar_data(request):
         events.append({
             "title": f"{evt.get_event_type_display()}: {evt.work_order.client.name}",
             "start": evt.date.isoformat(),
-            "color": "#4a90e2",  # You can adjust colors by event type if needed
+            "color": get_color(evt.work_order.id),
             "url": f"/workorders/detail/{evt.work_order.id}/",
         })
 
-    # Pending jobs = no events with dates
-    pending_jobs = WorkOrder.objects.exclude(events__date__isnull=False).filter(status__in=["pending", "in_progress"])
+    # Pending jobs (no scheduled events yet)
+    pending_jobs = WorkOrder.objects.exclude(events__date__isnull=False)\
+                                    .filter(status__in=["pending", "in_progress"])
     for wo in pending_jobs:
         events.append({
             "title": f"Pending: {wo.client.name}",
@@ -54,8 +63,11 @@ def workorder_calendar_data(request):
 @login_required
 def workorder_list(request):
     query = request.GET.get('q', '')
-    pending_jobs = WorkOrder.objects.exclude(events__date__isnull=False).filter(status__in=["pending", "in_progress"])
-    scheduled_jobs = WorkOrder.objects.filter(events__date__isnull=False, status__in=["pending", "in_progress"]).distinct()
+    pending_jobs = WorkOrder.objects.exclude(events__date__isnull=False)\
+                                    .filter(status__in=["pending", "in_progress"])
+    scheduled_jobs = WorkOrder.objects.filter(events__date__isnull=False,
+                                              status__in=["pending", "in_progress"])\
+                                      .distinct()
     completed_jobs = WorkOrder.objects.filter(status='completed')
 
     if query:
@@ -105,13 +117,12 @@ def workorder_create(request):
         attachment_form = JobAttachmentForm()
         note_form = JobNoteForm()
 
-    context = {
+    return render(request, 'workorders/workorder_form.html', {
         'form': form,
         'event_formset': event_formset,
         'attachment_form': attachment_form,
         'note_form': note_form,
-    }
-    return render(request, 'workorders/workorder_form.html', context)
+    })
 
 
 @login_required
@@ -141,7 +152,7 @@ def workorder_edit(request, job_id):
                 note.save()
 
             if 'create_invoice' in request.POST:
-                return redirect('/invoices/create/?work_order=' + str(workorder.id))
+                return redirect(f'/invoices/create/?work_order={workorder.id}')
             return redirect("workorder_detail", job_id=workorder.id)
     else:
         form = WorkOrderForm(instance=workorder)
@@ -149,14 +160,13 @@ def workorder_edit(request, job_id):
         attachment_form = JobAttachmentForm()
         note_form = JobNoteForm()
 
-    context = {
+    return render(request, "workorders/workorder_form.html", {
         'form': form,
         'event_formset': event_formset,
         'attachment_form': attachment_form,
         'note_form': note_form,
         'job': workorder,
-    }
-    return render(request, "workorders/workorder_form.html", context)
+    })
 
 
 @login_required
@@ -210,20 +220,20 @@ def workorder_detail(request, job_id):
         attachment_form = JobAttachmentForm()
         note_form = JobNoteForm()
 
-    context = {
+    return render(request, 'workorders/workorder_detail.html', {
         'job': workorder,
         'attachments': attachments,
         'notes': notes,
         'attachment_form': attachment_form,
         'note_form': note_form,
-    }
-    return render(request, 'workorders/workorder_detail.html', context)
+    })
 
 
 @login_required
 def pending_jobs_view(request):
     query = request.GET.get('q', '')
-    jobs = WorkOrder.objects.exclude(events__date__isnull=False).filter(status__in=["pending", "in_progress"])
+    jobs = WorkOrder.objects.exclude(events__date__isnull=False)\
+                            .filter(status__in=["pending", "in_progress"])
     if query:
         jobs = jobs.filter(client__name__icontains=query)
     return render(request, 'workorders/pending_jobs.html', {'jobs': jobs, 'query': query})
@@ -232,7 +242,9 @@ def pending_jobs_view(request):
 @login_required
 def scheduled_jobs_view(request):
     query = request.GET.get('q', '')
-    jobs = WorkOrder.objects.filter(events__date__isnull=False, status__in=["pending", "in_progress"]).distinct()
+    jobs = WorkOrder.objects.filter(events__date__isnull=False,
+                                    status__in=["pending", "in_progress"])\
+                            .distinct()
     if query:
         jobs = jobs.filter(client__name__icontains=query)
     return render(request, 'workorders/scheduled_jobs.html', {'jobs': jobs, 'query': query})
