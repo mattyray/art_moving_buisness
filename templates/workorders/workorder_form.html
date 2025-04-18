@@ -16,7 +16,7 @@
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
 
-    <!-- Custom Client Field with Select2 and Add Client button -->
+    <!-- Client and Job Details -->
     <div class="mb-4">
       <label for="{{ form.client.id_for_label }}" class="form-label fw-bold">Client</label>
       {{ form.client }}
@@ -27,23 +27,22 @@
         + Add New Client
       </a>
     </div>
-
     <div class="mb-4">
       {{ form.job_description|as_crispy_field }}
       {{ form.estimated_cost|as_crispy_field }}
       {{ form.assigned_to|as_crispy_field }}
     </div>
 
-    <!-- Inline formset for addresses -->
-    <h4>Pickup and Dropoff Addresses</h4>
-    <div id="address-formset">
-      {{ address_formset.management_form }}
-      {% for form in address_formset %}
+    <!-- Event Scheduling Section -->
+    <h4>Scheduled Events (Pickup, Wrap, Install, etc.)</h4>
+    <div id="event-formset">
+      {{ event_formset.management_form }}
+      {% for form in event_formset %}
         <div class="card mb-3">
           <div class="card-body">
             {{ form|crispy }}
             {% if form.instance.pk %}
-              <div class="form-check">
+              <div class="form-check mt-2">
                 {{ form.DELETE }} <label class="form-check-label">Delete</label>
               </div>
             {% endif %}
@@ -52,7 +51,7 @@
       {% endfor %}
     </div>
 
-    <!-- Attachments Section -->
+    <!-- Attachments -->
     <h4>Attachments</h4>
     <div class="card shadow-sm mb-4">
       <div class="card-body">
@@ -72,7 +71,7 @@
       </div>
     </div>
 
-    <!-- Notes Section -->
+    <!-- Notes -->
     <h4>Notes</h4>
     <div class="card shadow-sm mb-4">
       <div class="card-body">
@@ -92,13 +91,14 @@
       </div>
     </div>
 
+    <!-- Submit Buttons -->
     <div class="d-flex">
       <button type="submit" name="update_only" class="btn btn-success">Create / Update</button>
       <button type="submit" name="create_invoice" class="btn btn-danger ms-2">Update and Create Invoice</button>
     </div>
   </form>
 
-  <!-- Navigation Buttons -->
+  <!-- Navigation Footer -->
   <div class="mt-4 d-flex justify-content-between">
     <div>
       <a href="{% url 'workorder_list' %}" class="btn btn-secondary">Back to Work Orders</a>
@@ -114,10 +114,11 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- Select2 JS and CSS (moved from inside script to correct location) -->
+<!-- Select2 and Flatpickr -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <script>
   $(document).ready(function () {
@@ -125,6 +126,11 @@
       width: '100%',
       placeholder: 'Search or select a client',
       allowClear: true
+    });
+
+    // Initialize datepickers
+    flatpickr(".datepicker", {
+      dateFormat: "Y-m-d"
     });
   });
 </script>
