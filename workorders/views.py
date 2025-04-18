@@ -198,36 +198,46 @@ def mark_completed(request, job_id):
 @login_required
 def workorder_detail(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
-    attachments = workorder.attachments.all()
-    notes = workorder.notes.all()
+    events      = workorder.events.all()
+    # Exclude any attachment rows with no file path
+    attachments = workorder.attachments.exclude(file__exact='')
+    notes       = workorder.notes.all()
+
+    attachment_form = JobAttachmentForm()
+    note_form       = JobNoteForm()
 
     if request.method == 'POST':
+        # --- New Attachment ---
         if 'attachment_submit' in request.POST:
             attachment_form = JobAttachmentForm(request.POST, request.FILES)
-            if attachment_form.is_valid():
+            # Only save when a file was uploaded
+            uploaded = request.FILES.get('file')
+            if attachment_form.is_valid() and uploaded:
                 attachment = attachment_form.save(commit=False)
                 attachment.work_order = workorder
                 attachment.save()
-                return redirect('workorder_detail', job_id=workorder.id)
+            return redirect('workorder_detail', job_id=workorder.id)
+
+        # --- New Note ---
         elif 'note_submit' in request.POST:
             note_form = JobNoteForm(request.POST)
             if note_form.is_valid():
-                note = note_form.save(commit=False)
-                note.work_order = workorder
-                note.save()
-                return redirect('workorder_detail', job_id=workorder.id)
-    else:
-        attachment_form = JobAttachmentForm()
-        note_form = JobNoteForm()
+                text = note_form.cleaned_data.get('note', '').strip()
+                # Only save non‑empty notes
+                if text:
+                    note = note_form.save(commit=False)
+                    note.work_order = workorder
+                    note.save()
+            return redirect('workorder_detail', job_id=workorder.id)
 
     return render(request, 'workorders/workorder_detail.html', {
         'job': workorder,
+        'events': events,
         'attachments': attachments,
         'notes': notes,
         'attachment_form': attachment_form,
         'note_form': note_form,
     })
-
 
 @login_required
 def pending_jobs_view(request):

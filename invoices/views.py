@@ -42,7 +42,7 @@ def invoice_calendar_data(request):
         elif invoice.status == "paid":
             events.append({
                 "title": f"Paid Invoice: {invoice.client.name}",
-                "start": invoice.due_date.isoformat(),  # Use due_date as a fallback
+                "start": invoice.due_date.isoformat(),
                 "color": "green",
                 "url": f"/invoices/{invoice.id}/",
             })
@@ -81,8 +81,7 @@ def invoice_list(request):
 @login_required
 def invoice_detail(request, invoice_id):
     invoice = get_object_or_404(Invoice, id=invoice_id)
-    context = {'invoice': invoice}
-    return render(request, 'invoices/invoice_detail.html', context)
+    return render(request, 'invoices/invoice_detail.html', {'invoice': invoice})
 
 @login_required
 def invoice_create(request):
@@ -93,14 +92,16 @@ def invoice_create(request):
 
     if work_order_id:
         work_order = get_object_or_404(WorkOrder, id=work_order_id)
-        # Check if an invoice already exists for this work order
+        # prevent duplicate invoices
         existing_invoice = Invoice.objects.filter(work_order=work_order).first()
         if existing_invoice:
             messages.error(request, "An invoice has already been created for this job.")
             return redirect('invoice_detail', invoice_id=existing_invoice.id)
-        
-        pickup_addresses = work_order.addresses.filter(address_type='pickup')
-        dropoff_addresses = work_order.addresses.filter(address_type='dropoff')
+
+        # NEW: pull events instead of addresses
+        pickup_addresses = work_order.events.filter(event_type='pickup')
+        dropoff_addresses = work_order.events.filter(event_type='dropoff')
+
         initial_data = {
             'client': work_order.client.id,
             'work_order': work_order.id,
@@ -108,24 +109,21 @@ def invoice_create(request):
         }
 
     if request.method == 'POST':
-        # Copy POST data to modify it
         data = request.POST.copy()
         if work_order_id:
-            # Force the work_order field into POST data so the form always associates this invoice with the work order
             data['work_order'] = work_order.id
         form = InvoiceForm(data)
         if form.is_valid():
-            invoice = form.save()
+            form.save()
             return redirect('invoice_list')
     else:
         form = InvoiceForm(initial=initial_data)
 
-    context = {
+    return render(request, 'invoices/invoice_form.html', {
         'form': form,
         'pickup_addresses': pickup_addresses,
         'dropoff_addresses': dropoff_addresses,
-    }
-    return render(request, 'invoices/invoice_form.html', context)
+    })
 
 @login_required
 def invoice_update(request, invoice_id):
@@ -137,8 +135,7 @@ def invoice_update(request, invoice_id):
             return redirect('invoice_detail', invoice_id=invoice.id)
     else:
         form = InvoiceForm(instance=invoice)
-    context = {'form': form, 'invoice': invoice}
-    return render(request, 'invoices/invoice_form.html', context)
+    return render(request, 'invoices/invoice_form.html', {'form': form, 'invoice': invoice})
 
 @login_required
 def mark_invoice_paid(request, invoice_id):
@@ -155,15 +152,13 @@ def update_due_date(request, invoice_id):
         new_due_date = request.POST.get('new_due_date')
         if new_due_date:
             invoice.due_date = new_due_date
-            # Optionally, mark as paid:
             invoice.status = 'paid'
             invoice.save()
             messages.success(request, "Invoice due date updated and marked as paid.")
             return redirect('invoice_list')
         else:
             messages.error(request, "Please select a valid date.")
-    context = {'invoice': invoice}
-    return render(request, 'invoices/update_due_date.html', context)
+    return render(request, 'invoices/update_due_date.html', {'invoice': invoice})
 
 @login_required
 def get_workorders_for_client(request):
@@ -179,8 +174,7 @@ def invoice_unpaid(request):
         invoices = invoices.filter(
             Q(invoice_number__icontains=query) | Q(client__name__icontains=query)
         )
-    context = {'invoices': invoices, 'query': query}
-    return render(request, 'invoices/invoice_unpaid.html', context)
+    return render(request, 'invoices/invoice_unpaid.html', {'invoices': invoices, 'query': query})
 
 @login_required
 def invoice_paid(request):
@@ -190,8 +184,7 @@ def invoice_paid(request):
         invoices = invoices.filter(
             Q(invoice_number__icontains=query) | Q(client__name__icontains=query)
         )
-    context = {'invoices': invoices, 'query': query}
-    return render(request, 'invoices/invoice_paid.html', context)
+    return render(request, 'invoices/invoice_paid.html', {'invoices': invoices, 'query': query})
 
 @login_required
 def invoice_overdue(request):
@@ -201,5 +194,4 @@ def invoice_overdue(request):
         invoices = invoices.filter(
             Q(invoice_number__icontains=query) | Q(client__name__icontains=query)
         )
-    context = {'invoices': invoices, 'query': query}
-    return render(request, 'invoices/invoice_overdue.html', context)
+    return render(request, 'invoices/invoice_overdue.html', {'invoices': invoices, 'query': query})
