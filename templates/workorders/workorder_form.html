@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
 {% block title %}Edit Work Order{% endblock %}
+
 {% block content %}
 <div class="container">
 
@@ -16,7 +17,7 @@
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
 
-    <!-- Client and Job Details -->
+    <!-- Client and Job Info -->
     <div class="mb-4">
       <label for="{{ form.client.id_for_label }}" class="form-label fw-bold">Client</label>
       {{ form.client }}
@@ -33,12 +34,12 @@
       {{ form.assigned_to|as_crispy_field }}
     </div>
 
-    <!-- Event Scheduling Section -->
-    <h4>Scheduled Events (Pickup, Wrap, Install, etc.)</h4>
+    <!-- Event Formset Section -->
+    <h4>Scheduled Events</h4>
     <div id="event-formset">
       {{ event_formset.management_form }}
       {% for form in event_formset %}
-        <div class="card mb-3">
+        <div class="card mb-3 event-form">
           <div class="card-body">
             {{ form|crispy }}
             {% if form.instance.pk %}
@@ -46,9 +47,15 @@
                 {{ form.DELETE }} <label class="form-check-label">Delete</label>
               </div>
             {% endif %}
+            <button type="button" class="btn btn-sm btn-outline-danger remove-event mt-2">Remove</button>
           </div>
         </div>
       {% endfor %}
+    </div>
+
+    <!-- Add Event Button -->
+    <div class="text-center mb-4">
+      <button type="button" id="add-event" class="btn btn-outline-primary">+ Add Event</button>
     </div>
 
     <!-- Attachments -->
@@ -111,6 +118,16 @@
     {% endif %}
   </div>
 </div>
+
+<!-- Hidden empty form template -->
+<template id="empty-form-template">
+  <div class="card mb-3 event-form">
+    <div class="card-body">
+      {{ event_formset.empty_form.as_p }}
+      <button type="button" class="btn btn-sm btn-outline-danger remove-event mt-2">Remove</button>
+    </div>
+  </div>
+</template>
 {% endblock %}
 
 {% block extra_js %}
@@ -128,9 +145,56 @@
       allowClear: true
     });
 
-    // Initialize datepickers
-    flatpickr(".datepicker", {
-      dateFormat: "Y-m-d"
+    flatpickr(".datepicker", { dateFormat: "Y-m-d" });
+
+    const addBtn = document.getElementById('add-event');
+    const formset = document.getElementById('event-formset');
+    const totalFormsInput = formset.querySelector('input[name$="-TOTAL_FORMS"]');
+    const emptyFormTemplate = document.getElementById('empty-form-template').content;
+
+    function updateTotalForms(delta) {
+      const total = parseInt(totalFormsInput.value, 10);
+      totalFormsInput.value = total + delta;
+    }
+
+    function reindexForms() {
+      const forms = formset.querySelectorAll('.event-form');
+      forms.forEach((form, index) => {
+        form.querySelectorAll('input, select, textarea, label').forEach(el => {
+          ['name', 'id', 'for'].forEach(attr => {
+            if (el.hasAttribute(attr)) {
+              el.setAttribute(attr, el.getAttribute(attr).replace(/events-\d+/, `events-${index}`));
+            }
+          });
+        });
+      });
+    }
+
+    function attachRemoveHandler(row) {
+      const removeBtn = row.querySelector('.remove-event');
+      if (!removeBtn) return;
+      removeBtn.addEventListener('click', function () {
+        const deleteInput = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
+        if (deleteInput) {
+          deleteInput.checked = true;
+          row.style.display = 'none';
+        } else {
+          row.remove();
+          updateTotalForms(-1);
+          reindexForms();
+        }
+      });
+    }
+
+    formset.querySelectorAll('.event-form').forEach(attachRemoveHandler);
+
+    addBtn.addEventListener('click', function () {
+      const newForm = emptyFormTemplate.cloneNode(true);
+      formset.appendChild(newForm);
+      updateTotalForms(1);
+      reindexForms();
+      flatpickr(".datepicker", { dateFormat: "Y-m-d" });
+      attachRemoveHandler(formset.lastElementChild);
     });
   });
 </script>
