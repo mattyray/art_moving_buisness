@@ -17,19 +17,19 @@ def workorder_calendar_data(request):
 
     # Scheduled events for all non-completed jobs
     scheduled_events = Event.objects.filter(
-        scheduled_date__isnull=False,
+        date__isnull=False,
         work_order__status__in=["pending", "in_progress"]
     )
     for evt in scheduled_events:
         events.append({
             "title": f"{evt.get_event_type_display()}: {evt.work_order.client.name}",
-            "start": evt.scheduled_date.isoformat(),
+            "start": evt.date.isoformat(),
             "color": "#4a90e2",  # You can adjust colors by event type if needed
             "url": f"/workorders/detail/{evt.work_order.id}/",
         })
 
     # Pending jobs = no events with dates
-    pending_jobs = WorkOrder.objects.exclude(events__scheduled_date__isnull=False).filter(status__in=["pending", "in_progress"])
+    pending_jobs = WorkOrder.objects.exclude(events__date__isnull=False).filter(status__in=["pending", "in_progress"])
     for wo in pending_jobs:
         events.append({
             "title": f"Pending: {wo.client.name}",
@@ -54,8 +54,8 @@ def workorder_calendar_data(request):
 @login_required
 def workorder_list(request):
     query = request.GET.get('q', '')
-    pending_jobs = WorkOrder.objects.exclude(events__scheduled_date__isnull=False).filter(status__in=["pending", "in_progress"])
-    scheduled_jobs = WorkOrder.objects.filter(events__scheduled_date__isnull=False, status__in=["pending", "in_progress"]).distinct()
+    pending_jobs = WorkOrder.objects.exclude(events__date__isnull=False).filter(status__in=["pending", "in_progress"])
+    scheduled_jobs = WorkOrder.objects.filter(events__date__isnull=False, status__in=["pending", "in_progress"]).distinct()
     completed_jobs = WorkOrder.objects.filter(status='completed')
 
     if query:
@@ -223,7 +223,7 @@ def workorder_detail(request, job_id):
 @login_required
 def pending_jobs_view(request):
     query = request.GET.get('q', '')
-    jobs = WorkOrder.objects.exclude(events__scheduled_date__isnull=False).filter(status__in=["pending", "in_progress"])
+    jobs = WorkOrder.objects.exclude(events__date__isnull=False).filter(status__in=["pending", "in_progress"])
     if query:
         jobs = jobs.filter(client__name__icontains=query)
     return render(request, 'workorders/pending_jobs.html', {'jobs': jobs, 'query': query})
@@ -232,7 +232,7 @@ def pending_jobs_view(request):
 @login_required
 def scheduled_jobs_view(request):
     query = request.GET.get('q', '')
-    jobs = WorkOrder.objects.filter(events__scheduled_date__isnull=False, status__in=["pending", "in_progress"]).distinct()
+    jobs = WorkOrder.objects.filter(events__date__isnull=False, status__in=["pending", "in_progress"]).distinct()
     if query:
         jobs = jobs.filter(client__name__icontains=query)
     return render(request, 'workorders/scheduled_jobs.html', {'jobs': jobs, 'query': query})
