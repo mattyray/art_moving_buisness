@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
 {% block title %}Work Order Detail{% endblock %}
+
 {% block content %}
 <div class="container">
   <!-- Work Order Information Card -->
@@ -17,33 +18,66 @@
       <p><strong>ID:</strong> {{ job.id }}</p>
       <p><strong>Description:</strong> {{ job.job_description }}</p>
       <p><strong>Status:</strong> {{ job.get_status_display }}</p>
-      
-      <h5>Addresses</h5>
-      {% if job.addresses.all %}
-        {% for address in job.addresses.all %}
-          <p><strong>{{ address.get_address_type_display }} Address:</strong> {{ address.address }}</p>
-        {% endfor %}
-      {% else %}
-        <p>No addresses provided.</p>
-      {% endif %}
-      
       <p><strong>Estimated Cost:</strong> ${{ job.estimated_cost }}</p>
-      <p><strong>Scheduled Date:</strong> {{ job.scheduled_date|default:"Not Scheduled" }}</p>
-      <p><strong>Completed At:</strong> {{ job.completed_at|default:"Not Completed" }}</p>
-      <p><strong>Created At:</strong> {{ job.created_at|date:"Y-m-d H:i" }}</p>
-      <p><strong>Last Edited:</strong> {{ job.updated_at|date:"Y-m-d H:i" }}</p>
+      <p><strong>Created At:</strong> {{ job.created_at|date:"m/d/y g:i A" }}</p>
+      <p><strong>Last Edited:</strong> {{ job.updated_at|date:"m/d/y g:i A" }}</p>
+      <p><strong>Completed At:</strong>
+        {% if job.completed_at %}
+          {{ job.completed_at|date:"m/d/y g:i A" }}
+        {% else %}
+          Not Completed
+        {% endif %}
+      </p>
     </div>
   </div>
-  
+
+  <!-- Scheduled Events Card -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header" style="background-color: #4a90e2; color: white;">
+      <h3>Scheduled Events</h3>
+    </div>
+    <div class="card-body">
+      {% if job.events.all %}
+        <ul class="list-group">
+          {% for evt in job.events.all %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <strong>{{ evt.get_event_type_display }}</strong> — {{ evt.address }}
+                {% if evt.date %}
+                  on {{ evt.date|date:"m/d/y" }}
+                {% else %}
+                  <em>(No date set)</em>
+                {% endif %}
+              </div>
+              <span class="badge 
+                {% if evt.event_type == 'pickup' %}bg-primary
+                {% elif evt.event_type == 'pickup_wrap' %}bg-info
+                {% elif evt.event_type == 'wrap' %}bg-secondary
+                {% elif evt.event_type == 'install' %}bg-success
+                {% elif evt.event_type == 'deliver_install' %}bg-warning text-dark
+                {% elif evt.event_type == 'dropoff' %}bg-dark
+                {% endif %}">
+                {{ evt.get_event_type_display }}
+              </span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No scheduled events for this work order.</p>
+      {% endif %}
+    </div>
+  </div>
+
   <!-- Create Invoice Button for Completed Work Orders -->
   {% if job.status == "completed" %}
-  <div class="mb-4">
-    <button type="button" class="btn btn-danger" onclick="window.location.href='/invoices/create/?work_order={{ job.id }}'">
-      Create Invoice
-    </button>
-  </div>
+    <div class="mb-4">
+      <button type="button" class="btn btn-danger"
+              onclick="window.location.href='{% url 'invoice_create' %}?work_order={{ job.id }}'">
+        Create Invoice
+      </button>
+    </div>
   {% endif %}
-  
+
   <!-- Client Information Card -->
   <div class="card shadow-sm mb-4">
     <div class="card-header" style="background-color: #03a9f4; color: white;">
@@ -56,7 +90,7 @@
       <p><strong>Address:</strong> {{ job.client.address }}</p>
     </div>
   </div>
-  
+
   <!-- Attachments Card -->
   <div class="card shadow-sm mb-4">
     <div class="card-header" style="background-color: #388e3c; color: white;">
@@ -67,11 +101,11 @@
         {% for attachment in attachments %}
           <li class="list-group-item">
             {% if attachment.file %}
-              <a href="{{ attachment.file.url }}">{{ attachment.file.url }}</a>
+              <a href="{{ attachment.file.url }}">{{ attachment.file.name }}</a>
             {% else %}
               <span>No file available.</span>
             {% endif %}
-            <small class="text-muted">(Uploaded: {{ attachment.uploaded_at|date:"Y-m-d H:i" }})</small>
+            <small class="text-muted">(Uploaded: {{ attachment.uploaded_at|date:"m/d/y g:i A" }})</small>
           </li>
         {% empty %}
           <li class="list-group-item">No attachments.</li>
@@ -84,7 +118,7 @@
       </form>
     </div>
   </div>
-  
+
   <!-- Notes Card -->
   <div class="card shadow-sm mb-4">
     <div class="card-header" style="background-color: #8bc34a; color: white;">
@@ -95,7 +129,7 @@
         {% for note in notes %}
           <li class="list-group-item">
             {{ note.note }}
-            <small class="text-muted">({{ note.created_at|date:"Y-m-d H:i" }})</small>
+            <small class="text-muted">({{ note.created_at|date:"m/d/y g:i A" }})</small>
           </li>
         {% empty %}
           <li class="list-group-item">No notes.</li>
@@ -108,7 +142,7 @@
       </form>
     </div>
   </div>
-  
+
   <!-- Navigation Row -->
   <div class="mt-4 d-flex justify-content-between">
     <div>
@@ -121,6 +155,6 @@
   </div>
 </div>
 {% block extra_js %}
-<!-- No extra JavaScript is needed for the Create Invoice button -->
+<!-- No extra JavaScript needed here -->
 {% endblock %}
 {% endblock %}

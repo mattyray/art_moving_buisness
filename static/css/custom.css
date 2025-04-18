@@ -1,21 +1,28 @@
 body {
-  font-family: "Helvetica Neue", sans-serif;
+  font-family: OpenDyslexic, "Helvetica Neue", sans-serif;
   color: #222;
-  background-color: #fdfdfd;
+  background-color: #fafafa;
   line-height: 1.6;
+  letter-spacing: 0.03em;
 }
 
 h1, h2, h3, h4, h5 {
   font-weight: 600;
   margin-bottom: 1rem;
+  line-height: 1.4;
 }
 
 a {
-  color: #ff5c00;
+  color: #FF6B35;
   text-decoration: none;
 }
 a:hover {
   text-decoration: underline;
+}
+
+ul, ol {
+  margin-left: 1.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .container {
@@ -28,34 +35,35 @@ a:hover {
   border: 1px solid #e0e0e0;
   border-radius: 0.375rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  padding: 1rem;
+  padding: 1.5rem;
   background-color: white;
   margin-bottom: 1.5rem;
 }
 
 .btn {
   display: inline-block;
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1.25rem;
   border-radius: 0.375rem;
   font-weight: 600;
   transition: all 0.2s ease-in-out;
   border: none;
   text-align: center;
   cursor: pointer;
+  font-size: 1rem;
 }
 .btn.btn-primary {
-  background-color: #ff5c00;
+  background-color: #FF6B35;
   color: white;
 }
 .btn.btn-primary:hover {
-  background-color: rgb(204, 73.6, 0);
+  background-color: rgb(255, 69.6336633663, 2);
 }
 .btn.btn-secondary {
-  background-color: #007bff;
+  background-color: #3C3C3C;
   color: white;
 }
 .btn.btn-secondary:hover {
-  background-color: rgb(0, 98.4, 204);
+  background-color: rgb(34.5, 34.5, 34.5);
 }
 .btn.btn-danger {
   background-color: #dc3545;
@@ -70,6 +78,15 @@ a:hover {
 }
 .btn.btn-success:hover {
   background-color: rgb(30.1449275362, 125.8550724638, 52);
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.4em 0.7em;
+  font-size: 0.9rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
 }
 
 .text-center {
