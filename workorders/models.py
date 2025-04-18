@@ -8,9 +8,8 @@ class WorkOrder(models.Model):
         ('completed', 'Completed'),
     ]
     client = models.ForeignKey('clients.Client', on_delete=models.CASCADE, related_name='work_orders')
-    job_description = models.TextField()
+    job_description = models.TextField(blank=True, null=True)
     estimated_cost = models.DecimalField(max_digits=10, decimal_places=2)
-    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     completed_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -22,8 +21,6 @@ class WorkOrder(models.Model):
     def update_status(self):
         if self.status == 'completed':
             return
-
-        # If at least one event has a date, mark it as in_progress
         if self.events.filter(date__isnull=False).exists():
             self.status = 'in_progress'
         else:
