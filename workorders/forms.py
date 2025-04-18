@@ -1,10 +1,9 @@
 from django import forms
 from django.forms import inlineformset_factory
 from django.apps import apps
-from .models import WorkOrder, WorkOrderAddress, JobAttachment, JobNote
+from .models import WorkOrder, Event, JobAttachment, JobNote
 
 class WorkOrderForm(forms.ModelForm):
-    # Set queryset to None initially; we'll assign it in __init__ using a lazy lookup.
     client = forms.ModelChoiceField(
         queryset=None,
         widget=forms.Select(attrs={
@@ -25,33 +24,41 @@ class WorkOrderForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(WorkOrderForm, self).__init__(*args, **kwargs)
-        # Lazy import of Client to avoid circular dependency
         Client = apps.get_model('clients', 'Client')
         self.fields['client'].queryset = Client.objects.all()
 
 
-class WorkOrderAddressForm(forms.ModelForm):
-    scheduled_date = forms.DateField(
+class EventForm(forms.ModelForm):
+    date = forms.DateField(
         required=False,
         widget=forms.DateInput(attrs={
             'class': 'form-control datepicker',
             'placeholder': 'YYYY-MM-DD'
         })
     )
+    event_type = forms.ChoiceField(
+        choices=Event.EVENT_TYPES,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label="Event Type"
+    )
+    address = forms.CharField(
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+        label="Address"
+    )
 
     class Meta:
-        model = WorkOrderAddress
-        fields = ['address_type', 'address', 'scheduled_date']
-        widgets = {
-            'address': forms.TextInput(attrs={'class': 'form-control'}),
-        }
+        model = Event
+        fields = ['event_type', 'address', 'date']
 
-WorkOrderAddressFormSet = inlineformset_factory(
-    WorkOrder, WorkOrderAddress,
-    form=WorkOrderAddressForm,
-    extra=4,
+
+EventFormSet = inlineformset_factory(
+    WorkOrder,
+    Event,
+    form=EventForm,
+    extra=1,
     can_delete=True
 )
+
 
 class JobAttachmentForm(forms.ModelForm):
     file = forms.FileField(required=False)
@@ -59,6 +66,7 @@ class JobAttachmentForm(forms.ModelForm):
     class Meta:
         model = JobAttachment
         fields = ['file']
+
 
 class JobNoteForm(forms.ModelForm):
     note = forms.CharField(required=False, widget=forms.Textarea, label="Note")
