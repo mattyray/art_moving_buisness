@@ -6,34 +6,31 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
 
-from .models import WorkOrder, WorkOrderAddress, JobAttachment, JobNote
-from .forms import WorkOrderForm, WorkOrderAddressFormSet, JobAttachmentForm, JobNoteForm
+from .models import WorkOrder, Event, JobAttachment, JobNote
+from .forms import WorkOrderForm, EventFormSet, JobAttachmentForm, JobNoteForm
 
 
 @login_required
 def workorder_calendar_data(request):
-    """Returns pickup/dropoff events and pending/completed work orders for calendar display."""
+    """Returns scheduled events for calendar display."""
     events = []
 
-    # Scheduled pickups and dropoffs (only for non-completed work orders)
-    scheduled_addresses = WorkOrderAddress.objects.filter(
+    # Scheduled events for all non-completed jobs
+    scheduled_events = Event.objects.filter(
         scheduled_date__isnull=False,
         work_order__status__in=["pending", "in_progress"]
     )
-    for addr in scheduled_addresses:
-        label = "Pickup" if addr.address_type == "pickup" else "Dropoff"
+    for evt in scheduled_events:
         events.append({
-            "title": f"{label}: {addr.work_order.client.name}",
-            "start": addr.scheduled_date.isoformat(),
-            "color": "#4a90e2" if label == "Pickup" else "#f39c12",
-            "url": f"/workorders/detail/{addr.work_order.id}/",
+            "title": f"{evt.get_event_type_display()}: {evt.work_order.client.name}",
+            "start": evt.scheduled_date.isoformat(),
+            "color": "#4a90e2",  # You can adjust colors by event type if needed
+            "url": f"/workorders/detail/{evt.work_order.id}/",
         })
 
-    # Pending work orders (no address scheduled)
-    pending_orders = WorkOrder.objects.exclude(
-        addresses__scheduled_date__isnull=False
-    ).filter(status__in=["pending", "in_progress"])
-    for wo in pending_orders:
+    # Pending jobs = no events with dates
+    pending_jobs = WorkOrder.objects.exclude(events__scheduled_date__isnull=False).filter(status__in=["pending", "in_progress"])
+    for wo in pending_jobs:
         events.append({
             "title": f"Pending: {wo.client.name}",
             "start": wo.created_at.date().isoformat(),
@@ -41,9 +38,9 @@ def workorder_calendar_data(request):
             "url": f"/workorders/detail/{wo.id}/",
         })
 
-    # Completed work orders (use completed_at date)
-    completed_orders = WorkOrder.objects.filter(status='completed', completed_at__isnull=False)
-    for wo in completed_orders:
+    # Completed jobs
+    completed = WorkOrder.objects.filter(status='completed', completed_at__isnull=False)
+    for wo in completed:
         events.append({
             "title": f"Completed: {wo.client.name}",
             "start": wo.completed_at.date().isoformat(),
@@ -57,9 +54,8 @@ def workorder_calendar_data(request):
 @login_required
 def workorder_list(request):
     query = request.GET.get('q', '')
-
-    pending_jobs = WorkOrder.objects.exclude(addresses__scheduled_date__isnull=False).filter(status__in=["pending", "in_progress"])
-    scheduled_jobs = WorkOrder.objects.filter(addresses__scheduled_date__isnull=False, status__in=["pending", "in_progress"]).distinct()
+    pending_jobs = WorkOrder.objects.exclude(events__scheduled_date__isnull=False).filter(status__in=["pending", "in_progress"])
+    scheduled_jobs = WorkOrder.objects.filter(events__scheduled_date__isnull=False, status__in=["pending", "in_progress"]).distinct()
     completed_jobs = WorkOrder.objects.filter(status='completed')
 
     if query:
@@ -77,22 +73,17 @@ def workorder_list(request):
 
 
 @login_required
-def schedule_workorder(request, job_id):
-    return redirect('workorder_edit', job_id=job_id)
-
-
-@login_required
 def workorder_create(request):
     if request.method == 'POST':
         form = WorkOrderForm(request.POST)
-        address_formset = WorkOrderAddressFormSet(request.POST, prefix="addresses")
+        event_formset = EventFormSet(request.POST, prefix="events")
         attachment_form = JobAttachmentForm(request.POST, request.FILES)
         note_form = JobNoteForm(request.POST)
 
-        if form.is_valid() and address_formset.is_valid():
+        if form.is_valid() and event_formset.is_valid():
             workorder = form.save()
-            address_formset.instance = workorder
-            address_formset.save()
+            event_formset.instance = workorder
+            event_formset.save()
 
             workorder.update_status()
             workorder.save()
@@ -110,13 +101,13 @@ def workorder_create(request):
             return redirect('workorder_list')
     else:
         form = WorkOrderForm()
-        address_formset = WorkOrderAddressFormSet(prefix="addresses")
+        event_formset = EventFormSet(prefix="events")
         attachment_form = JobAttachmentForm()
         note_form = JobNoteForm()
 
     context = {
         'form': form,
-        'address_formset': address_formset,
+        'event_formset': event_formset,
         'attachment_form': attachment_form,
         'note_form': note_form,
     }
@@ -128,13 +119,13 @@ def workorder_edit(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
     if request.method == 'POST':
         form = WorkOrderForm(request.POST, instance=workorder)
-        address_formset = WorkOrderAddressFormSet(request.POST, instance=workorder, prefix="addresses")
+        event_formset = EventFormSet(request.POST, instance=workorder, prefix="events")
         attachment_form = JobAttachmentForm(request.POST, request.FILES)
         note_form = JobNoteForm(request.POST)
 
-        if form.is_valid() and address_formset.is_valid():
+        if form.is_valid() and event_formset.is_valid():
             form.save()
-            address_formset.save()
+            event_formset.save()
 
             workorder.update_status()
             workorder.save()
@@ -154,13 +145,13 @@ def workorder_edit(request, job_id):
             return redirect("workorder_detail", job_id=workorder.id)
     else:
         form = WorkOrderForm(instance=workorder)
-        address_formset = WorkOrderAddressFormSet(instance=workorder, prefix="addresses")
+        event_formset = EventFormSet(instance=workorder, prefix="events")
         attachment_form = JobAttachmentForm()
         note_form = JobNoteForm()
 
     context = {
         'form': form,
-        'address_formset': address_formset,
+        'event_formset': event_formset,
         'attachment_form': attachment_form,
         'note_form': note_form,
         'job': workorder,
@@ -232,7 +223,7 @@ def workorder_detail(request, job_id):
 @login_required
 def pending_jobs_view(request):
     query = request.GET.get('q', '')
-    jobs = WorkOrder.objects.exclude(addresses__scheduled_date__isnull=False).filter(status__in=["pending", "in_progress"])
+    jobs = WorkOrder.objects.exclude(events__scheduled_date__isnull=False).filter(status__in=["pending", "in_progress"])
     if query:
         jobs = jobs.filter(client__name__icontains=query)
     return render(request, 'workorders/pending_jobs.html', {'jobs': jobs, 'query': query})
@@ -241,7 +232,7 @@ def pending_jobs_view(request):
 @login_required
 def scheduled_jobs_view(request):
     query = request.GET.get('q', '')
-    jobs = WorkOrder.objects.filter(addresses__scheduled_date__isnull=False, status__in=["pending", "in_progress"]).distinct()
+    jobs = WorkOrder.objects.filter(events__scheduled_date__isnull=False, status__in=["pending", "in_progress"]).distinct()
     if query:
         jobs = jobs.filter(client__name__icontains=query)
     return render(request, 'workorders/scheduled_jobs.html', {'jobs': jobs, 'query': query})
