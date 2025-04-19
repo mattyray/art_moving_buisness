@@ -109,11 +109,18 @@
     </div>
 
     <!-- Submit Buttons -->
-    <div class="d-flex justify-content-end gap-2">
+    <div class="d-flex justify-content-end gap-2 mb-4">
       <button type="submit" name="update_only" class="btn btn-success">Create / Update</button>
       <button type="submit" name="create_invoice" class="btn btn-danger">Update &amp; Create Invoice</button>
     </div>
   </form>
+
+  <!-- Bottom Navigation Buttons -->
+  <div class="text-center">
+    <a href="{% url 'workorder_list' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Work Orders</a>
+    <a href="{% url 'home' %}"             class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+  </div>
+</div>
 </div>
 {% endblock %}
 
