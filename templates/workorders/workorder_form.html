@@ -12,10 +12,10 @@
   <!-- Top Nav Buttons -->
   <div class="mb-4 text-center">
     <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
-      <a href="{% url 'pending_jobs' %}"     class="btn btn-outline-primary w-100 w-sm-auto">Pending Jobs</a>
-      <a href="{% url 'scheduled_jobs' %}"   class="btn btn-outline-primary w-100 w-sm-auto">Scheduled Jobs</a>
-      <a href="{% url 'completed_jobs' %}"   class="btn btn-outline-primary w-100 w-sm-auto">Completed Jobs</a>
-      <a href="{% url 'workorder_create' %}" class="btn btn-outline-primary w-100 w-sm-auto">New Work Order</a>
+      <a href="{% url 'pending_jobs' %}" class="btn btn-outline-primary">Pending Jobs</a>
+      <a href="{% url 'scheduled_jobs' %}" class="btn btn-outline-primary">Scheduled Jobs</a>
+      <a href="{% url 'completed_jobs' %}" class="btn btn-outline-primary">Completed Jobs</a>
+      <a href="{% url 'workorder_create' %}" class="btn btn-outline-primary">New Work Order</a>
     </div>
   </div>
 
@@ -30,22 +30,20 @@
       <div class="card-body">
         <div class="row g-3">
           <!-- Client picker -->
-          <div class="col-12 col-md-6">
+          <div class="col-md-6">
             {{ form.client|as_crispy_field }}
-            <a href="{% url 'client_create' %}"
-               class="btn btn-sm btn-outline-primary mt-2 w-100 w-sm-auto"
-               target="_blank">+ Add New Client</a>
+            <a href="{% url 'client_create' %}" target="_blank"
+               class="btn btn-sm btn-outline-primary mt-2">+ Add New Client</a>
           </div>
 
           <!-- Job description -->
-          <div class="col-12 col-md-6">
+          <div class="col-md-6">
             {{ form.job_description|as_crispy_field }}
           </div>
 
           <!-- Estimated cost -->
-          <div class="col-12 col-md-6">
-            <label for="{{ form.estimated_cost.id_for_label }}"
-                   class="form-label fw-bold">Estimated Cost</label>
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Estimated Cost</label>
             <div class="input-group">
               <span class="input-group-text">$</span>
               {{ form.estimated_cost }}
@@ -62,20 +60,30 @@
       </div>
       <div class="card-body" id="event-formset">
         {{ event_formset.management_form }}
-        {% for subform in event_formset %}
+        <div id="event-forms-container">
+          {% for subform in event_formset %}
+            <div class="card mb-3 event-form">
+              <div class="card-body">
+                {{ subform|crispy }}
+                <button type="button" class="btn btn-sm btn-outline-danger remove-event mt-2">
+                  Remove
+                </button>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        <div class="text-center">
+          <button type="button" id="add-event" class="btn btn-outline-primary">+ Add Event</button>
+        </div>
+
+        <div id="empty-form-template" class="d-none">
           <div class="card mb-3 event-form">
             <div class="card-body">
-              {{ subform|crispy }}
-              <button type="button"
-                      class="btn btn-sm btn-outline-danger mt-2 remove-event">
-                Remove
-              </button>
+              {{ event_formset.empty_form|crispy }}
+              <button type="button" class="btn btn-sm btn-outline-danger remove-event mt-2">Remove</button>
             </div>
           </div>
-        {% endfor %}
-        <div class="text-center">
-          <button type="button" id="add-event"
-                  class="btn btn-outline-primary">+ Add Event</button>
         </div>
       </div>
     </div>
@@ -86,22 +94,6 @@
         <h5 class="mb-0">Attachments</h5>
       </div>
       <div class="card-body">
-        <ul class="list-group mb-3">
-          {% for attachment in attachments %}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-              {% if attachment.file %}
-                <a href="{{ attachment.file.url }}">{{ attachment.file.name }}</a>
-              {% else %}
-                <em>No file</em>
-              {% endif %}
-              <small class="text-muted">
-                {{ attachment.uploaded_at|date:"m/d/y g:i A" }}
-              </small>
-            </li>
-          {% empty %}
-            <li class="list-group-item">No attachments.</li>
-          {% endfor %}
-        </ul>
         {{ attachment_form|crispy }}
       </div>
     </div>
@@ -112,111 +104,60 @@
         <h5 class="mb-0">Notes</h5>
       </div>
       <div class="card-body">
-        <ul class="list-group mb-3">
-          {% for note in notes %}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-              {{ note.note }}
-              <small class="text-muted">
-                {{ note.created_at|date:"m/d/y g:i A" }}
-              </small>
-            </li>
-          {% empty %}
-            <li class="list-group-item">No notes.</li>
-          {% endfor %}
-        </ul>
         {{ note_form|crispy }}
       </div>
     </div>
 
     <!-- Submit Buttons -->
-    <div class="d-flex flex-column flex-sm-row gap-2 mb-5">
-      <button type="submit" name="update_only"
-              class="btn btn-success w-100 w-sm-auto">
-        Create / Update
-      </button>
-      <button type="submit" name="create_invoice"
-              class="btn btn-danger w-100 w-sm-auto">
-        Update &amp; Create Invoice
-      </button>
+    <div class="d-flex justify-content-end gap-2">
+      <button type="submit" name="update_only" class="btn btn-success">Create / Update</button>
+      <button type="submit" name="create_invoice" class="btn btn-danger">Update &amp; Create Invoice</button>
     </div>
   </form>
-
-  <!-- Footer Nav -->
-  <div class="d-flex flex-column flex-sm-row justify-content-between gap-2">
-    <a href="{% url 'workorder_list' %}"
-       class="btn btn-secondary w-100 w-sm-auto">
-      Back to Work Orders
-    </a>
-    {% if job %}
-      <a href="{% url 'workorder_delete' job.id %}"
-         class="btn btn-danger w-100 w-sm-auto">
-        Delete Work Order
-      </a>
-    {% endif %}
-  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-  <!-- jQuery (required by Select2) -->
+  <!-- jQuery, Select2, Flatpickr -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <!-- Select2 JS -->
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-  <!-- Flatpickr JS -->
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
   <script>
     $(document).ready(function() {
-      // init client search
-      $('.select2').select2({
-        width: '100%',
-        placeholder: 'Search or select a client',
-        allowClear: true
-      });
-      // init datepickers
+      $('.select2').select2({ width: '100%' });
       flatpickr('.datepicker', { dateFormat: 'Y-m-d' });
 
-      // event‐formset remove/add
-      const formset   = $('#event-formset');
-      const totalForms= formset.find('input[name$="-TOTAL_FORMS"]');
+      const formsetContainer = $('#event-forms-container');
+      const totalForms = $('#id_events-TOTAL_FORMS');
+      const emptyForm = $('#empty-form-template').html();
 
-      function attachRemove(btn) {
-        btn.on('click', function() {
-          const card = $(this).closest('.event-form');
-          const del  = card.find('input[name$="-DELETE"]');
-          if (del.length) {
-            del.prop('checked', true);
-            card.hide();
-          } else {
-            card.remove();
-            totalForms.val( parseInt(totalForms.val()) - 1 );
-          }
+      function attachRemoveEvent(btn) {
+        btn.click(function() {
+          $(this).closest('.event-form').remove();
+          updateTotalForms();
         });
       }
 
-      formset.find('.remove-event').each(function(){
-        attachRemove( $(this) );
+      function updateTotalForms() {
+        const formCount = formsetContainer.children('.event-form').length;
+        totalForms.val(formCount);
+      }
+
+      $('#add-event').click(function() {
+        const formCount = formsetContainer.children('.event-form').length;
+        const formRegex = new RegExp('__prefix__', 'g');
+        const newForm = $(emptyForm.replace(formRegex, formCount));
+
+        formsetContainer.append(newForm);
+        attachRemoveEvent(newForm.find('.remove-event'));
+        flatpickr(newForm.find('.datepicker'), { dateFormat: 'Y-m-d' });
+        updateTotalForms();
       });
 
-      $('#add-event').on('click', function(){
-        const idx  = parseInt(totalForms.val());
-        const tmpl = $('#empty-form-template').html().replace(/__prefix__/g, idx);
-        formset.append(tmpl);
-        totalForms.val(idx + 1);
-        // re‐attach and init date
-        const newCard = formset.find('.event-form').last();
-        attachRemove( newCard.find('.remove-event') );
-        flatpickr( newCard.find('.datepicker'), { dateFormat: 'Y-m-d' });
+      formsetContainer.find('.remove-event').each(function() {
+        attachRemoveEvent($(this));
       });
     });
   </script>
-
-  <!-- hidden template for new event -->
-  <div id="empty-form-template" style="display:none;">
-    {{ event_formset.empty_form.as_p }}
-    <button type="button"
-            class="btn btn-sm btn-outline-danger remove-event mt-2">
-      Remove
-    </button>
-  </div>
 {% endblock %}
