@@ -1,190 +1,107 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
-{% block title %}{% if job %}Edit{% else %}New{% endif %} Work Order{% endblock %}
+
+{% block title %}Work Order Detail{% endblock %}
 
 {% block content %}
 <div class="container py-4">
-  <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
 
-    <!-- Client & Job Details -->
-    <div class="card mb-4">
-      <div class="card-header bg-secondary text-white">
-        <h5 class="mb-0">Client &amp; Job Details</h5>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-          <!-- Left column -->
-          <div class="col-md-6">
-            <div class="mb-3">
-              <label for="{{ form.client.id_for_label }}" class="form-label fw-bold">Client</label>
-              {{ form.client }}
-              {% if form.client.errors %}
-                <div class="text-danger">{{ form.client.errors }}</div>
-              {% endif %}
-              <a href="{% url 'client_create' %}" class="btn btn-sm btn-outline-primary mt-2" target="_blank">
-                + Add New Client
-              </a>
-            </div>
-            <div class="mb-3">
-              {{ form.job_description|as_crispy_field }}
-            </div>
-          </div>
-          <!-- Right column -->
-          <div class="col-md-6">
-            <div class="mb-3">
-              <label for="{{ form.estimated_cost.id_for_label }}" class="form-label fw-bold">Estimated Cost</label>
-              <div class="input-group">
-                <span class="input-group-text">$</span>
-                {{ form.estimated_cost }}
-              </div>
-              {% if form.estimated_cost.errors %}
-                <div class="text-danger">{{ form.estimated_cost.errors }}</div>
-              {% endif %}
-            </div>
-          </div>
+  <!-- Work Order Summary -->
+  <div class="card mb-4">
+    <div class="card-header bg-secondary text-white">
+      <h5 class="mb-0">Work Order Details</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <p><strong>Client:</strong> {{ job.client.name }}</p>
+          <p><strong>Job Description:</strong> {{ job.job_description }}</p>
+        </div>
+        <div class="col-md-6">
+          <p><strong>Estimated Cost:</strong> ${{ job.estimated_cost }}</p>
+          <p><strong>Status:</strong> {{ job.get_status_display }}</p>
+          <p><strong>Created At:</strong> {{ job.created_at|date:"M d, Y g:i A" }}</p>
+          {% if job.completed_at %}
+            <p><strong>Completed At:</strong> {{ job.completed_at|date:"M d, Y g:i A" }}</p>
+          {% endif %}
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Scheduled Events -->
-    <div class="card mb-4">
-      <div class="card-header bg-primary text-white">
-        <h5 class="mb-0">Scheduled Events</h5>
-      </div>
-      <div class="card-body" id="event-formset">
-        {{ event_formset.management_form }}
-        {% for subform in event_formset %}
-          <div class="card mb-3 event-form">
-            <div class="card-body">
-              {{ subform|crispy }}
-              <button type="button" class="btn btn-sm btn-outline-danger remove-event mt-2">
-                Remove
-              </button>
-            </div>
-          </div>
+  <!-- Scheduled Events -->
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">Scheduled Events</h5>
+    </div>
+    <div class="card-body">
+      <ul class="list-group">
+        {% for event in events %}
+          <li class="list-group-item">
+            <strong>{{ event.get_event_type_display }}:</strong> 
+            {{ event.address }} on {{ event.date|date:"M d, Y" }}
+          </li>
+        {% empty %}
+          <li class="list-group-item">No scheduled events.</li>
         {% endfor %}
-        <div class="text-center">
-          <button type="button" id="add-event" class="btn btn-outline-primary">
-            + Add Event
-          </button>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Attachments & Notes -->
+  <div class="row">
+    <!-- Attachments -->
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0">Attachments</h5>
+        </div>
+        <div class="card-body">
+          <ul class="list-group">
+            {% for attachment in attachments %}
+              <li class="list-group-item">
+                <a href="{{ attachment.file.url }}">{{ attachment.file.name }}</a>
+                <small class="text-muted d-block">{{ attachment.uploaded_at|date:"M d, Y g:i A" }}</small>
+              </li>
+            {% empty %}
+              <li class="list-group-item">No attachments.</li>
+            {% endfor %}
+          </ul>
         </div>
       </div>
     </div>
 
-    <!-- Attachments & Notes side‑by‑side -->
-    <div class="row g-3">
-      <!-- Attachments -->
-      <div class="col-md-6">
-        <div class="card shadow-sm h-100">
-          <div class="card-header bg-success text-white">
-            <h5 class="mb-0">Attachments</h5>
-          </div>
-          <div class="card-body">
-            <ul class="list-group mb-3">
-              {% for attachment in attachments %}
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                  {% if attachment.file %}
-                    <a href="{{ attachment.file.url }}">{{ attachment.file.name }}</a>
-                  {% else %}
-                    <em>No file</em>
-                  {% endif %}
-                  <small class="text-muted">{{ attachment.uploaded_at|date:"m/d/y g:i A" }}</small>
-                </li>
-              {% empty %}
-                <li class="list-group-item">No attachments.</li>
-              {% endfor %}
-            </ul>
-            {{ attachment_form|crispy }}
-          </div>
+    <!-- Notes -->
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-header bg-warning text-dark">
+          <h5 class="mb-0">Notes</h5>
         </div>
-      </div>
-      <!-- Notes -->
-      <div class="col-md-6">
-        <div class="card shadow-sm h-100">
-          <div class="card-header bg-warning text-dark">
-            <h5 class="mb-0">Notes</h5>
-          </div>
-          <div class="card-body">
-            <ul class="list-group mb-3">
-              {% for note in notes %}
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                  {{ note.note }}
-                  <small class="text-muted">{{ note.created_at|date:"m/d/y g:i A" }}</small>
-                </li>
-              {% empty %}
-                <li class="list-group-item">No notes.</li>
-              {% endfor %}
-            </ul>
-            {{ note_form|crispy }}
-          </div>
+        <div class="card-body">
+          <ul class="list-group">
+            {% for note in notes %}
+              <li class="list-group-item">
+                {{ note.note }}
+                <small class="text-muted d-block">{{ note.created_at|date:"M d, Y g:i A" }}</small>
+              </li>
+            {% empty %}
+              <li class="list-group-item">No notes.</li>
+            {% endfor %}
+          </ul>
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Submit Buttons -->
-    <div class="d-flex justify-content-end gap-2 mt-4">
-      <button type="submit" name="update_only" class="btn btn-success">
-        Create / Update
-      </button>
-      <button type="submit" name="create_invoice" class="btn btn-danger">
-        Update &amp; Create Invoice
-      </button>
-    </div>
-  </form>
+  <!-- Action Buttons -->
+  <div class="mt-4 d-flex justify-content-between">
+    <a href="{% url 'workorder_edit' job.id %}" class="btn btn-outline-primary">Edit Work Order</a>
+    <a href="{% url 'workorder_list' %}" class="btn btn-secondary">Back to Work Orders</a>
+  </div>
+
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<!-- Select2 & Flatpickr -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-
-<script>
-  $(function() {
-    // Client search
-    $('.select2').select2({
-      width: '100%',
-      placeholder: 'Search or select a client',
-      allowClear: true
-    });
-    // Date pickers
-    flatpickr('.datepicker', { dateFormat: 'Y-m-d' });
-
-    // Event formset logic
-    const formset = $('#event-formset');
-    const totalForms = formset.find('input[name$="-TOTAL_FORMS"]');
-    const emptyTpl = $('#event-formset').data('empty-form') || '';
-
-    function attachRemove(btn) {
-      btn.on('click', function() {
-        const card = $(this).closest('.event-form');
-        const del = card.find('input[type="checkbox"][name$="-DELETE"]');
-        if (del.length) {
-          del.prop('checked', true);
-          card.hide();
-        } else {
-          card.remove();
-          totalForms.val(parseInt(totalForms.val()) - 1);
-        }
-      });
-    }
-
-    formset.find('.remove-event').each(function() {
-      attachRemove($(this));
-    });
-
-    $('#add-event').click(function() {
-      const idx = parseInt(totalForms.val());
-      let tmpl = formset.find('> .empty-form-template').html();
-      tmpl = tmpl.replace(/__prefix__/g, idx);
-      formset.append(tmpl);
-      totalForms.val(idx + 1);
-      flatpickr(formset.find('.event-form').last().find('.datepicker'), { dateFormat: 'Y-m-d' });
-      attachRemove(formset.find('.event-form').last().find('.remove-event'));
-    });
-  });
-</script>
+<!-- Optional JS for further enhancements (e.g., date pickers or select2 if needed later) -->
 {% endblock %}
