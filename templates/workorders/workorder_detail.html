@@ -94,14 +94,22 @@
   </div>
 
   <!-- Action Buttons -->
-  <div class="mt-4 d-flex justify-content-between">
-    <a href="{% url 'workorder_edit' job.id %}" class="btn btn-outline-primary">Edit Work Order</a>
-    <a href="{% url 'workorder_list' %}" class="btn btn-secondary">Back to Work Orders</a>
+  <div class="mt-4 d-flex flex-column flex-sm-row justify-content-between gap-2">
+    <a href="{% url 'workorder_edit' job.id %}" class="btn btn-primary w-100 w-sm-auto">Edit Work Order</a>
+    <a href="{% url 'workorder_delete' job.id %}" class="btn btn-danger">
+      Delete Work Order
+    </a>
+  </div>
+
+  <!-- Navigation Buttons -->
+  <div class="text-center mt-4">
+    <a href="{% url 'workorder_list' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Work Orders</a>
+    <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
   </div>
 
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<!-- Optional JS for further enhancements (e.g., date pickers or select2 if needed later) -->
+<!-- Optional JS for future interactivity -->
 {% endblock %}
