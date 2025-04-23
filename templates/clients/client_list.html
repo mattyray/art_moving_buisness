@@ -13,26 +13,28 @@
   </form>
   
   <a href="{% url 'client_create' %}" class="btn btn-success mb-3">Add New Client</a>
-  
-  <!-- Clients Table Wrapped in a Card -->
+
+  <!-- Responsive Scrollable Table -->
   <div class="card shadow-sm">
-    <div class="card-body">
-      <table class="table table-striped">
-        <thead>
+    <div class="card-body table-responsive">
+      <table class="table table-striped align-middle">
+        <thead class="small">
           <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th>Address</th>
+            <th style="min-width: 120px;">Name</th>
+            <th style="min-width: 180px;">Email</th>
+            <th style="min-width: 120px;">Phone</th>
+            <th style="min-width: 250px;">Address</th>
           </tr>
         </thead>
         <tbody>
           {% for client in clients %}
           <tr>
-            <td><a href="{% url 'client_detail' client.id %}">{{ client.name }}</a></td>
-            <td>{{ client.email }}</td>
-            <td>{{ client.phone }}</td>
-            <td>{{ client.address }}</td>
+            <td class="text-truncate" style="max-width: 150px;">
+              <a href="{% url 'client_detail' client.id %}">{{ client.name }}</a>
+            </td>
+            <td class="text-truncate" style="max-width: 200px;">{{ client.email }}</td>
+            <td class="text-truncate" style="max-width: 150px;">{{ client.phone }}</td>
+            <td class="text-truncate" style="max-width: 300px;">{{ client.address }}</td>
           </tr>
           {% empty %}
           <tr>
