@@ -96,9 +96,12 @@
   <!-- Action Buttons -->
   <div class="mt-4 d-flex flex-column flex-sm-row justify-content-between gap-2">
     <a href="{% url 'workorder_edit' job.id %}" class="btn btn-primary w-100 w-sm-auto">Edit Work Order</a>
-    <a href="{% url 'workorder_pdf' job.id %}" class="btn btn-outline-primary" target="_blank">
-      <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF
+    <a href="{% url 'workorder_pdf' job.id %}" class="btn btn-outline-danger d-flex align-items-center gap-2 shadow-sm px-4 py-2" target="_blank" style="border-width: 2px;">
+      <i class="bi bi-file-earmark-pdf-fill fs-5"></i>
+      <span class="fw-semibold">Download PDF</span>
     </a>
+    
+    
     
     
     <a href="{% url 'workorder_delete' job.id %}" class="btn btn-danger">
