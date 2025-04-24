@@ -18,6 +18,6 @@ urlpatterns = [
     # Calendar JSON API
     path("calendar-data/workorders/", views.workorder_calendar_data, name="workorder_calendar_data"),
 
-    path("<int:pk>/pdf/", workorder_pdf, name="workorder_pdf"),
+    path("<int:pk>/pdf/", views.workorder_pdf, name="workorder_pdf"),
 
 ]
