@@ -1,6 +1,10 @@
 {% extends "base.html" %}
-{% load crispy_forms_tags %}
+{% load crispy_forms_tags static %}
 {% block title %}{% if invoice %}Edit Invoice{% else %}Create Invoice{% endif %}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -39,41 +43,81 @@
   
   <form method="post" id="invoice-form">
     {% csrf_token %}
+    <div class="row mb-3">
+      <div class="col-md-6">
+        {{ form.client|as_crispy_field }}
+      </div>
+      <div class="col-md-6">
+        {{ form.work_order|as_crispy_field }}
+      </div>
+    </div>
     {{ form|crispy }}
-    <button type="submit" class="btn btn-success">{% if invoice %}Update Invoice{% else %}Create Invoice{% endif %}</button>
+    <button type="submit" class="btn btn-success">
+      {% if invoice %}Update Invoice{% else %}Create Invoice{% endif %}
+    </button>
   </form>
   
   <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">Back to Invoice Overview</a>
   <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
 </div>
+{% endblock %}
 
-<!-- JavaScript for dynamic work order loading and Flatpickr initialization -->
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-  document.addEventListener("DOMContentLoaded", function() {
-    // Dynamic work order loading for selected client, if the fields exist.
-    const clientField = document.querySelector("#id_client");
-    const workOrderField = document.querySelector("#id_work_order");
-    if (clientField && workOrderField) {
-      clientField.addEventListener("change", function() {
-        fetch(`/invoices/ajax/get_workorders/?client_id=${clientField.value}`)
-          .then(response => response.json())
-          .then(data => {
-            // Clear current options
-            workOrderField.innerHTML = '<option value="">---------</option>';
-            data.forEach(order => {
-              let option = document.createElement("option");
-              option.value = order.id;
-              option.text = `Order #${order.id} - ${order.job_description}`;
-              workOrderField.appendChild(option);
-            });
-          });
-      });
+document.addEventListener("DOMContentLoaded", function() {
+  // Initialize Select2 on both fields
+  $('#id_client').select2({
+    placeholder: 'Search for a client',
+    minimumInputLength: 1,
+    ajax: {
+      url: "{% url 'ajax_get_clients' %}",
+      dataType: 'json',
+      delay: 250,
+      data: params => ({ q: params.term }),
+      processResults: data => ({ results: data })
     }
-    
-    // Initialize Flatpickr on datepicker fields with format "F j, y" (e.g., "January 1, 23")
-    flatpickr(".datepicker", {
-      dateFormat: "F j, y"
+  });
+
+  $('#id_work_order').select2({
+    placeholder: 'Search for a work order',
+    minimumInputLength: 1,
+    ajax: {
+      url: "{% url 'ajax_get_workorders' %}",
+      dataType: 'json',
+      delay: 250,
+      data: params => ({ q: params.term }),
+      processResults: data => ({ results: data })
+    }
+  });
+
+  // When a client is selected, reload work orders filtered by client
+  $('#id_client').on('select2:select', function(e) {
+    const clientId = e.params.data.id;
+    $('#id_work_order').val(null).trigger('change');
+    $('#id_work_order').select2('destroy').select2({
+      placeholder: 'Search for a work order',
+      minimumInputLength: 1,
+      ajax: {
+        url: "{% url 'ajax_get_workorders' %}",
+        dataType: 'json',
+        delay: 250,
+        data: params => ({ q: params.term, client_id: clientId }),
+        processResults: data => ({ results: data })
+      }
     });
   });
+
+  // When a work order is selected, auto-select its client
+  $('#id_work_order').on('select2:select', function(e) {
+    const workOrderId = e.params.data.id;
+    fetch("{% url 'ajax_get_client' %}?workorder_id=" + workOrderId)
+      .then(r => r.json())
+      .then(data => {
+        const option = new Option(data.text, data.id, true, true);
+        $('#id_client').append(option).trigger('change');
+      });
+  });
+});
 </script>
 {% endblock %}
