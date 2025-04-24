@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Work Order #{{ job.id }}</title>
+  <style>
+    body { font-family: 'Arial', sans-serif; color: #333; margin: 2rem; }
+    header { text-align: center; margin-bottom: 2rem; }
+    header img { height: 80px; }
+    h1 { font-size: 1.5rem; margin: 0; }
+    .info-section, .event-section, .note-section { margin-bottom: 2rem; }
+    .info-label { font-weight: bold; width: 150px; display: inline-block; }
+    .section-title { border-bottom: 1px solid #ccc; margin-bottom: 1rem; font-size: 1.2rem; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <img src="{{ STATIC_URL }}images/nav-icon-128x128.png" alt="Logo">
+    <h1>EJ Art Moving – Work Order #{{ job.id }}</h1>
+  </header>
+
+  <div class="info-section">
+    <div class="section-title">Client Info</div>
+    <p><span class="info-label">Name:</span> {{ job.client.name }}</p>
+    <p><span class="info-label">Email:</span> {{ job.client.email }}</p>
+    <p><span class="info-label">Phone:</span> {{ job.client.phone }}</p>
+    <p><span class="info-label">Address:</span> {{ job.client.address }}</p>
+  </div>
+
+  <div class="info-section">
+    <div class="section-title">Job Info</div>
+    <p><span class="info-label">Description:</span> {{ job.job_description }}</p>
+    <p><span class="info-label">Estimated Cost:</span> ${{ job.estimated_cost }}</p>
+    <p><span class="info-label">Created:</span> {{ job.created_at|date:"F j, Y" }}</p>
+    {% if job.completed_at %}
+    <p><span class="info-label">Completed:</span> {{ job.completed_at|date:"F j, Y" }}</p>
+    {% endif %}
+  </div>
+
+  <div class="event-section">
+    <div class="section-title">Scheduled Events</div>
+    <ul>
+      {% for event in job.addresses.all %}
+        <li><strong>{{ event.get_event_type_display }}:</strong> {{ event.address }} – {{ event.date|date:"F j, Y" }}</li>
+      {% empty %}
+        <p>No scheduled events.</p>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="note-section">
+    <div class="section-title">Notes</div>
+    <ul>
+      {% for note in job.notes.all %}
+        <li>{{ note.note }} <small>({{ note.created_at|date:"F j, Y" }})</small></li>
+      {% empty %}
+        <p>No notes available.</p>
+      {% endfor %}
+    </ul>
+  </div>
+
+</body>
+</html>
