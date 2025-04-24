@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
-from django.http import HttpResponseRedirect, JsonResponse
+from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -8,6 +8,21 @@ from django.db.models import Q
 
 from .models import WorkOrder, Event, JobAttachment, JobNote
 from .forms import WorkOrderForm, EventFormSet, JobAttachmentForm, JobNoteForm
+
+# workorders/views.py
+from django.template.loader import render_to_string
+from weasyprint import HTML
+
+def workorder_pdf(request, pk):
+    workorder = get_object_or_404(WorkOrder, pk=pk)
+    html_string = render_to_string("workorders/workorder_pdf.html", {"job": workorder})
+    html = HTML(string=html_string, base_url=request.build_absolute_uri())
+    pdf = html.write_pdf()
+
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = f"filename=WorkOrder_{workorder.id}.pdf"
+    return response
+
 
 
 @login_required
