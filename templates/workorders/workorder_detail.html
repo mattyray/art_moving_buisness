@@ -96,6 +96,10 @@
   <!-- Action Buttons -->
   <div class="mt-4 d-flex flex-column flex-sm-row justify-content-between gap-2">
     <a href="{% url 'workorder_edit' job.id %}" class="btn btn-primary w-100 w-sm-auto">Edit Work Order</a>
+    <a href="{% url 'workorder_pdf' job.id %}" class="btn btn-outline-primary" target="_blank">
+      <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF
+    </a>
+    
     <a href="{% url 'workorder_delete' job.id %}" class="btn btn-danger">
       Delete Work Order
     </a>
