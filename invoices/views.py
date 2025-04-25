@@ -243,11 +243,12 @@ def ajax_get_active_workorders(request):
     client_id = request.GET.get('client_id')
     if not client_id:
         return JsonResponse([], safe=False)
-
+    
     work_orders = WorkOrder.objects.filter(
         client_id=client_id,
-        status__in=['pending', 'scheduled']
-    ).order_by('id')[:50]
+        status='completed'
+    )
+
 
     results = [
         {
