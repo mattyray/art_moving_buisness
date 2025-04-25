@@ -1,0 +1,3343 @@
+===== Dockerfile =====
+# Use official Python image as base
+FROM python:3.10.4-slim-bullseye
+
+# Install system dependencies for WeasyPrint
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libcairo2 \
+    libgdk-pixbuf2.0-0 \
+    libffi-dev \
+    shared-mime-info \
+    fonts-liberation \
+    fonts-dejavu \
+    curl \
+    wget \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Set work directory
+WORKDIR /code
+
+# Install Python dependencies
+COPY ./requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy project files
+COPY . .
+
+# Run Gunicorn
+CMD ["sh", "-c", "gunicorn django_project.wsgi --bind 0.0.0.0:${PORT:-8000}"]
+===== docker-compose.yml =====
+services:
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8080  # Run Django on port 8080
+    ports:
+      - "8080:8080"  # Maps container port 8080 to localhost:8080
+    depends_on:
+      db:
+        condition: service_healthy  # Ensures DB is ready before Django starts
+    environment:
+      - "DJANGO_DEBUG=True"
+      - "DJANGO_SECURE_SSL_REDIRECT=False"
+      - "DJANGO_SECURE_HSTS_SECONDS=0"
+      - "DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS=False"
+      - "DJANGO_SECURE_HSTS_PRELOAD=False"
+      - "DJANGO_SESSION_COOKIE_SECURE=False"
+      - "DJANGO_CSRF_COOKIE_SECURE=False"
+      - "DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
+    volumes:
+      - .:/code    # Mounts your project directory into the container
+    networks:
+      - art_moving_network
+
+  db:
+    image: postgres:15  # Upgraded to latest stable version
+    container_name: art_moving_db
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      POSTGRES_DB: art_moving
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres  # ✅ Secure authentication
+    healthcheck:  # Ensures DB is ready before Django starts
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 5
+    networks:
+      - art_moving_network
+
+volumes:
+  postgres_data:
+
+networks:
+  art_moving_network:
+===== docker-compose-prod.yml =====
+services:
+  web:
+    build: .
+    command: gunicorn django_project.wsgi --bind 0.0.0.0:$PORT
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - "DJANGO_DEBUG=False"
+      - "DJANGO_SECURE_SSL_REDIRECT=True"
+      - "DJANGO_SECURE_HSTS_SECONDS=2592000"  # 30 days
+      - "DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS=True"
+      - "DJANGO_SECURE_HSTS_PRELOAD=True"
+      - "DJANGO_SESSION_COOKIE_SECURE=True"
+      - "DJANGO_CSRF_COOKIE_SECURE=True"
+      - "PORT=8000"  # Needed for Heroku
+      - "DATABASE_URL=${DATABASE_URL}"
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      retries: 5
+      timeout: 5s
+
+volumes:
+  postgres_data:
+===== heroku.yml =====
+build:
+  docker:
+    web: Dockerfile  # Tells Heroku to use the Dockerfile to build your app
+
+release:
+  image: web
+  command:
+    - python manage.py migrate  # Runs database migrations
+    - python manage.py collectstatic --noinput  # Collects static files
+
+run:
+  web: gunicorn django_project.wsgi --bind 0.0.0.0:$PORT  # Starts the app
+===== requirements.txt =====
+asgiref==3.8.1
+crispy-bootstrap5==2025.4
+diff-match-patch==20241021
+Django==5.1.6
+django-crispy-forms==2.4
+django-environ==0.12.0
+django-import-export==4.3.7
+gunicorn==23.0.0
+numpy==2.2.5
+packaging==25.0
+pandas==2.2.3
+psycopg2-binary==2.9.10
+python-dateutil==2.9.0.post0
+pytz==2025.2
+six==1.17.0
+sqlparse==0.5.3
+tablib==3.8.0
+typing_extensions==4.13.2
+tzdata==2025.2
+whitenoise==6.9.0
+weasyprint==60.2
+pydyf==0.8.0
+
+
+===== manage.py =====
+#!/usr/bin/env python
+"""Django's command-line utility for administrative tasks."""
+import os
+import sys
+
+
+def main():
+    """Run administrative tasks."""
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_project.settings')
+    try:
+        from django.core.management import execute_from_command_line
+    except ImportError as exc:
+        raise ImportError(
+            "Couldn't import Django. Are you sure it's installed and "
+            "available on your PYTHONPATH environment variable? Did you "
+            "forget to activate a virtual environment?"
+        ) from exc
+    execute_from_command_line(sys.argv)
+
+
+if __name__ == '__main__':
+    main()
+
+
+===== accounts/models.py =====
+from django.contrib.auth.models import AbstractUser
+from django.db import models
+
+
+class CustomUser(AbstractUser):
+    pass
+
+===== accounts/views.py =====
+from django.urls import reverse_lazy
+from django.views import generic
+from django.contrib.auth import logout
+from django.shortcuts import redirect, render
+from .forms import CustomUserCreationForm
+from django.contrib.auth import login
+
+def custom_logout(request):
+    """Logs out the user and redirects to the homepage."""
+    print("🚀 custom_logout was called!")
+    request.session.flush()  # Clears session data manually
+    logout(request)
+    return redirect("/")  # Redirect to the root URL explicitly
+
+class SignupPageView(generic.CreateView):
+    """Handles user sign-up using Django’s built-in authentication system."""
+    form_class = CustomUserCreationForm
+    success_url = reverse_lazy("login")  # Redirect to login page after sign-up
+    template_name = "registration/signup.html"
+
+
+===== accounts/forms.py =====
+from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+
+
+class CustomUserCreationForm(UserCreationForm):
+    class Meta:
+        model = get_user_model()
+        fields = (
+            "email",
+            "username",
+        )
+
+
+class CustomUserChangeForm(UserChangeForm):
+    class Meta:
+        model = get_user_model()
+        fields = (
+            "email",
+            "username",
+        )
+
+===== accounts/urls.py =====
+from django.urls import path
+from .views import SignupPageView, custom_logout
+
+urlpatterns = [
+    path("signup/", SignupPageView.as_view(), name="signup"),
+    path("logout/", custom_logout, name="logout"),
+]
+
+
+===== accounts/admin.py =====
+from django.contrib import admin
+from django.contrib.auth import get_user_model
+from django.contrib.auth.admin import UserAdmin
+
+from .forms import CustomUserCreationForm, CustomUserChangeForm
+
+CustomUser = get_user_model()
+
+@admin.register(CustomUser)
+class CustomUserAdmin(UserAdmin):
+    model = CustomUser
+    add_form = CustomUserCreationForm
+    form = CustomUserChangeForm
+
+    list_display = ("email", "username", "is_superuser")
+    list_filter  = ("is_superuser", "is_staff", "is_active")
+
+    search_fields = ("email", "username")
+    ordering      = ("email",)
+
+    # Edit form layout
+    fieldsets = (
+        (None,               {"fields": ("email", "username", "password")}),
+        ("Permissions",      {"fields": ("is_active", "is_staff", "is_superuser",
+                                         "groups", "user_permissions")}),
+        ("Important dates",  {"fields": ("last_login", "date_joined")}),
+    )
+
+    # Add form layout (uses Django's built‑in password1/password2 fields)
+    add_fieldsets = (
+        (None, {
+            "classes": ("wide",),
+            "fields": ("email", "username", "password1", "password2",
+                       "is_active", "is_staff"),
+        }),
+    )
+
+
+===== pages/models.py =====
+from django.db import models
+
+# Create your models here.
+
+
+===== pages/views.py =====
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import TemplateView
+
+class HomePageView(LoginRequiredMixin, TemplateView):
+    template_name = 'home.html'
+
+
+===== pages/urls.py =====
+from django.urls import path
+from .views import HomePageView
+
+urlpatterns = [
+    path("", HomePageView.as_view(), name="home"),  # Ensure this exists!
+]
+
+
+===== pages/admin.py =====
+from django.contrib import admin
+
+# Register your models here.
+
+
+===== workorders/models.py =====
+from django.db import models
+from django.conf import settings
+
+class WorkOrder(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+    ]
+    client = models.ForeignKey(
+        'clients.Client',
+        on_delete=models.CASCADE,
+        related_name='work_orders'
+    )
+    job_description = models.TextField(blank=True, null=True)
+    estimated_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    completed_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"WorkOrder #{self.id} for {self.client.name}"
+
+    def update_status(self):
+        if self.status == 'completed':
+            return
+        if self.events.filter(date__isnull=False).exists():
+            self.status = 'in_progress'
+        else:
+            self.status = 'pending'
+
+
+class Event(models.Model):
+    EVENT_TYPES = [
+        ('pickup', 'Pickup'),
+        ('pickup_wrap', 'Pickup and Wrap'),
+        ('wrap', 'Wrap'),
+        ('install', 'Install'),
+        ('deliver_install', 'Deliver and Install'),
+        ('dropoff', 'Drop Off'),
+    ]
+    work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='events')
+    event_type = models.CharField(max_length=30, choices=EVENT_TYPES)
+    address = models.CharField(max_length=255, blank=True)
+    date = models.DateField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.get_event_type_display()} for WorkOrder #{self.work_order.id}"
+
+
+class JobAttachment(models.Model):
+    work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='attachments')
+    file = models.FileField(upload_to='job_attachments/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Attachment {self.id} for WorkOrder {self.work_order.id}"
+
+
+class JobNote(models.Model):
+    work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='notes')
+    note = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Note {self.id} for WorkOrder {self.work_order.id}"
+
+
+===== workorders/views.py =====
+from django.shortcuts import render, redirect, get_object_or_404
+from django.utils import timezone
+from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
+from django.urls import reverse
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.db.models import Q
+
+from .models import WorkOrder, Event, JobAttachment, JobNote
+from .forms import WorkOrderForm, EventFormSet, JobAttachmentForm, JobNoteForm
+
+# workorders/views.py
+from django.template.loader import render_to_string
+from weasyprint import HTML
+
+def workorder_pdf(request, pk):
+    workorder = get_object_or_404(WorkOrder, pk=pk)
+    html_string = render_to_string("workorders/workorder_pdf.html", {"job": workorder})
+    html = HTML(string=html_string, base_url=request.build_absolute_uri())
+    pdf = html.write_pdf()
+
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = f"filename=WorkOrder_{workorder.id}.pdf"
+    return response
+
+
+
+@login_required
+def workorder_calendar_data(request):
+    """Returns scheduled events for calendar display, color‐coding events by work order."""
+    events = []
+
+    # A simple palette to pick a distinct color per work order:
+    palette = [
+        "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+        "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"
+    ]
+    def get_color(wo_id):
+        return palette[wo_id % len(palette)]
+
+    # Scheduled Event objects (only non‐completed jobs)
+    scheduled_events = Event.objects.filter(
+        date__isnull=False,
+        work_order__status__in=["pending", "in_progress"]
+    )
+    for evt in scheduled_events:
+        events.append({
+            "title": f"{evt.get_event_type_display()}: {evt.work_order.client.name}",
+            "start": evt.date.isoformat(),
+            "color": get_color(evt.work_order.id),
+            "url": f"/workorders/detail/{evt.work_order.id}/",
+        })
+
+    # Pending jobs (no scheduled events yet)
+    pending_jobs = WorkOrder.objects.exclude(events__date__isnull=False)\
+                                    .filter(status__in=["pending", "in_progress"])
+    for wo in pending_jobs:
+        events.append({
+            "title": f"Pending: {wo.client.name}",
+            "start": wo.created_at.date().isoformat(),
+            "color": "gray",
+            "url": f"/workorders/detail/{wo.id}/",
+        })
+
+    # Completed jobs
+    completed = WorkOrder.objects.filter(status='completed', completed_at__isnull=False)
+    for wo in completed:
+        events.append({
+            "title": f"Completed: {wo.client.name}",
+            "start": wo.completed_at.date().isoformat(),
+            "color": "green",
+            "url": f"/workorders/detail/{wo.id}/",
+        })
+
+    return JsonResponse(events, safe=False)
+
+
+@login_required
+def workorder_list(request):
+    query = request.GET.get('q', '')
+    pending_jobs = WorkOrder.objects.exclude(events__date__isnull=False)\
+                                    .filter(status__in=["pending", "in_progress"])
+    scheduled_jobs = WorkOrder.objects.filter(events__date__isnull=False,
+                                              status__in=["pending", "in_progress"])\
+                                      .distinct()
+    completed_jobs = WorkOrder.objects.filter(status='completed')
+
+    if query:
+        pending_jobs = pending_jobs.filter(client__name__icontains=query)
+        scheduled_jobs = scheduled_jobs.filter(client__name__icontains=query)
+        completed_jobs = completed_jobs.filter(client__name__icontains=query)
+
+    context = {
+        'query': query,
+        'pending_jobs': pending_jobs.order_by('-updated_at')[:3],
+        'scheduled_jobs': scheduled_jobs.order_by('-updated_at')[:3],
+        'completed_jobs': completed_jobs.order_by('-updated_at')[:3],
+    }
+    return render(request, 'workorders/workorder_list.html', context)
+
+
+@login_required
+def workorder_create(request):
+    if request.method == 'POST':
+        form = WorkOrderForm(request.POST)
+        event_formset = EventFormSet(request.POST, prefix="events")
+        attachment_form = JobAttachmentForm(request.POST, request.FILES)
+        note_form = JobNoteForm(request.POST)
+
+        if form.is_valid() and event_formset.is_valid():
+            workorder = form.save()
+            event_formset.instance = workorder
+            event_formset.save()
+
+            workorder.update_status()
+            workorder.save()
+
+            if attachment_form.is_valid():
+                attachment = attachment_form.save(commit=False)
+                attachment.work_order = workorder
+                attachment.save()
+
+            if note_form.is_valid():
+                note = note_form.save(commit=False)
+                note.work_order = workorder
+                note.save()
+
+            return redirect('workorder_list')
+    else:
+        form = WorkOrderForm()
+        event_formset = EventFormSet(prefix="events")
+        attachment_form = JobAttachmentForm()
+        note_form = JobNoteForm()
+
+    return render(request, 'workorders/workorder_form.html', {
+        'form': form,
+        'event_formset': event_formset,
+        'attachment_form': attachment_form,
+        'note_form': note_form,
+    })
+
+
+@login_required
+def workorder_edit(request, job_id):
+    workorder = get_object_or_404(WorkOrder, id=job_id)
+    if request.method == 'POST':
+        form = WorkOrderForm(request.POST, instance=workorder)
+        event_formset = EventFormSet(request.POST, instance=workorder, prefix="events")
+        attachment_form = JobAttachmentForm(request.POST, request.FILES)
+        note_form = JobNoteForm(request.POST)
+
+        if form.is_valid() and event_formset.is_valid():
+            form.save()
+            event_formset.save()
+
+            workorder.update_status()
+            workorder.save()
+
+            if attachment_form.is_valid():
+                attachment = attachment_form.save(commit=False)
+                attachment.work_order = workorder
+                attachment.save()
+
+            if note_form.is_valid():
+                note = note_form.save(commit=False)
+                note.work_order = workorder
+                note.save()
+
+            if 'create_invoice' in request.POST:
+                return redirect(f'/invoices/create/?work_order={workorder.id}')
+            return redirect("workorder_detail", job_id=workorder.id)
+    else:
+        form = WorkOrderForm(instance=workorder)
+        event_formset = EventFormSet(instance=workorder, prefix="events")
+        attachment_form = JobAttachmentForm()
+        note_form = JobNoteForm()
+
+    return render(request, "workorders/workorder_form.html", {
+        'form': form,
+        'event_formset': event_formset,
+        'attachment_form': attachment_form,
+        'note_form': note_form,
+        'job': workorder,
+    })
+
+
+@login_required
+def workorder_delete(request, job_id):
+    workorder = get_object_or_404(WorkOrder, id=job_id)
+    if request.method == 'POST':
+        workorder.delete()
+        messages.success(request, "Work order deleted successfully.")
+        return redirect('workorder_list')
+    return render(request, 'workorders/workorder_confirm_delete.html', {'workorder': workorder})
+
+
+@login_required
+def mark_scheduled(request, job_id):
+    return redirect('workorder_edit', job_id=job_id)
+
+
+@login_required
+def mark_completed(request, job_id):
+    workorder = get_object_or_404(WorkOrder, id=job_id)
+    if workorder.status in ['pending', 'in_progress']:
+        workorder.status = 'completed'
+        workorder.completed_at = timezone.now()
+        workorder.save()
+        messages.success(request, "Work order marked as completed.")
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('workorder_list')))
+
+
+@login_required
+def workorder_detail(request, job_id):
+    workorder = get_object_or_404(WorkOrder, id=job_id)
+    events      = workorder.events.all()
+    # Exclude any attachment rows with no file path
+    attachments = workorder.attachments.exclude(file__exact='')
+    notes       = workorder.notes.all()
+
+    attachment_form = JobAttachmentForm()
+    note_form       = JobNoteForm()
+
+    if request.method == 'POST':
+        # --- New Attachment ---
+        if 'attachment_submit' in request.POST:
+            attachment_form = JobAttachmentForm(request.POST, request.FILES)
+            # Only save when a file was uploaded
+            uploaded = request.FILES.get('file')
+            if attachment_form.is_valid() and uploaded:
+                attachment = attachment_form.save(commit=False)
+                attachment.work_order = workorder
+                attachment.save()
+            return redirect('workorder_detail', job_id=workorder.id)
+
+        # --- New Note ---
+        elif 'note_submit' in request.POST:
+            note_form = JobNoteForm(request.POST)
+            if note_form.is_valid():
+                text = note_form.cleaned_data.get('note', '').strip()
+                # Only save non‑empty notes
+                if text:
+                    note = note_form.save(commit=False)
+                    note.work_order = workorder
+                    note.save()
+            return redirect('workorder_detail', job_id=workorder.id)
+
+    return render(request, 'workorders/workorder_detail.html', {
+        'job': workorder,
+        'events': events,
+        'attachments': attachments,
+        'notes': notes,
+        'attachment_form': attachment_form,
+        'note_form': note_form,
+    })
+
+@login_required
+def pending_jobs_view(request):
+    query = request.GET.get('q', '')
+    jobs = WorkOrder.objects.exclude(events__date__isnull=False)\
+                            .filter(status__in=["pending", "in_progress"])
+    if query:
+        jobs = jobs.filter(client__name__icontains=query)
+    return render(request, 'workorders/pending_jobs.html', {'jobs': jobs, 'query': query})
+
+
+@login_required
+def scheduled_jobs_view(request):
+    query = request.GET.get('q', '')
+    jobs = WorkOrder.objects.filter(events__date__isnull=False,
+                                    status__in=["pending", "in_progress"])\
+                            .distinct()
+    if query:
+        jobs = jobs.filter(client__name__icontains=query)
+    return render(request, 'workorders/scheduled_jobs.html', {'jobs': jobs, 'query': query})
+
+
+@login_required
+def completed_jobs_view(request):
+    query = request.GET.get('q', '')
+    jobs = WorkOrder.objects.filter(status='completed')
+    if query:
+        jobs = jobs.filter(client__name__icontains=query)
+    return render(request, 'workorders/completed_jobs.html', {'jobs': jobs, 'query': query})
+
+
+===== workorders/forms.py =====
+from django import forms
+from django.forms import inlineformset_factory
+from django.apps import apps
+from .models import WorkOrder, Event, JobAttachment, JobNote
+
+class WorkOrderForm(forms.ModelForm):
+    client = forms.ModelChoiceField(
+        queryset=None,
+        widget=forms.Select(attrs={
+            'class': 'form-control select2',
+            'data-placeholder': 'Search or select a client'
+        }),
+        label="Client"
+    )
+
+    class Meta:
+        model = WorkOrder
+        fields = [
+            'client',
+            'job_description',
+            'estimated_cost',
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super(WorkOrderForm, self).__init__(*args, **kwargs)
+        Client = apps.get_model('clients', 'Client')
+        self.fields['client'].queryset = Client.objects.all()
+
+        # Make job_description optional
+        self.fields['job_description'].required = False
+
+        # Make estimated_cost optional and style it
+        self.fields['estimated_cost'].required = False
+        self.fields['estimated_cost'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': '0.00'
+        })
+
+
+class EventForm(forms.ModelForm):
+    date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control datepicker',
+            'placeholder': 'YYYY-MM-DD'
+        })
+    )
+    # allow blank / add a blank choice so required=False works
+    event_type = forms.ChoiceField(
+        required=False,
+        choices=[('', '---------')] + Event.EVENT_TYPES,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label="Event Type"
+    )
+    address = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+        label="Address"
+    )
+
+    class Meta:
+        model = Event
+        fields = ['event_type', 'address', 'date']
+
+
+EventFormSet = inlineformset_factory(
+    WorkOrder,
+    Event,
+    form=EventForm,
+    extra=1,
+    can_delete=True
+)
+
+
+EventFormSet = inlineformset_factory(
+    WorkOrder,
+    Event,
+    form=EventForm,
+    extra=1,
+    can_delete=True
+)
+
+
+class JobAttachmentForm(forms.ModelForm):
+    file = forms.FileField(required=False)
+
+    class Meta:
+        model = JobAttachment
+        fields = ['file']
+
+
+class JobNoteForm(forms.ModelForm):
+    note = forms.CharField(required=False, widget=forms.Textarea, label="Note")
+
+    class Meta:
+        model = JobNote
+        fields = ['note']
+
+
+===== workorders/urls.py =====
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.workorder_list, name='workorder_list'),
+    path('create/', views.workorder_create, name='workorder_create'),
+    path('edit/<int:job_id>/', views.workorder_edit, name='workorder_edit'),
+    path('delete/<int:job_id>/', views.workorder_delete, name='workorder_delete'),
+
+    path('pending/', views.pending_jobs_view, name='pending_jobs'),
+    path('scheduled/', views.scheduled_jobs_view, name='scheduled_jobs'),
+    path('completed/', views.completed_jobs_view, name='completed_jobs'),
+
+    path('mark_completed/<int:job_id>/', views.mark_completed, name='mark_completed'),
+
+    path('detail/<int:job_id>/', views.workorder_detail, name='workorder_detail'),
+
+    # Calendar JSON API
+    path("calendar-data/workorders/", views.workorder_calendar_data, name="workorder_calendar_data"),
+
+    path("<int:pk>/pdf/", views.workorder_pdf, name="workorder_pdf"),
+
+]
+
+
+===== workorders/admin.py =====
+from django.contrib import admin
+from .models import WorkOrder, Event, JobAttachment, JobNote
+
+class EventInline(admin.TabularInline):
+    model = Event
+    extra = 1  # Number of extra empty forms
+
+class WorkOrderAdmin(admin.ModelAdmin):
+    inlines = [EventInline]
+    list_display = ['id', 'client', 'job_description', 'status']
+    search_fields = ['client__name', 'job_description']
+    list_filter = ['status', 'created_at', 'updated_at']
+
+admin.site.register(WorkOrder, WorkOrderAdmin)
+admin.site.register(JobAttachment)
+admin.site.register(JobNote)
+
+
+===== clients/models.py =====
+from django.db import models
+
+class Client(models.Model):
+    name = models.CharField(max_length=255)
+    email = models.EmailField(blank=True, null=True)  # 👈 Allow blanks
+    phone = models.CharField(max_length=50, blank=True, null=True)
+    address = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+
+===== clients/views.py =====
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from .models import Client
+from .forms import ClientForm
+
+@login_required
+def client_list(request):
+    query = request.GET.get('q', '')
+    clients = Client.objects.all()
+    if query:
+        clients = clients.filter(name__icontains=query)
+    context = {'clients': clients, 'query': query}
+    return render(request, 'clients/client_list.html', context)
+
+@login_required
+def client_detail(request, client_id):
+    client = get_object_or_404(Client, id=client_id)
+    # Work orders will be available through the reverse relationship: client.work_orders.all()
+    context = {'client': client}
+    return render(request, 'clients/client_detail.html', context)
+
+@login_required
+def client_create(request):
+    if request.method == 'POST':
+        form = ClientForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('client_list')
+    else:
+        form = ClientForm()
+    context = {'form': form}
+    return render(request, 'clients/client_form.html', context)
+
+@login_required
+def client_edit(request, client_id):
+    client = get_object_or_404(Client, id=client_id)
+    if request.method == 'POST':
+        form = ClientForm(request.POST, instance=client)
+        if form.is_valid():
+            form.save()
+            return redirect('client_detail', client_id=client.id)
+    else:
+        form = ClientForm(instance=client)
+    context = {'form': form, 'client': client}
+    return render(request, 'clients/client_form.html', context)
+
+
+===== clients/forms.py =====
+from django import forms
+from .models import Client
+
+class ClientForm(forms.ModelForm):
+    class Meta:
+        model = Client
+        fields = ['name', 'email', 'phone', 'address']
+
+
+===== clients/urls.py =====
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.client_list, name='client_list'),
+    path('create/', views.client_create, name='client_create'),
+    path('<int:client_id>/', views.client_detail, name='client_detail'),
+    path('edit/<int:client_id>/', views.client_edit, name='client_edit'),
+]
+
+
+===== clients/admin.py =====
+from django.contrib import admin
+from .models import Client
+
+from import_export.admin import ImportExportModelAdmin
+from .resources import ClientResource
+
+@admin.register(Client)
+class ClientAdmin(ImportExportModelAdmin):
+    resource_class = ClientResource
+    list_display = ('name', 'email', 'phone', 'address')
+
+
+
+
+
+===== invoices/models.py =====
+import random
+from django.db import models
+from django.utils import timezone
+
+class Invoice(models.Model):
+    STATUS_CHOICES = [
+        ('unpaid', 'Unpaid'),
+        ('paid', 'Paid'),
+        ('overdue', 'Overdue'),
+    ]
+    
+    invoice_number = models.CharField(max_length=50, unique=True, blank=True)
+    client = models.ForeignKey('clients.Client', on_delete=models.CASCADE, related_name='invoices')
+    # Optional: link to a work order
+    work_order = models.ForeignKey(
+        'workorders.WorkOrder',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='invoices'
+    )
+    date_created = models.DateField(default=timezone.now)
+    due_date = models.DateField()
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='unpaid')
+    notes = models.TextField(blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.invoice_number:
+            # Auto-generate a unique invoice number, for example using date and a random number
+            self.invoice_number = f"INV-{timezone.now().strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Invoice {self.invoice_number} - {self.client.name}"
+
+
+===== invoices/views.py =====
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse, HttpResponse
+from django.db.models import Q
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .models import Invoice
+from .forms import InvoiceForm
+from clients.models import Client
+from workorders.models import WorkOrder
+from django.utils import timezone
+
+@login_required
+def invoice_delete(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    if request.method == "POST":
+        invoice.delete()
+        messages.success(request, "Invoice deleted successfully.")
+        return redirect('invoice_list')
+    return render(request, 'invoices/invoice_confirm_delete.html', {'invoice': invoice})
+
+@login_required
+def invoice_calendar_data(request):
+    """Fetch invoices for the calendar (unpaid, overdue, paid)."""
+    invoices = Invoice.objects.all()
+    events = []
+
+    for invoice in invoices:
+        if invoice.status == "unpaid":
+            events.append({
+                "title": f"Unpaid Invoice: {invoice.client.name}",
+                "start": invoice.due_date.isoformat(),
+                "color": "red",
+                "url": f"/invoices/{invoice.id}/",
+            })
+        elif invoice.status == "overdue":
+            events.append({
+                "title": f"Overdue Invoice: {invoice.client.name}",
+                "start": invoice.due_date.isoformat(),
+                "color": "darkred",
+                "url": f"/invoices/{invoice.id}/",
+            })
+        elif invoice.status == "paid":
+            events.append({
+                "title": f"Paid Invoice: {invoice.client.name}",
+                "start": invoice.due_date.isoformat(),
+                "color": "green",
+                "url": f"/invoices/{invoice.id}/",
+            })
+    return JsonResponse(events, safe=False)
+
+@login_required
+def invoice_list(request):
+    query = request.GET.get('q', '')
+    unpaid_invoices = Invoice.objects.filter(status='unpaid')
+    paid_invoices = Invoice.objects.filter(status='paid')
+    overdue_invoices = Invoice.objects.filter(status='overdue')
+    
+    if query:
+        unpaid_invoices = unpaid_invoices.filter(
+            Q(invoice_number__icontains=query) | Q(client__name__icontains=query)
+        )
+        paid_invoices = paid_invoices.filter(
+            Q(invoice_number__icontains=query) | Q(client__name__icontains=query)
+        )
+        overdue_invoices = overdue_invoices.filter(
+            Q(invoice_number__icontains=query) | Q(client__name__icontains=query)
+        )
+    
+    unpaid_invoices = unpaid_invoices.order_by('-date_created')[:3]
+    paid_invoices = paid_invoices.order_by('-date_created')[:3]
+    overdue_invoices = overdue_invoices.order_by('-date_created')[:3]
+    
+    context = {
+        'query': query,
+        'unpaid_invoices': unpaid_invoices,
+        'paid_invoices': paid_invoices,
+        'overdue_invoices': overdue_invoices,
+    }
+    return render(request, 'invoices/invoice_list.html', context)
+
+@login_required
+def invoice_detail(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    return render(request, 'invoices/invoice_detail.html', {'invoice': invoice})
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .models import Invoice
+from .forms import InvoiceForm
+from workorders.models import WorkOrder
+
+@login_required
+def invoice_create(request):
+    # 1) Figure out which client (GET) and which work_order (POST) are selected
+    client_id     = request.GET.get('client') or request.POST.get('client')
+    work_order_id = request.POST.get('work_order')
+
+    # 2) Prepare the events list (empty by default)
+    events = []
+    if work_order_id:
+        wo = get_object_or_404(WorkOrder, id=work_order_id)
+        events = wo.events.all()
+
+    # 3) Build initial data so that the hidden client field is pre-populated
+    initial_data = {}
+    if client_id:
+        initial_data['client'] = client_id
+
+    # 4) Instantiate the form (POST or GET)
+    if request.method == 'POST':
+        form = InvoiceForm(request.POST, initial=initial_data)
+    else:
+        form = InvoiceForm(initial=initial_data)
+
+    # 5) Filter the work_order dropdown to only this client’s active jobs
+    if client_id:
+        form.fields['work_order'].queryset = WorkOrder.objects.filter(
+            client_id=client_id,
+            status__in=['pending', 'scheduled']
+        )
+    else:
+        form.fields['work_order'].queryset = WorkOrder.objects.none()
+
+    # 6) On POST, validate & save
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        return redirect('invoice_list')
+
+    # 7) Render with context including our events
+    return render(request, 'invoices/invoice_form.html', {
+        'form': form,
+        'events': events,
+        'invoice': None,  # so template knows this is “create” mode
+    })
+
+
+@login_required
+def invoice_update(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    # Always show the invoice’s existing events
+    events = invoice.work_order.events.all()
+
+    # Instantiate form with instance
+    if request.method == 'POST':
+        form = InvoiceForm(request.POST, instance=invoice)
+    else:
+        form = InvoiceForm(instance=invoice)
+
+    # Filter work_order to that invoice’s client
+    form.fields['work_order'].queryset = WorkOrder.objects.filter(
+        client=invoice.client,
+        status__in=['pending', 'scheduled']
+    )
+
+    # Handle save
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        return redirect('invoice_detail', invoice_id=invoice.id)
+
+    return render(request, 'invoices/invoice_form.html', {
+        'form': form,
+        'events': events,
+        'invoice': invoice,  # so template knows this is “edit” mode
+    })
+
+
+@login_required
+def mark_invoice_paid(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    invoice.status = 'paid'
+    invoice.save()
+    messages.success(request, "Invoice marked as paid.")
+    return redirect('invoice_list')
+
+@login_required
+def update_due_date(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    if request.method == 'POST':
+        new_due_date = request.POST.get('new_due_date')
+        if new_due_date:
+            invoice.due_date = new_due_date
+            invoice.status = 'paid'
+            invoice.save()
+            messages.success(request, "Invoice due date updated and marked as paid.")
+            return redirect('invoice_list')
+        else:
+            messages.error(request, "Please select a valid date.")
+    return render(request, 'invoices/update_due_date.html', {'invoice': invoice})
+
+@login_required
+def get_workorders_for_client(request):
+    client_id = request.GET.get('client_id')
+    work_orders = WorkOrder.objects.filter(client_id=client_id).values('id', 'job_description', 'estimated_cost')
+    return JsonResponse(list(work_orders), safe=False)
+
+@login_required
+def invoice_unpaid(request):
+    query = request.GET.get('q', '')
+    invoices = Invoice.objects.filter(status='unpaid').order_by('-date_created')
+    if query:
+        invoices = invoices.filter(
+            Q(invoice_number__icontains=query) | Q(client__name__icontains=query)
+        )
+    return render(request, 'invoices/invoice_unpaid.html', {'invoices': invoices, 'query': query})
+
+@login_required
+def invoice_paid(request):
+    query = request.GET.get('q', '')
+    invoices = Invoice.objects.filter(status='paid').order_by('-date_created')
+    if query:
+        invoices = invoices.filter(
+            Q(invoice_number__icontains=query) | Q(client__name__icontains=query)
+        )
+    return render(request, 'invoices/invoice_paid.html', {'invoices': invoices, 'query': query})
+
+@login_required
+def invoice_overdue(request):
+    query = request.GET.get('q', '')
+    invoices = Invoice.objects.filter(status='overdue').order_by('-date_created')
+    if query:
+        invoices = invoices.filter(
+            Q(invoice_number__icontains=query) | Q(client__name__icontains=query)
+        )
+    return render(request, 'invoices/invoice_overdue.html', {'invoices': invoices, 'query': query})
+
+# ---------- NEW AJAX VIEWS BELOW ----------
+# ---------- AJAX VIEWS ----------
+
+@login_required
+def ajax_get_clients(request):
+    """Return JSON list of clients matching the query term."""
+    q = request.GET.get('q', '')
+    clients = Client.objects.filter(name__icontains=q).order_by('name')[:20]
+    results = [{'id': c.id, 'text': c.name} for c in clients]
+    return JsonResponse(results, safe=False)
+
+@login_required
+def ajax_get_active_workorders(request):
+    """
+    Return JSON list of active work orders for a given client.
+    Only 'pending' and 'scheduled' statuses are considered active.
+    """
+    client_id = request.GET.get('client_id')
+    if not client_id:
+        return JsonResponse([], safe=False)
+
+    work_orders = WorkOrder.objects.filter(
+        client_id=client_id,
+        status__in=['pending', 'scheduled']
+    ).order_by('id')[:50]
+
+    results = [
+        {
+            'id': wo.id,
+            'text': f"Order #{wo.id} – {wo.job_description[:40]}{'...' if len(wo.job_description) > 40 else ''}"
+        }
+        for wo in work_orders
+    ]
+    return JsonResponse(results, safe=False)
+
+
+===== invoices/forms.py =====
+from django import forms
+from .models import Invoice
+from clients.models import Client
+from workorders.models import WorkOrder
+
+class InvoiceForm(forms.ModelForm):
+    client = forms.ModelChoiceField(
+        queryset=Client.objects.all(),
+        widget=forms.Select(attrs={
+            'class': 'form-control select2',
+            'style': 'width: 100%;',
+            'placeholder': 'Search for a client...',
+        })
+    )
+    work_order = forms.ModelChoiceField(
+        queryset=WorkOrder.objects.none(),  # Start empty; will be populated via AJAX
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'form-control select2',
+            'style': 'width: 100%;',
+            'placeholder': 'Select a work order...',
+            'disabled': 'disabled',          # Disabled until a client is chosen
+        })
+    )
+    due_date = forms.DateField(
+        widget=forms.DateInput(attrs={
+            'class': 'form-control datepicker',
+            'placeholder': 'YYYY-MM-DD'
+        })
+    )
+    
+    class Meta:
+        model = Invoice
+        fields = [
+            'client',
+            'work_order',
+            'due_date',
+            'amount',
+            'status',
+            'notes',
+        ]
+
+
+===== invoices/urls.py =====
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.invoice_list, name='invoice_list'),
+    path('create/', views.invoice_create, name='invoice_create'),
+    path('<int:invoice_id>/', views.invoice_detail, name='invoice_detail'),
+    path('<int:invoice_id>/edit/', views.invoice_update, name='invoice_update'),
+    path('<int:invoice_id>/delete/', views.invoice_delete, name='invoice_delete'),
+    path('unpaid/', views.invoice_unpaid, name='invoice_unpaid'),
+    path('paid/', views.invoice_paid, name='invoice_paid'),
+    path('overdue/', views.invoice_overdue, name='invoice_overdue'),
+    path('<int:invoice_id>/mark_paid/', views.mark_invoice_paid, name='mark_invoice_paid'),
+    path('<int:invoice_id>/update_due_date/', views.update_due_date, name='update_due_date'),
+    path('calendar-data/invoices/', views.invoice_calendar_data, name='invoice_calendar_data'),
+
+    # AJAX endpoint for client search
+    path('ajax/get_clients/', views.ajax_get_clients, name='ajax_get_clients'),
+]
+
+
+===== invoices/admin.py =====
+from django.contrib import admin
+from .models import Invoice
+
+admin.site.register(Invoice)
+
+
+===== django_project/settings.py =====
+from environ import Env
+from pathlib import Path
+import os
+
+# Initialize environment variables
+env = Env()
+Env.read_env()
+
+# Base directory
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# ✅ Security settings
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")  # Required for Heroku
+
+# Secret Key & Debug Mode
+SECRET_KEY = env("DJANGO_SECRET_KEY", default="No Secret Key Found")
+DEBUG = env.bool("DJANGO_DEBUG", default=False)
+
+# ✅ Allowed Hosts
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=[
+    "localhost",
+    "127.0.0.1",
+    "art-moving-buisness-0a734245a61f.herokuapp.com",
+    # "your-custom-domain.com",
+    # "www.your-custom-domain.com"
+])
+
+# ✅ Installed Apps
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+
+    # Custom apps
+    'accounts.apps.AccountsConfig',
+    'pages.apps.PagesConfig',
+    'workorders',
+    'clients',
+    'invoices',
+
+    # Third-party packages
+    'crispy_forms',
+    'crispy_bootstrap5',
+    'import_export',
+
+]
+
+# ✅ Middleware
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+# ✅ URL Configuration
+ROOT_URLCONF = 'django_project.urls'
+
+# ✅ Templates
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [BASE_DIR / 'templates'],  # Include custom templates
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
+# ✅ WSGI Application
+WSGI_APPLICATION = 'django_project.wsgi.application'
+
+# ✅ Database Configuration
+DATABASES = {
+    "default": env.db_url("DATABASE_URL")
+}
+
+
+# ✅ Authentication
+AUTH_USER_MODEL = 'accounts.CustomUser'
+
+# ✅ Password Validation
+AUTH_PASSWORD_VALIDATORS = [
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+]
+
+# ✅ Localization
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'UTC'
+USE_I18N = True
+USE_TZ = True
+
+STATIC_URL = "/static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]  # 👈 crucial for collectstatic to find non-app static files
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+# ✅ Default Primary Key
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ✅ Crispy Forms
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+# ✅ Login & Logout
+LOGIN_REDIRECT_URL = 'home'
+LOGOUT_REDIRECT_URL = "/"  
+
+# ✅ Security Settings for Production
+if not DEBUG:
+    SECURE_SSL_REDIRECT = env.bool("DJANGO_SECURE_SSL_REDIRECT", default=True)
+    SECURE_HSTS_SECONDS = env.int("DJANGO_SECURE_HSTS_SECONDS", default=2592000)  # 30 days
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", default=True)
+    SECURE_HSTS_PRELOAD = env.bool("DJANGO_SECURE_HSTS_PRELOAD", default=True)
+    SESSION_COOKIE_SECURE = env.bool("DJANGO_SESSION_COOKIE_SECURE", default=True)
+    CSRF_COOKIE_SECURE = env.bool("DJANGO_CSRF_COOKIE_SECURE", default=True)
+else:
+    SECURE_SSL_REDIRECT = False
+    SECURE_HSTS_SECONDS = 0
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+    SECURE_HSTS_PRELOAD = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+
+
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+]
+
+IMPORT_EXPORT_USE_TRANSACTIONS = True
+
+
+===== django_project/urls.py =====
+from django.contrib import admin
+from django.urls import path, include
+from django.conf.urls.static import static
+from django.conf import settings
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("accounts/", include("accounts.urls")),         # Custom signup and logout routes
+    path("accounts/", include("django.contrib.auth.urls")),  # Login, password reset, etc.
+    path("", include("pages.urls")),           
+    path("workorders/", include("workorders.urls")),  # Work Orders routes
+    path("clients/", include("clients.urls")),
+    path("invoices/", include("invoices.urls")),
+    path("workorders/", include("workorders.urls")),
+    path("invoices/", include("invoices.urls")),
+
+]
+
+
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+
+
+
+===== django_project/asgi.py =====
+"""
+ASGI config for django_project project.
+
+It exposes the ASGI callable as a module-level variable named ``application``.
+
+For more information on this file, see
+https://docs.djangoproject.com/en/5.1/howto/deployment/asgi/
+"""
+
+import os
+
+from django.core.asgi import get_asgi_application
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_project.settings')
+
+application = get_asgi_application()
+
+
+===== django_project/wsgi.py =====
+"""
+WSGI config for django_project project.
+
+It exposes the WSGI callable as a module-level variable named ``application``.
+
+For more information on this file, see
+https://docs.djangoproject.com/en/5.1/howto/deployment/wsgi/
+"""
+
+import os
+
+from django.core.wsgi import get_wsgi_application
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_project.settings')
+
+application = get_wsgi_application()
+
+
+===== templates/clients/client_detail.html =====
+{% extends "base.html" %}
+{% block title %}Client Detail{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <!-- Client Summary -->
+  <div class="card mb-4">
+    <div class="card-header bg-secondary text-white">
+      <h5 class="mb-0">Client: {{ client.name }}</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <p><strong>Email:</strong> {{ client.email }}</p>
+          <p><strong>Phone:</strong> {{ client.phone }}</p>
+        </div>
+        <div class="col-md-6">
+          <p><strong>Address:</strong> {{ client.address }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer d-flex justify-content-between">
+      <a href="{% url 'client_edit' client.id %}" class="btn btn-warning">Edit Client</a>
+      <a href="{% url 'client_list' %}" class="btn btn-secondary">Back to Clients</a>
+    </div>
+  </div>
+
+  <!-- Related Work Orders -->
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">Work Orders</h5>
+    </div>
+    <div class="card-body">
+      {% if client.work_orders.all %}
+      <ul class="list-group">
+        {% for order in client.work_orders.all %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <a href="{% url 'workorder_detail' order.id %}">Work Order #{{ order.id }}</a> –
+              {{ order.job_description|truncatewords:6 }}
+            </div>
+            <span class="badge bg-info text-dark">{{ order.get_status_display }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+        <p>No work orders available.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+
+===== templates/clients/client_form.html =====
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}{% if client %}Edit Client{% else %}Add New Client{% endif %}{% endblock %}
+{% block content %}
+<div class="container">
+  <h2>{% if client %}Edit Client{% else %}Add New Client{% endif %}</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form|crispy }}
+    <button type="submit" class="btn btn-success">{% if client %}Update Client{% else %}Create Client{% endif %}</button>
+  </form>
+  <a href="{% url 'client_list' %}" class="btn btn-secondary mt-3">Back to Clients</a>
+</div>
+{% endblock %}
+
+
+===== templates/clients/client_list.html =====
+{% extends "base.html" %}
+{% block title %}Clients{% endblock %}
+{% block content %}
+<div class="container">
+  <h2 class="mb-4">Clients</h2>
+  
+  <!-- Search Bar -->
+  <form method="get" class="mb-4">
+    <div class="input-group">
+      <input type="text" name="q" class="form-control" placeholder="Search by client name..." value="{{ query }}">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </div>
+  </form>
+  
+  <a href="{% url 'client_create' %}" class="btn btn-success mb-3">Add New Client</a>
+
+  <!-- Responsive Scrollable Table -->
+  <div class="card shadow-sm">
+    <div class="card-body table-responsive">
+      <table class="table table-striped align-middle">
+        <thead class="small">
+          <tr>
+            <th style="min-width: 120px;">Name</th>
+            <th style="min-width: 180px;">Email</th>
+            <th style="min-width: 120px;">Phone</th>
+            <th style="min-width: 250px;">Address</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for client in clients %}
+          <tr>
+            <td class="text-truncate" style="max-width: 150px;">
+              <a href="{% url 'client_detail' client.id %}">{{ client.name }}</a>
+            </td>
+            <td class="text-truncate" style="max-width: 200px;">{{ client.email }}</td>
+            <td class="text-truncate" style="max-width: 150px;">{{ client.phone }}</td>
+            <td class="text-truncate" style="max-width: 300px;">{{ client.address }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4">No clients found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
+===== templates/registration/login.html =====
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Login</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form|crispy }}
+        <button type="submit" class="btn btn-primary">Login</button>
+    </form>
+    <p class="mt-3">Don't have an account? <a href="{% url 'signup' %}">Sign up here</a>.</p>
+</div>
+{% endblock %}
+
+
+===== templates/registration/logout.html =====
+{% extends "base.html" %}
+
+{% block title %}Logout{% endblock %}
+
+{% block content %}
+<div class="container text-center mt-4">
+    <h2>You have been logged out</h2>
+    <a href="{% url 'login' %}" class="btn btn-primary">Login Again</a>
+</div>
+{% endblock %}
+
+
+===== templates/registration/signup.html =====
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Sign Up{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Sign Up</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form|crispy }}
+        <button type="submit" class="btn btn-primary">Sign Up</button>
+    </form>
+    <p class="mt-3">Already have an account? <a href="{% url 'login' %}">Login here</a>.</p>
+</div>
+{% endblock %}
+
+
+===== templates/home.html =====
+<!-- templates/home.html -->
+{% extends "base.html" %}
+{% block title %}Dashboard – Art Moving Business{% endblock %}
+{% block content %}
+  <!-- Welcome Hero -->
+  <div class="text-center mb-4">
+    <h2 class="fw-bold">Welcome back, {{ user.username }} 👋</h2>
+    <p class="text-muted">Here’s what’s happening today in your business.</p>
+  </div>
+
+  <!-- Quick Action Buttons -->
+  <div class="row g-3 justify-content-center">
+    <div class="col-lg-3 col-md-4 col-sm-6">
+      <a href="{% url 'workorder_list' %}" class="btn btn-primary w-100 py-4 shadow-sm d-flex flex-column align-items-center">
+        <i class="bi bi-card-checklist fs-1 mb-2"></i>
+        <span>Work Orders</span>
+      </a>
+    </div>
+    <div class="col-lg-3 col-md-4 col-sm-6">
+      <a href="{% url 'client_list' %}" class="btn btn-warning w-100 py-4 shadow-sm d-flex flex-column align-items-center">
+        <i class="bi bi-people-fill fs-1 mb-2"></i>
+        <span>Clients</span>
+      </a>
+    </div>
+    <div class="col-lg-3 col-md-4 col-sm-6">
+      <a href="{% url 'invoice_list' %}" class="btn btn-danger w-100 py-4 shadow-sm d-flex flex-column align-items-center">
+        <i class="bi bi-receipt fs-1 mb-2"></i>
+        <span>Invoicing</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Calendar & Legend -->
+  <div class="card mt-5 shadow-sm">
+    <div class="card-header">
+      <h5 class="mb-0">Calendar</h5>
+    </div>
+    <div class="card-body">
+      <!-- Legend -->
+      <div class="mb-3">
+        <span class="badge bg-success me-2">Paid Invoice</span>
+        <span class="badge bg-danger me-2">Unpaid Invoice</span>
+        <span class="badge bg-secondary me-2">Work Order Events</span>
+        <small class="d-block text-muted mt-1">
+          Work order events are color‑coded uniquely per job.
+        </small>
+      </div>
+      <!-- FullCalendar -->
+      <div id="calendar"></div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  var calendarEl = document.getElementById("calendar");
+  if (!calendarEl) return console.error("Calendar element not found!");
+
+  var calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: "dayGridMonth",
+    height: 'auto',
+    events: async function(fetchInfo, success, fail) {
+      try {
+        let [wo, inv] = await Promise.all([
+          fetch("/workorders/calendar-data/workorders/").then(r=>r.json()),
+          fetch("/invoices/calendar-data/invoices/").then(r=>r.json())
+        ]);
+        success([...wo, ...inv]);
+      } catch (e) {
+        console.error("Calendar fetch error:", e);
+        fail(e);
+      }
+    },
+    eventClick: info => {
+      if (info.event.url) {
+        window.location.href = info.event.url;
+        info.jsEvent.preventDefault();
+      }
+    }
+  });
+  calendar.render();
+});
+</script>
+{% endblock %}
+
+
+===== templates/invoices/invoice_paid.html =====
+{% extends "base.html" %}
+{% block title %}Paid Invoices{% endblock %}
+{% block content %}
+<div class="container">
+  <h2 class="mb-4">Paid Invoices</h2>
+  
+  <!-- Navigation Buttons for Invoice Categories -->
+  <div class="mb-4 text-center">
+    <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger me-2">Unpaid Invoices</a>
+    <a href="{% url 'invoice_paid' %}" class="btn btn-outline-danger me-2">Paid Invoices</a>
+    <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue Invoices</a>
+    <a href="{% url 'invoice_create' %}" class="btn btn-danger">New Invoice</a>
+  </div>
+  
+  <!-- Search Bar -->
+  <form method="get" class="mb-4">
+    <div class="input-group">
+      <input type="text" name="q" class="form-control" placeholder="Search by invoice number or client name..." value="{{ query }}">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </div>
+  </form>
+  
+  <div class="card shadow-sm">
+    <div class="card-header bg-info text-white">Paid Invoices</div>
+    <div class="card-body">
+      {% if invoices %}
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Invoice Number</th>
+            <th>Client</th>
+            <th>Amount</th>
+            <th>Date Created</th>
+            <th>Due Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in invoices %}
+          <tr>
+            <td>{{ inv.invoice_number }}</td>
+            <td>{{ inv.client.name }}</td>
+            <td>${{ inv.amount }}</td>
+            <td>{{ inv.date_created|date:"m-d-y" }}</td>
+            <td>{{ inv.due_date|date:"m-d-y" }}</td>
+            <td>
+              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p>No paid invoices found.</p>
+      {% endif %}
+    </div>
+  </div>
+  <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">Back to Invoice Overview</a>
+  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+</div>
+{% endblock %}
+
+
+===== templates/invoices/invoice_unpaid.html =====
+{% extends "base.html" %}
+{% block title %}Unpaid Invoices{% endblock %}
+{% block content %}
+<div class="container">
+  <h2 class="mb-4">Unpaid Invoices</h2>
+  
+  <!-- Navigation Buttons for Invoice Categories -->
+  <div class="mb-4 text-center">
+    <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger me-2">Unpaid Invoices</a>
+    <a href="{% url 'invoice_paid' %}" class="btn btn-outline-danger me-2">Paid Invoices</a>
+    <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue Invoices</a>
+    <a href="{% url 'invoice_create' %}" class="btn btn-danger">New Invoice</a>
+  </div>
+  
+  <!-- Search Bar -->
+  <form method="get" class="mb-4">
+    <div class="input-group">
+      <input type="text" name="q" class="form-control" placeholder="Search by invoice number or client name..." value="{{ query }}">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </div>
+  </form>
+  
+  <div class="card shadow-sm">
+    <div class="card-header bg-info text-white">Unpaid Invoices</div>
+    <div class="card-body">
+      {% if invoices %}
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Invoice Number</th>
+            <th>Client</th>
+            <th>Amount</th>
+            <th>Date Created</th>
+            <th>Due Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in invoices %}
+          <tr>
+            <td>{{ inv.invoice_number }}</td>
+            <td>{{ inv.client.name }}</td>
+            <td>${{ inv.amount }}</td>
+            <td>{{ inv.date_created|date:"m-d-y" }}</td>
+            <td>{{ inv.due_date|date:"m-d-y" }}</td>
+            <td>
+              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+              <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-success">Mark as Paid</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p>No unpaid invoices found.</p>
+      {% endif %}
+    </div>
+  </div>
+  <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">Back to Invoice Overview</a>
+  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+</div>
+{% endblock %}
+
+
+===== templates/invoices/invoice_confirm_delete.html =====
+{% extends "base.html" %}
+{% block title %}Delete Invoice{% endblock %}
+{% block content %}
+<div class="container">
+  <h2>Delete Invoice {{ invoice.invoice_number }}</h2>
+  <p>Are you sure you want to delete this invoice?</p>
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Yes, delete it</button>
+    <a href="{% url 'invoice_detail' invoice.id %}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}
+
+
+===== templates/invoices/invoice_overdue.html =====
+{% extends "base.html" %}
+{% block title %}Overdue Invoices{% endblock %}
+{% block content %}
+<div class="container">
+  <h2 class="mb-4">Overdue Invoices</h2>
+  
+  <!-- Navigation Buttons for Invoice Categories -->
+  <div class="mb-4 text-center">
+    <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger me-2">Unpaid Invoices</a>
+    <a href="{% url 'invoice_paid' %}" class="btn btn-outline-danger me-2">Paid Invoices</a>
+    <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue Invoices</a>
+    <a href="{% url 'invoice_create' %}" class="btn btn-danger">New Invoice</a>
+  </div>
+  
+  <!-- Search Bar -->
+  <form method="get" class="mb-4">
+    <div class="input-group">
+      <input type="text" name="q" class="form-control" placeholder="Search by invoice number or client name..." value="{{ query }}">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </div>
+  </form>
+  
+  <div class="card shadow-sm">
+    <div class="card-header bg-info text-white">Overdue Invoices</div>
+    <div class="card-body">
+      {% if invoices %}
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Invoice Number</th>
+            <th>Client</th>
+            <th>Amount</th>
+            <th>Date Created</th>
+            <th>Due Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in invoices %}
+          <tr>
+            <td>{{ inv.invoice_number }}</td>
+            <td>{{ inv.client.name }}</td>
+            <td>${{ inv.amount }}</td>
+            <td>{{ inv.date_created|date:"m-d-y" }}</td>
+            <td>{{ inv.due_date|date:"m-d-y" }}</td>
+            <td>
+              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+              <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-success">Mark as Paid</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p>No overdue invoices found.</p>
+      {% endif %}
+    </div>
+  </div>
+  <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">Back to Invoice Overview</a>
+  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+</div>
+{% endblock %}
+
+
+===== templates/invoices/update_due_date.html =====
+{% extends "base.html" %}
+{% block title %}Update Due Date{% endblock %}
+{% block content %}
+<div class="container">
+  <h2 class="mb-4">Update Invoice Due Date</h2>
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-4">
+      <label for="new_due_date">New Due Date:</label>
+      <input type="text" name="new_due_date" id="new_due_date" class="form-control datepicker" placeholder="YYYY-MM-DD" required>
+    </div>
+    <button type="submit" class="btn btn-success">Update Due Date</button>
+    <a href="{% url 'invoice_list' %}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  flatpickr(".datepicker", { dateFormat: "Y-m-d" });
+});
+</script>
+{% endblock %}
+{% endblock %}
+
+
+===== templates/invoices/invoice_list.html =====
+{% extends "base.html" %}
+{% block title %}Invoice Overview{% endblock %}
+{% block content %}
+<div class="container">
+  <h2 class="mb-4">Invoice Overview</h2>
+  
+  <!-- Search Bar -->
+  <form method="get" class="mb-4">
+    <div class="input-group">
+      <input type="text" name="q" class="form-control" placeholder="Search by invoice number or client name..." value="{{ query }}">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </div>
+  </form>
+  
+  <!-- Navigation Buttons for Invoice Categories -->
+  <div class="mb-4 text-center">
+    <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger me-2">Unpaid Invoices</a>
+    <a href="{% url 'invoice_paid' %}" class="btn btn-outline-danger me-2">Paid Invoices</a>
+    <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue Invoices</a>
+    <a href="{% url 'invoice_create' %}" class="btn btn-danger">New Invoice</a>
+  </div>
+  
+  <!-- Unpaid Invoices Card -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-danger text-white">
+      <h4>Unpaid Invoices</h4>
+    </div>
+    <div class="card-body">
+      {% if unpaid_invoices %}
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Invoice Number</th>
+            <th>Client</th>
+            <th>Amount</th>
+            <th>Date Created</th>
+            <th>Due Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in unpaid_invoices %}
+          <tr>
+            <td>{{ inv.invoice_number }}</td>
+            <td>{{ inv.client.name }}</td>
+            <td>${{ inv.amount }}</td>
+            <td>{{ inv.date_created|date:"m-d-y" }}</td>
+            <td>{{ inv.due_date|date:"m-d-y" }}</td>
+            <td>
+              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+              <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-success">Mark as Paid</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p>No unpaid invoices found.</p>
+      {% endif %}
+    </div>
+  </div>
+  
+  <!-- Paid Invoices Card -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-success text-white">
+      <h4>Paid Invoices</h4>
+    </div>
+    <div class="card-body">
+      {% if paid_invoices %}
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Invoice Number</th>
+            <th>Client</th>
+            <th>Amount</th>
+            <th>Date Created</th>
+            <th>Due Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in paid_invoices %}
+          <tr>
+            <td>{{ inv.invoice_number }}</td>
+            <td>{{ inv.client.name }}</td>
+            <td>${{ inv.amount }}</td>
+            <td>{{ inv.date_created|date:"m-d-y" }}</td>
+            <td>{{ inv.due_date|date:"m-d-y" }}</td>
+            <td>
+              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p>No paid invoices found.</p>
+      {% endif %}
+    </div>
+  </div>
+  
+  <!-- Overdue Invoices Card -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-warning text-white">
+      <h4>Overdue Invoices</h4>
+    </div>
+    <div class="card-body">
+      {% if overdue_invoices %}
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Invoice Number</th>
+            <th>Client</th>
+            <th>Amount</th>
+            <th>Date Created</th>
+            <th>Due Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in overdue_invoices %}
+          <tr>
+            <td>{{ inv.invoice_number }}</td>
+            <td>{{ inv.client.name }}</td>
+            <td>${{ inv.amount }}</td>
+            <td>{{ inv.date_created|date:"m-d-y" }}</td>
+            <td>{{ inv.due_date|date:"m-d-y" }}</td>
+            <td>
+              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+              <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#dueDateModal" data-invoice-id="{{ inv.id }}">
+                Set Paid Date
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p>No overdue invoices found.</p>
+      {% endif %}
+    </div>
+  </div>
+  
+  <!-- Back Navigation -->
+  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+</div>
+
+<!-- Due Date Modal -->
+<div class="modal fade" id="dueDateModal" tabindex="-1" aria-labelledby="dueDateModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="post" id="dueDateForm">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="dueDateModalLabel">Set Paid Date</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>Select the paid date:</p>
+          <input type="text" name="new_due_date" class="form-control datepicker" placeholder="m-d-y" required>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success">Update Due Date</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  // Initialize Flatpickr for date inputs in the modal
+  flatpickr(".datepicker", { dateFormat: "Y-m-d" });
+  
+  // Set the action URL for the due date modal based on the invoice ID
+  var dueDateModal = document.getElementById('dueDateModal');
+  dueDateModal.addEventListener('show.bs.modal', function (event) {
+    var button = event.relatedTarget;
+    var invoiceId = button.getAttribute('data-invoice-id');
+    var form = document.getElementById('dueDateForm');
+    form.action = '/invoices/' + invoiceId + '/update_due_date/';
+  });
+});
+</script>
+{% endblock %}
+{% endblock %}
+
+
+===== templates/invoices/invoice_form.html =====
+{% extends "base.html" %}
+{% load crispy_forms_tags static %}
+{% block title %}
+  {% if invoice %}Edit Invoice{% else %}Create Invoice{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<link
+  href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+  rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h2 class="mb-4">
+    {% if invoice %}Edit Invoice{% else %}Create Invoice{% endif %}
+  </h2>
+
+  <!-- Navigation Buttons -->
+  <div class="mb-4 text-center">
+    <a href="{% url 'invoice_unpaid' %}"  class="btn btn-outline-danger me-2">Unpaid</a>
+    <a href="{% url 'invoice_paid' %}"    class="btn btn-outline-danger me-2">Paid</a>
+    <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue</a>
+    <a href="{% url 'invoice_create' %}" class="btn btn-danger">New</a>
+  </div>
+
+  <!-- Events List (replacing pickup/dropoff) -->
+  {% if events %}
+    <div class="mb-4">
+      <h4>Scheduled Events</h4>
+      <ul>
+        {% for event in events %}
+          <li>
+            <strong>{{ event.get_event_type_display }}:</strong>
+            {{ event.address }} — {{ event.date|date:"Y-m-d" }}
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {# Only on “create” do we need the GET form to load jobs #}
+  {% if not invoice %}
+    <form method="get" class="mb-4">
+      {{ form.client|as_crispy_field }}
+      <button type="submit" class="btn btn-outline-primary">Load Jobs</button>
+    </form>
+  {% endif %}
+
+  <form method="post" id="invoice-form">
+    {% csrf_token %}
+
+    {# preserve the chosen client on POST #}
+    <input
+      type="hidden"
+      name="client"
+      value="{% if invoice %}{{ invoice.client.id }}{% else %}{{ form.initial.client }}{% endif %}"
+    >
+
+    {{ form.work_order|as_crispy_field }}
+    {{ form.amount|as_crispy_field }}
+    {{ form.due_date|as_crispy_field }}
+    {{ form.notes|as_crispy_field }}
+
+    <button type="submit" class="btn btn-success">
+      {% if invoice %}Update Invoice{% else %}Create Invoice{% endif %}
+    </button>
+  </form>
+
+  <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">
+    Back to Invoice Overview
+  </a>
+  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">
+    Back to Dashboard
+  </a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  // Initialize Select2 on the client field (only relevant in the GET form)
+  $('#id_client').select2({
+    placeholder: 'Search for a client…',
+    allowClear: true,
+    minimumInputLength: 1,
+    ajax: {
+      url: "{% url 'ajax_get_clients' %}",
+      dataType: 'json',
+      delay: 250,
+      data: params => ({ q: params.term }),
+      processResults: data => ({ results: data })
+    }
+  });
+});
+</script>
+{% endblock %}
+
+
+===== templates/invoices/invoice_detail.html =====
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Invoice Detail{% endblock %}
+{% block content %}
+<div class="container">
+  <!-- Navigation Buttons for Invoice Categories -->
+  <div class="mb-4 text-center">
+    <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger me-2">Unpaid Invoices</a>
+    <a href="{% url 'invoice_paid' %}" class="btn btn-outline-danger me-2">Paid Invoices</a>
+    <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue Invoices</a>
+    <a href="{% url 'invoice_create' %}" class="btn btn-danger">New Invoice</a>
+  </div>
+  
+  <div class="card shadow-sm mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h2>Invoice {{ invoice.invoice_number }} Details</h2>
+      <div>
+        <a href="{% url 'invoice_update' invoice.id %}" class="btn btn-warning btn-sm me-2">Edit Invoice</a>
+        <a href="{% url 'invoice_list' %}" class="btn btn-secondary btn-sm">Back to Invoice Overview</a>
+      </div>
+    </div>
+    <div class="card-body">
+      <h4>Invoice Information</h4>
+      <p><strong>Client:</strong> {{ invoice.client.name }}</p>
+      <p><strong>Date Created:</strong> {{ invoice.date_created|date:"Y-m-d" }}</p>
+      <p><strong>Due Date:</strong> {{ invoice.due_date|date:"Y-m-d" }}</p>
+      <p><strong>Amount:</strong> ${{ invoice.amount }}</p>
+      <p><strong>Status:</strong> {{ invoice.get_status_display }}</p>
+      {% if invoice.notes %}
+        <p><strong>Notes:</strong> {{ invoice.notes }}</p>
+      {% endif %}
+      
+      {% if invoice.work_order %}
+      <hr>
+      <h4>Associated Work Order Details</h4>
+      <p><strong>ID:</strong> {{ invoice.work_order.id }}</p>
+      <p><strong>Description:</strong> {{ invoice.work_order.job_description }}</p>
+      <p><strong>Estimated Cost:</strong> ${{ invoice.work_order.estimated_cost }}</p>
+      <p><strong>Status:</strong> {{ invoice.work_order.get_status_display }}</p>
+      
+      {% if invoice.work_order.addresses.all %}
+        <h5>Pickup Addresses</h5>
+        <ul>
+          {% for addr in invoice.work_order.addresses.all %}
+            {% if addr.address_type|lower == "pickup" %}
+              <li>{{ addr.address }}</li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+        <h5>Dropoff Addresses</h5>
+        <ul>
+          {% for addr in invoice.work_order.addresses.all %}
+            {% if addr.address_type|lower == "dropoff" %}
+              <li>{{ addr.address }}</li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No addresses associated with this work order.</p>
+      {% endif %}
+      
+      {% else %}
+        <p><strong>Work Order:</strong> Not linked</p>
+      {% endif %}
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" onclick="window.print();">Print Invoice</button>
+    </div>
+  </div>
+  
+  <!-- Navigation Row -->
+  <div class="mt-4 d-flex justify-content-between">
+    <div>
+      <a href="{% url 'invoice_list' %}" class="btn btn-secondary">Back to Invoice Overview</a>
+      <a href="{% url 'home' %}" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+    <div>
+      <a href="{% url 'invoice_delete' invoice.id %}" class="btn btn-danger">Delete Invoice</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
+===== templates/base.html =====
+<!-- templates/base.html -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Art Moving Business Management System{% endblock %}</title>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="64x64" href="{% static 'images/icon-64x64.png' %}">
+
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+
+  <link href="https://fonts.cdnfonts.com/css/open-dyslexic" rel="stylesheet">
+
+
+  <!-- FullCalendar CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+  <!-- Flatpickr CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <!-- Select2 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="d-flex flex-column min-vh-100">
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark py-2">
+    <div class="container">
+      <a href="{% url 'home' %}" class="d-flex align-items-center text-decoration-none">
+        <img src="{% static 'images/nav-icon-128x128.png' %}" alt="Site Icon" class="me-2" style="height:40px;">
+        <span class="navbar-brand mb-0 h4">EJ Art Mover</span>
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+              aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto align-items-center">
+          <li class="nav-item"><a class="nav-link px-3" href="{% url 'home' %}"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link px-3" href="{% url 'workorder_list' %}"><i class="bi bi-card-checklist me-1"></i>Work Orders</a></li>
+          <li class="nav-item"><a class="nav-link px-3" href="{% url 'client_list' %}"><i class="bi bi-people-fill me-1"></i>Clients</a></li>
+          <li class="nav-item"><a class="nav-link px-3" href="{% url 'invoice_list' %}"><i class="bi bi-receipt me-1"></i>Invoices</a></li>
+          {% if user.is_authenticated %}
+            <li class="nav-item"><a class="nav-link px-3" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right me-1"></i>Logout</a></li>
+          {% else %}
+            <li class="nav-item"><a class="nav-link px-3" href="{% url 'login' %}"><i class="bi bi-box-arrow-in-right me-1"></i>Login</a></li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Offcanvas Sidebar -->
+  <div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasSidebar" aria-labelledby="offcanvasSidebarLabel">
+    <div class="offcanvas-header border-bottom">
+      <h5 class="offcanvas-title" id="offcanvasSidebarLabel">Navigation</h5>
+      <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+      {% if user.is_authenticated %}
+        <div class="text-center mb-4">
+          <i class="bi bi-person-circle fs-1 text-secondary"></i>
+          <div class="mt-2 fw-semibold">{{ user.username }}</div>
+        </div>
+      {% endif %}
+      <div class="list-group">
+        <h6 class="text-uppercase mb-2">Dashboard</h6>
+        <a href="{% url 'home' %}" class="list-group-item list-group-item-action"><i class="bi bi-speedometer2 me-2"></i>Home</a>
+
+        <h6 class="text-uppercase mt-4 mb-2">Work Orders</h6>
+        <a href="{% url 'workorder_list' %}" class="list-group-item list-group-item-action"><i class="bi bi-card-checklist me-2"></i>All Jobs</a>
+        <a href="{% url 'pending_jobs' %}" class="list-group-item list-group-item-action"><i class="bi bi-hourglass-split me-2"></i>Pending</a>
+        <a href="{% url 'scheduled_jobs' %}" class="list-group-item list-group-item-action"><i class="bi bi-calendar-event me-2"></i>Scheduled</a>
+        <a href="{% url 'completed_jobs' %}" class="list-group-item list-group-item-action"><i class="bi bi-check-circle me-2"></i>Completed</a>
+        <a href="{% url 'workorder_create' %}" class="list-group-item list-group-item-action text-success"><i class="bi bi-plus-circle me-2"></i>New Job</a>
+
+        <h6 class="text-uppercase mt-4 mb-2">Clients</h6>
+        <a href="{% url 'client_list' %}" class="list-group-item list-group-item-action"><i class="bi bi-people-fill me-2"></i>All Clients</a>
+        <a href="{% url 'client_create' %}" class="list-group-item list-group-item-action text-warning"><i class="bi bi-person-plus me-2"></i>New Client</a>
+
+        <h6 class="text-uppercase mt-4 mb-2">Invoicing</h6>
+        <a href="{% url 'invoice_list' %}" class="list-group-item list-group-item-action"><i class="bi bi-receipt me-2"></i>Overview</a>
+        <a href="{% url 'invoice_unpaid' %}" class="list-group-item list-group-item-action text-danger"><i class="bi bi-clock me-2"></i>Unpaid</a>
+        <a href="{% url 'invoice_paid' %}" class="list-group-item list-group-item-action text-success"><i class="bi bi-check2-circle me-2"></i>Paid</a>
+        <a href="{% url 'invoice_overdue' %}" class="list-group-item list-group-item-action text-warning"><i class="bi bi-exclamation-circle me-2"></i>Overdue</a>
+        <a href="{% url 'invoice_create' %}" class="list-group-item list-group-item-action text-danger"><i class="bi bi-plus-circle me-2"></i>New Invoice</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="container my-4 flex-grow-1">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-dark text-white text-center py-3 mt-auto">
+    <div class="container">
+      <small>&copy; {% now "Y" %} Art Moving Business Management System</small>
+    </div>
+  </footer>
+
+  <!-- JS Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
+
+
+===== templates/workorders/workorder_confirm_delete.html =====
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Confirm Delete Work Order{% endblock %}
+{% block content %}
+<div class="container">
+  <h2 class="mb-4">Delete Work Order #{{ workorder.id }}</h2>
+  <p>Are you sure you want to delete this work order?</p>
+  
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Yes, delete it</button>
+    <a href="{% url 'workorder_detail' workorder.id %}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}
+
+
+===== templates/workorders/completed_jobs.html =====
+{% extends "base.html" %}
+{% block title %}Completed Jobs{% endblock %}
+{% block content %}
+<div class="container">
+  <h2 class="mb-4">Completed Jobs</h2>
+  
+  <!-- Navigation Buttons -->
+  <div class="mb-4 text-center">
+    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+      <a href="{% url 'pending_jobs' %}"     class="btn btn-outline-primary w-100 w-sm-auto">Pending Jobs</a>
+      <a href="{% url 'scheduled_jobs' %}"   class="btn btn-outline-primary w-100 w-sm-auto">Scheduled Jobs</a>
+      <a href="{% url 'completed_jobs' %}"   class="btn btn-outline-primary w-100 w-sm-auto">Completed Jobs</a>
+      <a href="{% url 'workorder_create' %}" class="btn btn-outline-primary w-100 w-sm-auto">New Work Order</a>
+    </div>
+  </div>
+  
+  <!-- Search Bar -->
+  <form method="get" class="mb-4">
+    <div class="input-group">
+      <input type="text"
+             name="q"
+             class="form-control"
+             placeholder="Search by client name…"
+             value="{{ query }}">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </div>
+  </form>
+  
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-success text-white">
+      <h5 class="mb-0">Completed Jobs</h5>
+    </div>
+    <div class="card-body p-0">
+      {% if jobs %}
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead class="small">
+            <tr>
+              <th>ID</th>
+              <th>Client</th>
+              <th class="d-none d-md-table-cell">Description</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for job in jobs %}
+            <tr>
+              <td>{{ job.id }}</td>
+              <td>{{ job.client.name }}</td>
+              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">
+                {{ job.job_description|truncatewords:10 }}
+              </td>
+              <td>
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                  <a href="{% url 'workorder_detail' job.id %}"
+                     class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}"
+                     class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                  <button type="button"
+                          class="btn btn-sm btn-primary w-100 w-sm-auto"
+                          onclick="createInvoice({{ job.id }})">
+                    Create Invoice
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="p-3 mb-0">No completed jobs found.</p>
+      {% endif %}
+    </div>
+  </div>
+  
+  <!-- Back Buttons -->
+  <div class="text-center">
+    <a href="{% url 'workorder_list' %}"
+       class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Work Orders</a>
+    <a href="{% url 'home' %}"
+       class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function createInvoice(jobId) {
+  const review = confirm(
+    "Would you like to review/edit this job before creating an invoice?"
+  );
+  window.location.href = review
+    ? `/workorders/edit/${jobId}/`
+    : `/invoices/create/?work_order=${jobId}`;
+}
+</script>
+{% endblock %}
+
+
+===== templates/workorders/workorder_pdf.html =====
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Work Order #{{ job.id }}</title>
+  <style>
+    body { font-family: 'Arial', sans-serif; color: #333; margin: 2rem; }
+    header { text-align: center; margin-bottom: 2rem; }
+    header img { height: 80px; }
+    h1 { font-size: 1.5rem; margin: 0; }
+    .info-section, .event-section, .note-section { margin-bottom: 2rem; }
+    .info-label { font-weight: bold; width: 150px; display: inline-block; }
+    .section-title { border-bottom: 1px solid #ccc; margin-bottom: 1rem; font-size: 1.2rem; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <img src="{{ STATIC_URL }}images/nav-icon-128x128.png" alt="Logo">
+    <h1>EJ Art Moving – Work Order #{{ job.id }}</h1>
+  </header>
+
+  <div class="info-section">
+    <div class="section-title">Client Info</div>
+    <p><span class="info-label">Name:</span> {{ job.client.name }}</p>
+    <p><span class="info-label">Email:</span> {{ job.client.email }}</p>
+    <p><span class="info-label">Phone:</span> {{ job.client.phone }}</p>
+    <p><span class="info-label">Address:</span> {{ job.client.address }}</p>
+  </div>
+
+  <div class="info-section">
+    <div class="section-title">Job Info</div>
+    <p><span class="info-label">Description:</span> {{ job.job_description }}</p>
+    <p><span class="info-label">Estimated Cost:</span> ${{ job.estimated_cost }}</p>
+    <p><span class="info-label">Created:</span> {{ job.created_at|date:"F j, Y" }}</p>
+    {% if job.completed_at %}
+    <p><span class="info-label">Completed:</span> {{ job.completed_at|date:"F j, Y" }}</p>
+    {% endif %}
+  </div>
+
+  <div class="event-section">
+    <div class="section-title">Scheduled Events</div>
+    <ul>
+      {% for event in job.addresses.all %}
+        <li><strong>{{ event.get_event_type_display }}:</strong> {{ event.address }} – {{ event.date|date:"F j, Y" }}</li>
+      {% empty %}
+        <p>No scheduled events.</p>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="note-section">
+    <div class="section-title">Notes</div>
+    <ul>
+      {% for note in job.notes.all %}
+        <li>{{ note.note }} <small>({{ note.created_at|date:"F j, Y" }})</small></li>
+      {% empty %}
+        <p>No notes available.</p>
+      {% endfor %}
+    </ul>
+  </div>
+
+</body>
+</html>
+
+
+===== templates/workorders/workorder_detail.html =====
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Work Order Detail{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <!-- Work Order Summary -->
+  <div class="card mb-4">
+    <div class="card-header bg-secondary text-white">
+      <h5 class="mb-0">Work Order #{{ job.id }}</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <p><strong>Client:</strong> {{ job.client.name }}</p>
+          <p><strong>Job Description:</strong> {{ job.job_description }}</p>
+        </div>
+        <div class="col-md-6">
+          <p><strong>Estimated Cost:</strong> ${{ job.estimated_cost }}</p>
+          <p><strong>Status:</strong> {{ job.get_status_display }}</p>
+          <p><strong>Created At:</strong> {{ job.created_at|date:"M d, Y g:i A" }}</p>
+          {% if job.completed_at %}
+            <p><strong>Completed At:</strong> {{ job.completed_at|date:"M d, Y g:i A" }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scheduled Events -->
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">Scheduled Events</h5>
+    </div>
+    <div class="card-body">
+      <ul class="list-group">
+        {% for event in events %}
+          <li class="list-group-item">
+            <strong>{{ event.get_event_type_display }}:</strong> 
+            {{ event.address }} on {{ event.date|date:"M d, Y" }}
+          </li>
+        {% empty %}
+          <li class="list-group-item">No scheduled events.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <!-- Attachments & Notes -->
+  <div class="row">
+    <!-- Attachments -->
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0">Attachments</h5>
+        </div>
+        <div class="card-body">
+          <ul class="list-group">
+            {% for attachment in attachments %}
+              <li class="list-group-item">
+                <a href="{{ attachment.file.url }}">{{ attachment.file.name }}</a>
+                <small class="text-muted d-block">{{ attachment.uploaded_at|date:"M d, Y g:i A" }}</small>
+              </li>
+            {% empty %}
+              <li class="list-group-item">No attachments.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-header bg-warning text-dark">
+          <h5 class="mb-0">Notes</h5>
+        </div>
+        <div class="card-body">
+          <ul class="list-group">
+            {% for note in notes %}
+              <li class="list-group-item">
+                {{ note.note }}
+                <small class="text-muted d-block">{{ note.created_at|date:"M d, Y g:i A" }}</small>
+              </li>
+            {% empty %}
+              <li class="list-group-item">No notes.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="mt-4 d-flex flex-column flex-sm-row justify-content-between gap-2">
+    <a href="{% url 'workorder_edit' job.id %}" class="btn btn-primary w-100 w-sm-auto">Edit Work Order</a>
+    <a href="{% url 'workorder_pdf' job.id %}" class="btn btn-light border d-flex align-items-center gap-2 shadow-sm px-4 py-2" target="_blank" style="border-color: #999;">
+      <i class="bi bi-file-earmark-pdf-fill text-danger fs-5"></i>
+      <span class="fw-semibold text-dark">Download PDF</span>
+    </a>
+    
+    <a href="{% url 'workorder_delete' job.id %}" class="btn btn-danger">
+      Delete Work Order
+    </a>
+  </div>
+
+  <!-- Navigation Buttons -->
+  <div class="text-center mt-4">
+    <a href="{% url 'workorder_list' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Work Orders</a>
+    <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Optional JS for future interactivity -->
+{% endblock %}
+
+
+===== templates/workorders/workorder_form.html =====
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}{{ job|default_if_none:"New" }} Work Order{% endblock %}
+
+{% block extra_css %}
+  <!-- Select2 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <!-- Top Nav Buttons -->
+  <div class="mb-4 text-center">
+    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+      <a href="{% url 'pending_jobs' %}" class="btn btn-outline-primary">Pending Jobs</a>
+      <a href="{% url 'scheduled_jobs' %}" class="btn btn-outline-primary">Scheduled Jobs</a>
+      <a href="{% url 'completed_jobs' %}" class="btn btn-outline-primary">Completed Jobs</a>
+      <a href="{% url 'workorder_create' %}" class="btn btn-outline-primary">New Work Order</a>
+    </div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <!-- Client & Job Details -->
+    <div class="card mb-4">
+      <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0">Client &amp; Job Details</h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <!-- Client picker -->
+          <div class="col-md-6">
+            {{ form.client|as_crispy_field }}
+            <a href="{% url 'client_create' %}" target="_blank"
+               class="btn btn-sm btn-outline-primary mt-2">+ Add New Client</a>
+          </div>
+
+          <!-- Job description -->
+          <div class="col-md-6">
+            {{ form.job_description|as_crispy_field }}
+          </div>
+
+          <!-- Estimated cost -->
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Estimated Cost</label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              {{ form.estimated_cost }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scheduled Events -->
+    <div class="card mb-4">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Scheduled Events</h5>
+      </div>
+      <div class="card-body" id="event-formset">
+        {{ event_formset.management_form }}
+        <div id="event-forms-container">
+          {% for subform in event_formset %}
+            <div class="card mb-3 event-form">
+              <div class="card-body">
+                {{ subform|crispy }}
+                <button type="button" class="btn btn-sm btn-outline-danger remove-event mt-2">
+                  Remove
+                </button>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        <div class="text-center">
+          <button type="button" id="add-event" class="btn btn-outline-primary">+ Add Event</button>
+        </div>
+
+        <div id="empty-form-template" class="d-none">
+          <div class="card mb-3 event-form">
+            <div class="card-body">
+              {{ event_formset.empty_form|crispy }}
+              <button type="button" class="btn btn-sm btn-outline-danger remove-event mt-2">Remove</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attachments -->
+    <div class="card mb-4">
+      <div class="card-header bg-success text-white">
+        <h5 class="mb-0">Attachments</h5>
+      </div>
+      <div class="card-body">
+        {{ attachment_form|crispy }}
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="card mb-4">
+      <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0">Notes</h5>
+      </div>
+      <div class="card-body">
+        {{ note_form|crispy }}
+      </div>
+    </div>
+
+    <!-- Submit Buttons -->
+    <div class="d-flex justify-content-end gap-2 mb-4">
+      <button type="submit" name="update_only" class="btn btn-success">Create / Update</button>
+      <button type="submit" name="create_invoice" class="btn btn-danger">Update &amp; Create Invoice</button>
+    </div>
+  </form>
+
+  <!-- Bottom Navigation Buttons -->
+  <div class="text-center">
+    <a href="{% url 'workorder_list' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Work Orders</a>
+    <a href="{% url 'home' %}"             class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+  </div>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <!-- jQuery, Select2, Flatpickr -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+  <script>
+    $(document).ready(function() {
+      $('.select2').select2({ width: '100%' });
+      flatpickr('.datepicker', { dateFormat: 'Y-m-d' });
+
+      const formsetContainer = $('#event-forms-container');
+      const totalForms = $('#id_events-TOTAL_FORMS');
+      const emptyForm = $('#empty-form-template').html();
+
+      function attachRemoveEvent(btn) {
+        btn.click(function() {
+          $(this).closest('.event-form').remove();
+          updateTotalForms();
+        });
+      }
+
+      function updateTotalForms() {
+        const formCount = formsetContainer.children('.event-form').length;
+        totalForms.val(formCount);
+      }
+
+      $('#add-event').click(function() {
+        const formCount = formsetContainer.children('.event-form').length;
+        const formRegex = new RegExp('__prefix__', 'g');
+        const newForm = $(emptyForm.replace(formRegex, formCount));
+
+        formsetContainer.append(newForm);
+        attachRemoveEvent(newForm.find('.remove-event'));
+        flatpickr(newForm.find('.datepicker'), { dateFormat: 'Y-m-d' });
+        updateTotalForms();
+      });
+
+      formsetContainer.find('.remove-event').each(function() {
+        attachRemoveEvent($(this));
+      });
+    });
+  </script>
+{% endblock %}
+
+
+===== templates/workorders/scheduled_jobs.html =====
+{% extends "base.html" %}
+{% block title %}Scheduled Jobs{% endblock %}
+{% block content %}
+<div class="container">
+  <h2 class="mb-4">Scheduled Jobs</h2>
+  
+  <!-- Navigation Buttons -->
+  <div class="mb-4 text-center">
+    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+      <a href="{% url 'pending_jobs' %}"     class="btn btn-outline-primary w-100 w-sm-auto">Pending Jobs</a>
+      <a href="{% url 'scheduled_jobs' %}"   class="btn btn-outline-primary w-100 w-sm-auto">Scheduled Jobs</a>
+      <a href="{% url 'completed_jobs' %}"   class="btn btn-outline-primary w-100 w-sm-auto">Completed Jobs</a>
+      <a href="{% url 'workorder_create' %}" class="btn btn-outline-primary w-100 w-sm-auto">New Work Order</a>
+    </div>
+  </div>
+  
+  <!-- Search Bar -->
+  <form method="get" class="mb-4">
+    <div class="input-group">
+      <input type="text" name="q" class="form-control" placeholder="Search by client name…" value="{{ query }}">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </div>
+  </form>
+  
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-info text-white">
+      <h5 class="mb-0">Scheduled Jobs</h5>
+    </div>
+    <div class="card-body p-0">
+      {% if jobs %}
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead class="small">
+            <tr>
+              <th>ID</th>
+              <th>Client</th>
+              <th class="d-none d-md-table-cell">Description</th>
+              <th class="d-none d-md-table-cell">Scheduled Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for job in jobs %}
+            <tr>
+              <td>{{ job.id }}</td>
+              <td>{{ job.client.name }}</td>
+              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">
+                {{ job.job_description|truncatewords:10 }}
+              </td>
+              <td class="d-none d-md-table-cell">
+                {{ job.scheduled_date|date:"m/d/y" }}
+              </td>
+              <td>
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                  <a href="{% url 'workorder_detail' job.id %}"
+                     class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}"
+                     class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                  <form method="post" action="{% url 'mark_completed' job.id %}" class="w-100 w-sm-auto mb-0">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success w-100">Mark Completed</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="p-3 mb-0">No scheduled jobs found.</p>
+      {% endif %}
+    </div>
+  </div>
+  
+  <!-- Back Buttons -->
+  <div class="text-center">
+    <a href="{% url 'workorder_list' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Work Orders</a>
+    <a href="{% url 'home' %}"             class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+  </div>
+</div>
+{% endblock %}
+
+
+===== templates/workorders/pending_jobs.html =====
+{% extends "base.html" %}
+{% block title %}Pending Jobs{% endblock %}
+{% block content %}
+<div class="container">
+  <h2 class="mb-4">Pending Jobs</h2>
+
+  <!-- Navigation Buttons -->
+  <div class="mb-4 text-center">
+    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+      <a href="{% url 'pending_jobs' %}"     class="btn btn-outline-primary w-100 w-sm-auto">Pending Jobs</a>
+      <a href="{% url 'scheduled_jobs' %}"   class="btn btn-outline-primary w-100 w-sm-auto">Scheduled Jobs</a>
+      <a href="{% url 'completed_jobs' %}"   class="btn btn-outline-primary w-100 w-sm-auto">Completed Jobs</a>
+      <a href="{% url 'workorder_create' %}" class="btn btn-outline-primary w-100 w-sm-auto">New Work Order</a>
+    </div>
+  </div>
+
+  <!-- Search Bar -->
+  <form method="get" class="mb-4">
+    <div class="input-group">
+      <input type="text" name="q" class="form-control" placeholder="Search by client name…" value="{{ query }}">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </div>
+  </form>
+
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-secondary text-white">
+      <h5 class="mb-0">Pending Jobs</h5>
+    </div>
+    <div class="card-body p-0">
+      {% if jobs %}
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead class="small">
+            <tr>
+              <th>ID</th>
+              <th>Client</th>
+              <th class="d-none d-md-table-cell">Description</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for job in jobs %}
+            <tr>
+              <td>{{ job.id }}</td>
+              <td>{{ job.client.name }}</td>
+              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">
+                {{ job.job_description|truncatewords:10 }}
+              </td>
+              <td>
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                  <a href="{% url 'workorder_detail' job.id %}"
+                     class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}"
+                     class="btn btn-sm btn-warning w-100 w-sm-auto">Edit / Schedule</a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="p-3 mb-0">No pending jobs found.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Back Buttons -->
+  <div class="text-center">
+    <a href="{% url 'workorder_list' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Work Orders</a>
+    <a href="{% url 'home' %}"             class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+  </div>
+</div>
+{% endblock %}
+
+
+===== templates/workorders/workorder_list.html =====
+{% extends "base.html" %}
+{% block title %}Work Orders{% endblock %}
+{% block content %}
+<div class="container">
+  <h2 class="mb-4">Work Orders</h2>
+  
+  <!-- Navigation Buttons -->
+  <div class="mb-4 text-center">
+    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+      <a href="{% url 'pending_jobs' %}" class="btn btn-outline-primary w-100 w-sm-auto">Pending Jobs</a>
+      <a href="{% url 'scheduled_jobs' %}" class="btn btn-outline-primary w-100 w-sm-auto">Scheduled Jobs</a>
+      <a href="{% url 'completed_jobs' %}" class="btn btn-outline-primary w-100 w-sm-auto">Completed Jobs</a>
+      <a href="{% url 'workorder_create' %}" class="btn btn-outline-primary w-100 w-sm-auto">New Work Order</a>
+    </div>
+  </div>
+  
+  <!-- Pending Jobs Section -->
+  <div class="card mb-4">
+    <div class="card-header bg-secondary text-white">
+      <h5 class="mb-0">Pending Jobs</h5>
+    </div>
+    <div class="card-body p-0">
+      {% if pending_jobs %}
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead class="small">
+            <tr>
+              <th>ID</th>
+              <th>Client</th>
+              <th class="d-none d-md-table-cell">Description</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for job in pending_jobs %}
+            <tr>
+              <td>{{ job.id }}</td>
+              <td>{{ job.client.name }}</td>
+              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">
+                {{ job.job_description|truncatewords:10 }}
+              </td>
+              <td>
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                  <a href="{% url 'workorder_detail' job.id %}" 
+                     class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" 
+                     class="btn btn-sm btn-warning w-100 w-sm-auto">Edit / Schedule</a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="p-3 mb-0">No pending jobs found.</p>
+      {% endif %}
+    </div>
+  </div>
+  
+  <!-- Scheduled Jobs Section -->
+  <div class="card mb-4">
+    <div class="card-header bg-info text-white">
+      <h5 class="mb-0">Scheduled Jobs</h5>
+    </div>
+    <div class="card-body p-0">
+      {% if scheduled_jobs %}
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead class="small">
+            <tr>
+              <th>ID</th>
+              <th>Client</th>
+              <th class="d-none d-md-table-cell">Description</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for job in scheduled_jobs %}
+            <tr>
+              <td>{{ job.id }}</td>
+              <td>{{ job.client.name }}</td>
+              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">
+                {{ job.job_description|truncatewords:10 }}
+              </td>
+              <td>
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                  <a href="{% url 'workorder_detail' job.id %}" 
+                     class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" 
+                     class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                  <form method="post" action="{% url 'mark_completed' job.id %}" class="w-100 w-sm-auto">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success w-100">Mark Completed</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="p-3 mb-0">No scheduled jobs found.</p>
+      {% endif %}
+    </div>
+  </div>
+  
+  <!-- Completed Jobs Section -->
+  <div class="card mb-4">
+    <div class="card-header bg-success text-white">
+      <h5 class="mb-0">Completed Jobs</h5>
+    </div>
+    <div class="card-body p-0">
+      {% if completed_jobs %}
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead class="small">
+            <tr>
+              <th>ID</th>
+              <th>Client</th>
+              <th class="d-none d-md-table-cell">Description</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for job in completed_jobs %}
+            <tr>
+              <td>{{ job.id }}</td>
+              <td>{{ job.client.name }}</td>
+              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">
+                {{ job.job_description|truncatewords:10 }}
+              </td>
+              <td>
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                  <a href="{% url 'workorder_detail' job.id %}" 
+                     class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" 
+                     class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                  <button type="button" 
+                          class="btn btn-sm btn-primary w-100 w-sm-auto"
+                          onclick="createInvoice({{ job.id }})">
+                    Create Invoice
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="p-3 mb-0">No completed jobs found.</p>
+      {% endif %}
+    </div>
+  </div>
+  
+  <!-- Back to Dashboard Button -->
+  <div class="text-center">
+    <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+function createInvoice(jobId) {
+  const review = confirm(
+    "Would you like to review/edit this job before creating an invoice?"
+  );
+  window.location.href = review
+    ? `/workorders/edit/${jobId}/`
+    : `/invoices/create/?work_order=${jobId}`;
+}
+</script>
+{% endblock %}
+{% endblock %}
