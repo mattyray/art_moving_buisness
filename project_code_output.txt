@@ -2,6 +2,22 @@
 # Use official Python image as base
 FROM python:3.10.4-slim-bullseye
 
+# Install system dependencies for WeasyPrint
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libcairo2 \
+    libgdk-pixbuf2.0-0 \
+    libffi-dev \
+    shared-mime-info \
+    fonts-liberation \
+    fonts-dejavu \
+    curl \
+    wget \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # Set environment variables
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -10,7 +26,7 @@ ENV PYTHONUNBUFFERED=1
 # Set work directory
 WORKDIR /code
 
-# Install dependencies
+# Install Python dependencies
 COPY ./requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -19,7 +35,7 @@ COPY . .
 
 # Run Gunicorn
 CMD ["sh", "-c", "gunicorn django_project.wsgi --bind 0.0.0.0:${PORT:-8000}"]
-  ===== docker-compose.yml =====
+===== docker-compose.yml =====
 services:
   web:
     build: .
@@ -114,16 +130,29 @@ run:
   web: gunicorn django_project.wsgi --bind 0.0.0.0:$PORT  # Starts the app
 ===== requirements.txt =====
 asgiref==3.8.1
+crispy-bootstrap5==2025.4
+diff-match-patch==20241021
 Django==5.1.6
+django-crispy-forms==2.4
+django-environ==0.12.0
+django-import-export==4.3.7
+gunicorn==23.0.0
+numpy==2.2.5
+packaging==25.0
+pandas==2.2.3
 psycopg2-binary==2.9.10
+python-dateutil==2.9.0.post0
+pytz==2025.2
+six==1.17.0
 sqlparse==0.5.3
-django-crispy-forms
-crispy-bootstrap5
-whitenoise
-gunicorn
-django-environ 
-pandas
-django-import-export
+tablib==3.8.0
+typing_extensions==4.13.2
+tzdata==2025.2
+whitenoise==6.9.0
+weasyprint==60.2
+pydyf==0.8.0
+
+
 ===== manage.py =====
 #!/usr/bin/env python
 """Django's command-line utility for administrative tasks."""
@@ -500,42 +529,56 @@ application = get_wsgi_application()
 ===== templates/clients/client_detail.html =====
 {% extends "base.html" %}
 {% block title %}Client Detail{% endblock %}
+
 {% block content %}
-<div class="container">
-  <h2 class="mb-4">Client: {{ client.name }}</h2>
-  <div class="card shadow-sm mb-4">
-    <div class="card-header">
-      <h4>Contact Information</h4>
+<div class="container py-4">
+
+  <!-- Client Summary -->
+  <div class="card mb-4">
+    <div class="card-header bg-secondary text-white">
+      <h5 class="mb-0">Client: {{ client.name }}</h5>
     </div>
     <div class="card-body">
-      <p><strong>Email:</strong> {{ client.email }}</p>
-      <p><strong>Phone:</strong> {{ client.phone }}</p>
-      <p><strong>Address:</strong> {{ client.address }}</p>
+      <div class="row">
+        <div class="col-md-6">
+          <p><strong>Email:</strong> {{ client.email }}</p>
+          <p><strong>Phone:</strong> {{ client.phone }}</p>
+        </div>
+        <div class="col-md-6">
+          <p><strong>Address:</strong> {{ client.address }}</p>
+        </div>
+      </div>
     </div>
-    <div class="card-footer">
+    <div class="card-footer d-flex justify-content-between">
       <a href="{% url 'client_edit' client.id %}" class="btn btn-warning">Edit Client</a>
+      <a href="{% url 'client_list' %}" class="btn btn-secondary">Back to Clients</a>
     </div>
   </div>
 
-  <!-- You can optionally add sections to display related work orders and invoices -->
-  <div class="card shadow-sm mb-4">
-    <div class="card-header">
-      <h4>Work Orders</h4>
+  <!-- Related Work Orders -->
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">Work Orders</h5>
     </div>
     <div class="card-body">
       {% if client.work_orders.all %}
-        <ul class="list-group">
-          {% for order in client.work_orders.all %}
-          <li class="list-group-item">
-            <a href="{% url 'workorder_detail' order.id %}">Work Order #{{ order.id }}</a> - {{ order.get_status_display }}
+      <ul class="list-group">
+        {% for order in client.work_orders.all %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <a href="{% url 'workorder_detail' order.id %}">Work Order #{{ order.id }}</a> –
+              {{ order.job_description|truncatewords:6 }}
+            </div>
+            <span class="badge bg-info text-dark">{{ order.get_status_display }}</span>
           </li>
-          {% endfor %}
-        </ul>
+        {% endfor %}
+      </ul>
       {% else %}
         <p>No work orders available.</p>
       {% endif %}
     </div>
   </div>
+
 </div>
 {% endblock %}
 
@@ -573,26 +616,28 @@ application = get_wsgi_application()
   </form>
   
   <a href="{% url 'client_create' %}" class="btn btn-success mb-3">Add New Client</a>
-  
-  <!-- Clients Table Wrapped in a Card -->
+
+  <!-- Responsive Scrollable Table -->
   <div class="card shadow-sm">
-    <div class="card-body">
-      <table class="table table-striped">
-        <thead>
+    <div class="card-body table-responsive">
+      <table class="table table-striped align-middle">
+        <thead class="small">
           <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th>Address</th>
+            <th style="min-width: 120px;">Name</th>
+            <th style="min-width: 180px;">Email</th>
+            <th style="min-width: 120px;">Phone</th>
+            <th style="min-width: 250px;">Address</th>
           </tr>
         </thead>
         <tbody>
           {% for client in clients %}
           <tr>
-            <td><a href="{% url 'client_detail' client.id %}">{{ client.name }}</a></td>
-            <td>{{ client.email }}</td>
-            <td>{{ client.phone }}</td>
-            <td>{{ client.address }}</td>
+            <td class="text-truncate" style="max-width: 150px;">
+              <a href="{% url 'client_detail' client.id %}">{{ client.name }}</a>
+            </td>
+            <td class="text-truncate" style="max-width: 200px;">{{ client.email }}</td>
+            <td class="text-truncate" style="max-width: 150px;">{{ client.phone }}</td>
+            <td class="text-truncate" style="max-width: 300px;">{{ client.address }}</td>
           </tr>
           {% empty %}
           <tr>
@@ -1190,8 +1235,12 @@ document.addEventListener("DOMContentLoaded", function() {
 
 ===== templates/invoices/invoice_form.html =====
 {% extends "base.html" %}
-{% load crispy_forms_tags %}
+{% load crispy_forms_tags static %}
 {% block title %}{% if invoice %}Edit Invoice{% else %}Create Invoice{% endif %}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -1230,42 +1279,80 @@ document.addEventListener("DOMContentLoaded", function() {
   
   <form method="post" id="invoice-form">
     {% csrf_token %}
+    <div class="row mb-3">
+      <div class="col-md-6">
+        {{ form.client|as_crispy_field }}
+      </div>
+      <div class="col-md-6">
+        {{ form.work_order|as_crispy_field }}
+      </div>
+    </div>
     {{ form|crispy }}
-    <button type="submit" class="btn btn-success">{% if invoice %}Update Invoice{% else %}Create Invoice{% endif %}</button>
+    <button type="submit" class="btn btn-success">
+      {% if invoice %}Update Invoice{% else %}Create Invoice{% endif %}
+    </button>
   </form>
   
   <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">Back to Invoice Overview</a>
   <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
 </div>
+{% endblock %}
 
-<!-- JavaScript for dynamic work order loading and Flatpickr initialization -->
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-  document.addEventListener("DOMContentLoaded", function() {
-    // Dynamic work order loading for selected client, if the fields exist.
-    const clientField = document.querySelector("#id_client");
-    const workOrderField = document.querySelector("#id_work_order");
-    if (clientField && workOrderField) {
-      clientField.addEventListener("change", function() {
-        fetch(`/invoices/ajax/get_workorders/?client_id=${clientField.value}`)
-          .then(response => response.json())
-          .then(data => {
-            // Clear current options
-            workOrderField.innerHTML = '<option value="">---------</option>';
-            data.forEach(order => {
-              let option = document.createElement("option");
-              option.value = order.id;
-              option.text = `Order #${order.id} - ${order.job_description}`;
-              workOrderField.appendChild(option);
-            });
-          });
-      });
+document.addEventListener("DOMContentLoaded", function() {
+  // Initialize the client dropdown with AJAX search
+  const $client = $('#id_client').select2({
+    placeholder: 'Search for a client…',
+    allowClear: true,
+    minimumInputLength: 1,
+    ajax: {
+      url: "{% url 'ajax_get_clients' %}",
+      dataType: 'json',
+      delay: 250,
+      data: params => ({ q: params.term }),
+      processResults: data => ({ results: data })
     }
-    
-    // Initialize Flatpickr on datepicker fields with format "F j, y" (e.g., "January 1, 23")
-    flatpickr(".datepicker", {
-      dateFormat: "F j, y"
-    });
   });
+
+  // Initialize the work order dropdown, disabled until client is chosen
+  const $workOrder = $('#id_work_order').select2({
+    placeholder: 'Select a work order…',
+    allowClear: true,
+    data: []  // start empty
+  });
+  $workOrder.prop('disabled', true);
+
+  // When a client is selected, fetch and populate active work orders
+  $client.on('select2:select', function(e) {
+    const clientId = e.params.data.id;
+    // enable the work order field
+    $workOrder.prop('disabled', false);
+    // fetch active work orders for this client
+    fetch("{% url 'ajax_get_active_workorders' %}?client_id=" + clientId)
+      .then(response => response.json())
+      .then(data => {
+        // clear existing options
+        $workOrder.empty();
+        // add a blank option
+        $workOrder.append(new Option('', '', false, false));
+        // populate with new results
+        data.forEach(item => {
+          const option = new Option(item.text, item.id, false, false);
+          $workOrder.append(option);
+        });
+        // refresh Select2
+        $workOrder.trigger('change');
+      });
+  });
+
+  // If client is cleared, disable and clear work order
+  $client.on('select2:clear', function() {
+    $workOrder.val(null).trigger('change');
+    $workOrder.prop('disabled', true);
+  });
+});
 </script>
 {% endblock %}
 
@@ -1597,6 +1684,73 @@ function createInvoice(jobId) {
 {% endblock %}
 
 
+===== templates/workorders/workorder_pdf.html =====
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Work Order #{{ job.id }}</title>
+  <style>
+    body { font-family: 'Arial', sans-serif; color: #333; margin: 2rem; }
+    header { text-align: center; margin-bottom: 2rem; }
+    header img { height: 80px; }
+    h1 { font-size: 1.5rem; margin: 0; }
+    .info-section, .event-section, .note-section { margin-bottom: 2rem; }
+    .info-label { font-weight: bold; width: 150px; display: inline-block; }
+    .section-title { border-bottom: 1px solid #ccc; margin-bottom: 1rem; font-size: 1.2rem; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <img src="{{ STATIC_URL }}images/nav-icon-128x128.png" alt="Logo">
+    <h1>EJ Art Moving – Work Order #{{ job.id }}</h1>
+  </header>
+
+  <div class="info-section">
+    <div class="section-title">Client Info</div>
+    <p><span class="info-label">Name:</span> {{ job.client.name }}</p>
+    <p><span class="info-label">Email:</span> {{ job.client.email }}</p>
+    <p><span class="info-label">Phone:</span> {{ job.client.phone }}</p>
+    <p><span class="info-label">Address:</span> {{ job.client.address }}</p>
+  </div>
+
+  <div class="info-section">
+    <div class="section-title">Job Info</div>
+    <p><span class="info-label">Description:</span> {{ job.job_description }}</p>
+    <p><span class="info-label">Estimated Cost:</span> ${{ job.estimated_cost }}</p>
+    <p><span class="info-label">Created:</span> {{ job.created_at|date:"F j, Y" }}</p>
+    {% if job.completed_at %}
+    <p><span class="info-label">Completed:</span> {{ job.completed_at|date:"F j, Y" }}</p>
+    {% endif %}
+  </div>
+
+  <div class="event-section">
+    <div class="section-title">Scheduled Events</div>
+    <ul>
+      {% for event in job.addresses.all %}
+        <li><strong>{{ event.get_event_type_display }}:</strong> {{ event.address }} – {{ event.date|date:"F j, Y" }}</li>
+      {% empty %}
+        <p>No scheduled events.</p>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="note-section">
+    <div class="section-title">Notes</div>
+    <ul>
+      {% for note in job.notes.all %}
+        <li>{{ note.note }} <small>({{ note.created_at|date:"F j, Y" }})</small></li>
+      {% empty %}
+        <p>No notes available.</p>
+      {% endfor %}
+    </ul>
+  </div>
+
+</body>
+</html>
+
+
 ===== templates/workorders/workorder_detail.html =====
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
@@ -1696,6 +1850,11 @@ function createInvoice(jobId) {
   <!-- Action Buttons -->
   <div class="mt-4 d-flex flex-column flex-sm-row justify-content-between gap-2">
     <a href="{% url 'workorder_edit' job.id %}" class="btn btn-primary w-100 w-sm-auto">Edit Work Order</a>
+    <a href="{% url 'workorder_pdf' job.id %}" class="btn btn-light border d-flex align-items-center gap-2 shadow-sm px-4 py-2" target="_blank" style="border-color: #999;">
+      <i class="bi bi-file-earmark-pdf-fill text-danger fs-5"></i>
+      <span class="fw-semibold text-dark">Download PDF</span>
+    </a>
+    
     <a href="{% url 'workorder_delete' job.id %}" class="btn btn-danger">
       Delete Work Order
     </a>

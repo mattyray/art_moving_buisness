@@ -195,3 +195,38 @@ def invoice_overdue(request):
             Q(invoice_number__icontains=query) | Q(client__name__icontains=query)
         )
     return render(request, 'invoices/invoice_overdue.html', {'invoices': invoices, 'query': query})
+
+# ---------- NEW AJAX VIEWS BELOW ----------
+# ---------- AJAX VIEWS ----------
+
+@login_required
+def ajax_get_clients(request):
+    """Return JSON list of clients matching the query term."""
+    q = request.GET.get('q', '')
+    clients = Client.objects.filter(name__icontains=q).order_by('name')[:20]
+    results = [{'id': c.id, 'text': c.name} for c in clients]
+    return JsonResponse(results, safe=False)
+
+@login_required
+def ajax_get_active_workorders(request):
+    """
+    Return JSON list of active work orders for a given client.
+    Only 'pending' and 'scheduled' statuses are considered active.
+    """
+    client_id = request.GET.get('client_id')
+    if not client_id:
+        return JsonResponse([], safe=False)
+
+    work_orders = WorkOrder.objects.filter(
+        client_id=client_id,
+        status__in=['pending', 'scheduled']
+    ).order_by('id')[:50]
+
+    results = [
+        {
+            'id': wo.id,
+            'text': f"Order #{wo.id} – {wo.job_description[:40]}{'...' if len(wo.job_description) > 40 else ''}"
+        }
+        for wo in work_orders
+    ]
+    return JsonResponse(results, safe=False)
