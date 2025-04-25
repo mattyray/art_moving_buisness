@@ -75,12 +75,17 @@
   </a>
 </div>
 {% endblock %}
-
 {% block extra_js %}
+
+<!-- Select2 for Client AJAX search -->
+
 <script>
-document.addEventListener("DOMContentLoaded", function() {
-  // Initialize Select2 on the client field (only relevant in the GET form)
-  $('#id_client').select2({
+document.addEventListener("DOMContentLoaded", function () {
+  const clientSelect = $('#id_client');
+  const workOrderSelect = document.getElementById('id_work_order');
+
+  // Initialize Select2 on the client field
+  clientSelect.select2({
     placeholder: 'Search for a client…',
     allowClear: true,
     minimumInputLength: 1,
@@ -91,6 +96,44 @@ document.addEventListener("DOMContentLoaded", function() {
       data: params => ({ q: params.term }),
       processResults: data => ({ results: data })
     }
+  });
+
+  // When client is selected, fetch completed work orders
+  clientSelect.on('select2:select', function (e) {
+    const clientId = e.params.data.id;
+
+    // Clear and disable the work order field while loading
+    workOrderSelect.disabled = true;
+    workOrderSelect.innerHTML = '<option>Loading...</option>';
+
+    fetch(`/invoices/ajax_get_active_workorders/?client_id=${clientId}`)
+      .then(response => response.json())
+      .then(data => {
+        workOrderSelect.innerHTML = ''; // Clear existing options
+
+        if (data.length === 0) {
+          const opt = document.createElement('option');
+          opt.text = 'No completed work orders';
+          opt.disabled = true;
+          opt.selected = true;
+          workOrderSelect.add(opt);
+        } else {
+          const placeholder = document.createElement('option');
+          placeholder.text = 'Select a work order…';
+          placeholder.disabled = true;
+          placeholder.selected = true;
+          workOrderSelect.add(placeholder);
+
+          data.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item.id;
+            opt.text = item.text;
+            workOrderSelect.add(opt);
+          });
+        }
+
+        workOrderSelect.disabled = false;
+      });
   });
 });
 </script>
