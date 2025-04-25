@@ -18,5 +18,4 @@ urlpatterns = [
 
     # AJAX endpoints for dynamic client → work order lookup
     path('ajax/get_clients/', views.ajax_get_clients, name='ajax_get_clients'),
-    path('ajax/get_active_workorders/', views.ajax_get_active_workorders, name='ajax_get_active_workorders'),
 ]
