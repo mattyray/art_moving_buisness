@@ -21,7 +21,7 @@
     <a href="{% url 'invoice_unpaid' %}"  class="btn btn-outline-danger me-2">Unpaid</a>
     <a href="{% url 'invoice_paid' %}"    class="btn btn-outline-danger me-2">Paid</a>
     <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue</a>
-    <a href="{% url 'invoice_create' %}" class="btn btn-danger">New Invoice</a>
+    <a href="{% url 'invoice_create' %}" class="btn btn-danger">New</a>
   </div>
 
   <!-- Events List (replacing pickup/dropoff) -->
@@ -39,17 +39,23 @@
     </div>
   {% endif %}
 
-  {# 1️⃣ GET form to load work orders for a client #}
-  <form method="get" class="mb-4">
-    {{ form.client|as_crispy_field }}
-    <button type="submit" class="btn btn-outline-primary">Load Jobs</button>
-  </form>
+  {# Only on “create” do we need the GET form to load jobs #}
+  {% if not invoice %}
+    <form method="get" class="mb-4">
+      {{ form.client|as_crispy_field }}
+      <button type="submit" class="btn btn-outline-primary">Load Jobs</button>
+    </form>
+  {% endif %}
 
-  {# 2️⃣ POST form to actually create/update the invoice #}
   <form method="post" id="invoice-form">
     {% csrf_token %}
+
     {# preserve the chosen client on POST #}
-    <input type="hidden" name="client" value="{{ form.initial.client }}">
+    <input
+      type="hidden"
+      name="client"
+      value="{% if invoice %}{{ invoice.client.id }}{% else %}{{ form.initial.client }}{% endif %}"
+    >
 
     {{ form.work_order|as_crispy_field }}
     {{ form.amount|as_crispy_field }}
@@ -71,10 +77,9 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-  // Only initialize Select2 on the client field
+  // Initialize Select2 on the client field (only relevant in the GET form)
   $('#id_client').select2({
     placeholder: 'Search for a client…',
     allowClear: true,
