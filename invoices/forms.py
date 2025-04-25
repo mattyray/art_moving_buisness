@@ -13,13 +13,13 @@ class InvoiceForm(forms.ModelForm):
         })
     )
     work_order = forms.ModelChoiceField(
-        queryset=WorkOrder.objects.none(),  # Start empty; will be populated via AJAX
+        queryset=WorkOrder.objects.none(),  # default empty
         required=False,
         widget=forms.Select(attrs={
             'class': 'form-control select2',
             'style': 'width: 100%;',
             'placeholder': 'Select a work order...',
-            'disabled': 'disabled',          # Disabled until a client is chosen
+            'disabled': 'disabled',
         })
     )
     due_date = forms.DateField(
@@ -28,7 +28,27 @@ class InvoiceForm(forms.ModelForm):
             'placeholder': 'YYYY-MM-DD'
         })
     )
-    
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Handle dynamic queryset for work_order field based on client
+        client_id = None
+
+        if 'client' in self.data:
+            client_id = self.data.get('client')
+        elif 'client' in self.initial:
+            client_id = self.initial['client']
+        elif self.instance and self.instance.pk:
+            client_id = self.instance.client_id
+
+        if client_id:
+            self.fields['work_order'].queryset = WorkOrder.objects.filter(
+                client_id=client_id,
+                status='completed'
+            )
+            self.fields['work_order'].widget.attrs.pop('disabled', None)
+
     class Meta:
         model = Invoice
         fields = [
