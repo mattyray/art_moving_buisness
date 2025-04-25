@@ -1,5 +1,3 @@
-# invoices/urls.py
-
 from django.urls import path
 from . import views
 
@@ -16,6 +14,6 @@ urlpatterns = [
     path('<int:invoice_id>/update_due_date/', views.update_due_date, name='update_due_date'),
     path('calendar-data/invoices/', views.invoice_calendar_data, name='invoice_calendar_data'),
 
-    # AJAX endpoints for dynamic client → work order lookup
+    # AJAX endpoint for client search
     path('ajax/get_clients/', views.ajax_get_clients, name='ajax_get_clients'),
 ]
