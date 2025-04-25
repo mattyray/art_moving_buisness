@@ -1,3 +1,5 @@
+# invoices/urls.py
+
 from django.urls import path
 from . import views
 
@@ -10,8 +12,11 @@ urlpatterns = [
     path('unpaid/', views.invoice_unpaid, name='invoice_unpaid'),
     path('paid/', views.invoice_paid, name='invoice_paid'),
     path('overdue/', views.invoice_overdue, name='invoice_overdue'),
-    path('ajax/get_workorders/', views.get_workorders_for_client, name='get_workorders_for_client'),
     path('<int:invoice_id>/mark_paid/', views.mark_invoice_paid, name='mark_invoice_paid'),
     path('<int:invoice_id>/update_due_date/', views.update_due_date, name='update_due_date'),
     path('calendar-data/invoices/', views.invoice_calendar_data, name='invoice_calendar_data'),
+
+    # AJAX endpoints for dynamic client → work order lookup
+    path('ajax/get_clients/', views.ajax_get_clients, name='ajax_get_clients'),
+    path('ajax/get_active_workorders/', views.ajax_get_active_workorders, name='ajax_get_active_workorders'),
 ]

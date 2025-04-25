@@ -13,12 +13,13 @@ class InvoiceForm(forms.ModelForm):
         })
     )
     work_order = forms.ModelChoiceField(
-        queryset=WorkOrder.objects.all(),
+        queryset=WorkOrder.objects.none(),  # Start empty; will be populated via AJAX
         required=False,
         widget=forms.Select(attrs={
             'class': 'form-control select2',
             'style': 'width: 100%;',
-            'placeholder': 'Search for a work order...',
+            'placeholder': 'Select a work order...',
+            'disabled': 'disabled',          # Disabled until a client is chosen
         })
     )
     due_date = forms.DateField(

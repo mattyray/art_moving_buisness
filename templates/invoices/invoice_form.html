@@ -1,64 +1,72 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags static %}
-{% block title %}{% if invoice %}Edit Invoice{% else %}Create Invoice{% endif %}{% endblock %}
+{% block title %}
+  {% if invoice %}Edit Invoice{% else %}Create Invoice{% endif %}
+{% endblock %}
 
 {% block extra_css %}
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link
+  href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+  rel="stylesheet" />
 {% endblock %}
 
 {% block content %}
 <div class="container">
-  <h2 class="mb-4">{% if invoice %}Edit Invoice{% else %}Create Invoice{% endif %}</h2>
-  
-  <!-- Navigation Buttons for Invoice Categories -->
+  <h2 class="mb-4">
+    {% if invoice %}Edit Invoice{% else %}Create Invoice{% endif %}
+  </h2>
+
+  <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
-    <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger me-2">Unpaid Invoices</a>
-    <a href="{% url 'invoice_paid' %}" class="btn btn-outline-danger me-2">Paid Invoices</a>
-    <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue Invoices</a>
+    <a href="{% url 'invoice_unpaid' %}"  class="btn btn-outline-danger me-2">Unpaid</a>
+    <a href="{% url 'invoice_paid' %}"    class="btn btn-outline-danger me-2">Paid</a>
+    <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue</a>
     <a href="{% url 'invoice_create' %}" class="btn btn-danger">New Invoice</a>
   </div>
-  
-  <!-- Display Work Order Addresses if provided -->
-  {% if pickup_addresses %}
-    <h4>Pickup Addresses</h4>
-    <ul>
-      {% for address in pickup_addresses %}
-        <li>{{ address.address }}</li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p>No pickup addresses found.</p>
+
+  <!-- Events List (replacing pickup/dropoff) -->
+  {% if events %}
+    <div class="mb-4">
+      <h4>Scheduled Events</h4>
+      <ul>
+        {% for event in events %}
+          <li>
+            <strong>{{ event.get_event_type_display }}:</strong>
+            {{ event.address }} — {{ event.date|date:"Y-m-d" }}
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
   {% endif %}
-  
-  {% if dropoff_addresses %}
-    <h4>Dropoff Addresses</h4>
-    <ul>
-      {% for address in dropoff_addresses %}
-        <li>{{ address.address }}</li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p>No dropoff addresses found.</p>
-  {% endif %}
-  
+
+  {# 1️⃣ GET form to load work orders for a client #}
+  <form method="get" class="mb-4">
+    {{ form.client|as_crispy_field }}
+    <button type="submit" class="btn btn-outline-primary">Load Jobs</button>
+  </form>
+
+  {# 2️⃣ POST form to actually create/update the invoice #}
   <form method="post" id="invoice-form">
     {% csrf_token %}
-    <div class="row mb-3">
-      <div class="col-md-6">
-        {{ form.client|as_crispy_field }}
-      </div>
-      <div class="col-md-6">
-        {{ form.work_order|as_crispy_field }}
-      </div>
-    </div>
-    {{ form|crispy }}
+    {# preserve the chosen client on POST #}
+    <input type="hidden" name="client" value="{{ form.initial.client }}">
+
+    {{ form.work_order|as_crispy_field }}
+    {{ form.amount|as_crispy_field }}
+    {{ form.due_date|as_crispy_field }}
+    {{ form.notes|as_crispy_field }}
+
     <button type="submit" class="btn btn-success">
       {% if invoice %}Update Invoice{% else %}Create Invoice{% endif %}
     </button>
   </form>
-  
-  <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">Back to Invoice Overview</a>
-  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+
+  <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">
+    Back to Invoice Overview
+  </a>
+  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">
+    Back to Dashboard
+  </a>
 </div>
 {% endblock %}
 
@@ -66,9 +74,10 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-  // Initialize Select2 on both fields
+  // Only initialize Select2 on the client field
   $('#id_client').select2({
-    placeholder: 'Search for a client',
+    placeholder: 'Search for a client…',
+    allowClear: true,
     minimumInputLength: 1,
     ajax: {
       url: "{% url 'ajax_get_clients' %}",
@@ -77,46 +86,6 @@ document.addEventListener("DOMContentLoaded", function() {
       data: params => ({ q: params.term }),
       processResults: data => ({ results: data })
     }
-  });
-
-  $('#id_work_order').select2({
-    placeholder: 'Search for a work order',
-    minimumInputLength: 1,
-    ajax: {
-      url: "{% url 'ajax_get_workorders' %}",
-      dataType: 'json',
-      delay: 250,
-      data: params => ({ q: params.term }),
-      processResults: data => ({ results: data })
-    }
-  });
-
-  // When a client is selected, reload work orders filtered by client
-  $('#id_client').on('select2:select', function(e) {
-    const clientId = e.params.data.id;
-    $('#id_work_order').val(null).trigger('change');
-    $('#id_work_order').select2('destroy').select2({
-      placeholder: 'Search for a work order',
-      minimumInputLength: 1,
-      ajax: {
-        url: "{% url 'ajax_get_workorders' %}",
-        dataType: 'json',
-        delay: 250,
-        data: params => ({ q: params.term, client_id: clientId }),
-        processResults: data => ({ results: data })
-      }
-    });
-  });
-
-  // When a work order is selected, auto-select its client
-  $('#id_work_order').on('select2:select', function(e) {
-    const workOrderId = e.params.data.id;
-    fetch("{% url 'ajax_get_client' %}?workorder_id=" + workOrderId)
-      .then(r => r.json())
-      .then(data => {
-        const option = new Option(data.text, data.id, true, true);
-        $('#id_client').append(option).trigger('change');
-      });
   });
 });
 </script>
