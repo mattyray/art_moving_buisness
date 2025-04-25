@@ -82,60 +82,87 @@ def invoice_list(request):
 def invoice_detail(request, invoice_id):
     invoice = get_object_or_404(Invoice, id=invoice_id)
     return render(request, 'invoices/invoice_detail.html', {'invoice': invoice})
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .models import Invoice
+from .forms import InvoiceForm
+from workorders.models import WorkOrder
 
 @login_required
 def invoice_create(request):
-    work_order_id = request.GET.get('work_order')
-    pickup_addresses = None
-    dropoff_addresses = None
-    initial_data = {}
+    # 1) Figure out which client (GET) and which work_order (POST) are selected
+    client_id     = request.GET.get('client') or request.POST.get('client')
+    work_order_id = request.POST.get('work_order')
 
+    # 2) Prepare the events list (empty by default)
+    events = []
     if work_order_id:
-        work_order = get_object_or_404(WorkOrder, id=work_order_id)
-        # prevent duplicate invoices
-        existing_invoice = Invoice.objects.filter(work_order=work_order).first()
-        if existing_invoice:
-            messages.error(request, "An invoice has already been created for this job.")
-            return redirect('invoice_detail', invoice_id=existing_invoice.id)
+        wo = get_object_or_404(WorkOrder, id=work_order_id)
+        events = wo.events.all()
 
-        # NEW: pull events instead of addresses
-        pickup_addresses = work_order.events.filter(event_type='pickup')
-        dropoff_addresses = work_order.events.filter(event_type='dropoff')
+    # 3) Build initial data so that the hidden client field is pre-populated
+    initial_data = {}
+    if client_id:
+        initial_data['client'] = client_id
 
-        initial_data = {
-            'client': work_order.client.id,
-            'work_order': work_order.id,
-            'amount': work_order.estimated_cost,
-        }
-
+    # 4) Instantiate the form (POST or GET)
     if request.method == 'POST':
-        data = request.POST.copy()
-        if work_order_id:
-            data['work_order'] = work_order.id
-        form = InvoiceForm(data)
-        if form.is_valid():
-            form.save()
-            return redirect('invoice_list')
+        form = InvoiceForm(request.POST, initial=initial_data)
     else:
         form = InvoiceForm(initial=initial_data)
 
+    # 5) Filter the work_order dropdown to only this client’s active jobs
+    if client_id:
+        form.fields['work_order'].queryset = WorkOrder.objects.filter(
+            client_id=client_id,
+            status__in=['pending', 'scheduled']
+        )
+    else:
+        form.fields['work_order'].queryset = WorkOrder.objects.none()
+
+    # 6) On POST, validate & save
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        return redirect('invoice_list')
+
+    # 7) Render with context including our events
     return render(request, 'invoices/invoice_form.html', {
         'form': form,
-        'pickup_addresses': pickup_addresses,
-        'dropoff_addresses': dropoff_addresses,
+        'events': events,
+        'invoice': None,  # so template knows this is “create” mode
     })
+
 
 @login_required
 def invoice_update(request, invoice_id):
     invoice = get_object_or_404(Invoice, id=invoice_id)
+    # Always show the invoice’s existing events
+    events = invoice.work_order.events.all()
+
+    # Instantiate form with instance
     if request.method == 'POST':
         form = InvoiceForm(request.POST, instance=invoice)
-        if form.is_valid():
-            form.save()
-            return redirect('invoice_detail', invoice_id=invoice.id)
     else:
         form = InvoiceForm(instance=invoice)
-    return render(request, 'invoices/invoice_form.html', {'form': form, 'invoice': invoice})
+
+    # Filter work_order to that invoice’s client
+    form.fields['work_order'].queryset = WorkOrder.objects.filter(
+        client=invoice.client,
+        status__in=['pending', 'scheduled']
+    )
+
+    # Handle save
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        return redirect('invoice_detail', invoice_id=invoice.id)
+
+    return render(request, 'invoices/invoice_form.html', {
+        'form': form,
+        'events': events,
+        'invoice': invoice,  # so template knows this is “edit” mode
+    })
+
 
 @login_required
 def mark_invoice_paid(request, invoice_id):
