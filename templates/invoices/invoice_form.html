@@ -5,9 +5,8 @@
 {% endblock %}
 
 {% block extra_css %}
-<link
-  href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
-  rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet" />
 {% endblock %}
 
 {% block content %}
@@ -18,28 +17,27 @@
 
   <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
-    <a href="{% url 'invoice_unpaid' %}"  class="btn btn-outline-danger me-2">Unpaid</a>
-    <a href="{% url 'invoice_paid' %}"    class="btn btn-outline-danger me-2">Paid</a>
+    <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger me-2">Unpaid</a>
+    <a href="{% url 'invoice_paid' %}" class="btn btn-outline-danger me-2">Paid</a>
     <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue</a>
     <a href="{% url 'invoice_create' %}" class="btn btn-danger">New</a>
   </div>
 
-  <!-- Events List (replacing pickup/dropoff) -->
+  <!-- Events List -->
   {% if events %}
     <div class="mb-4">
       <h4>Scheduled Events</h4>
       <ul>
         {% for event in events %}
           <li>
-            <strong>{{ event.get_event_type_display }}:</strong>
-            {{ event.address }} — {{ event.date|date:"Y-m-d" }}
+            <strong>{{ event.get_event_type_display }}:</strong> {{ event.address }} — {{ event.date|date:"Y-m-d" }}
           </li>
         {% endfor %}
       </ul>
     </div>
   {% endif %}
 
-  {# Only on “create” do we need the GET form to load jobs #}
+  {# Load Client for Work Order selection #}
   {% if not invoice %}
     <form method="get" class="mb-4">
       {{ form.client|as_crispy_field }}
@@ -49,16 +47,19 @@
 
   <form method="post" id="invoice-form">
     {% csrf_token %}
-
-    {# preserve the chosen client on POST #}
-    <input
-      type="hidden"
-      name="client"
-      value="{% if invoice %}{{ invoice.client.id }}{% else %}{{ form.initial.client }}{% endif %}"
-    >
+    <input type="hidden" name="client" value="{% if invoice %}{{ invoice.client.id }}{% else %}{{ form.initial.client }}{% endif %}">
 
     {{ form.work_order|as_crispy_field }}
-    {{ form.amount|as_crispy_field }}
+
+    <!-- Amount with $ prefix -->
+    <div class="mb-3">
+      <label for="id_amount" class="form-label">Amount</label>
+      <div class="input-group">
+        <span class="input-group-text">$</span>
+        {{ form.amount }}
+      </div>
+    </div>
+
     {{ form.due_date|as_crispy_field }}
     {{ form.notes|as_crispy_field }}
 
@@ -67,24 +68,21 @@
     </button>
   </form>
 
-  <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">
-    Back to Invoice Overview
-  </a>
-  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">
-    Back to Dashboard
-  </a>
+  <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">Back to Invoice Overview</a>
+  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
 </div>
 {% endblock %}
-{% block extra_js %}
 
-<!-- Select2 for Client AJAX search -->
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   const clientSelect = $('#id_client');
   const workOrderSelect = document.getElementById('id_work_order');
 
-  // Initialize Select2 on the client field
+  // Initialize Select2
   clientSelect.select2({
     placeholder: 'Search for a client…',
     allowClear: true,
@@ -98,18 +96,17 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // When client is selected, fetch completed work orders
+  // Fetch completed work orders when client selected
   clientSelect.on('select2:select', function (e) {
     const clientId = e.params.data.id;
 
-    // Clear and disable the work order field while loading
     workOrderSelect.disabled = true;
     workOrderSelect.innerHTML = '<option>Loading...</option>';
 
     fetch(`/invoices/ajax_get_active_workorders/?client_id=${clientId}`)
       .then(response => response.json())
       .then(data => {
-        workOrderSelect.innerHTML = ''; // Clear existing options
+        workOrderSelect.innerHTML = '';
 
         if (data.length === 0) {
           const opt = document.createElement('option');
@@ -134,6 +131,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
         workOrderSelect.disabled = false;
       });
+  });
+
+  // Initialize Flatpickr on due date input
+  flatpickr("#id_due_date", {
+    dateFormat: "Y-m-d"
   });
 });
 </script>
