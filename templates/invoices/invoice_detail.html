@@ -38,26 +38,19 @@
       <p><strong>Estimated Cost:</strong> ${{ invoice.work_order.estimated_cost }}</p>
       <p><strong>Status:</strong> {{ invoice.work_order.get_status_display }}</p>
       
-      {% if invoice.work_order.addresses.all %}
-        <h5>Pickup Addresses</h5>
-        <ul>
-          {% for addr in invoice.work_order.addresses.all %}
-            {% if addr.address_type|lower == "pickup" %}
-              <li>{{ addr.address }}</li>
-            {% endif %}
-          {% endfor %}
-        </ul>
-        <h5>Dropoff Addresses</h5>
-        <ul>
-          {% for addr in invoice.work_order.addresses.all %}
-            {% if addr.address_type|lower == "dropoff" %}
-              <li>{{ addr.address }}</li>
-            {% endif %}
-          {% endfor %}
-        </ul>
-      {% else %}
-        <p>No addresses associated with this work order.</p>
+      {% if events %}
+      <hr>
+      <h4>Scheduled Events</h4>
+      <ul>
+        {% for event in events %}
+          <li>
+            <strong>{{ event.get_event_type_display }}:</strong>
+            {{ event.address }} — {{ event.date|date:"Y-m-d" }}
+          </li>
+        {% endfor %}
+      </ul>
       {% endif %}
+    
       
       {% else %}
         <p><strong>Work Order:</strong> Not linked</p>
