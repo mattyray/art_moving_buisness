@@ -83,10 +83,9 @@ def invoice_detail(request, invoice_id):
     invoice = get_object_or_404(Invoice, id=invoice_id)
     return render(request, 'invoices/invoice_detail.html', {'invoice': invoice})
 
-
 @login_required
 def invoice_create(request):
-    client_id     = request.GET.get('client') or request.POST.get('client')
+    client_id = request.GET.get('client') or request.POST.get('client')
     work_order_id = request.GET.get('work_order') or request.POST.get('work_order')
 
     events = []
@@ -94,7 +93,7 @@ def invoice_create(request):
 
     if work_order_id:
         wo = get_object_or_404(WorkOrder, id=work_order_id)
-        client_id = wo.client.id  # Automatically grab client from the work order
+        client_id = wo.client.id
         events = wo.events.all()
         initial_data['client'] = client_id
         initial_data['work_order'] = work_order_id
@@ -102,29 +101,45 @@ def invoice_create(request):
         initial_data['client'] = client_id
 
     if request.method == 'POST':
-        form = InvoiceForm(request.POST, initial=initial_data)
-    else:
-        form = InvoiceForm(initial=initial_data)
+        form = InvoiceForm(request.POST)
 
-    # Only completed work orders should appear
-    if client_id:
-        form.fields['work_order'].queryset = WorkOrder.objects.filter(
-            client_id=client_id,
-            status='completed'
-        )
-    else:
-        form.fields['work_order'].queryset = WorkOrder.objects.none()
+        # 1) filter work_order choices before validation
+        if client_id:
+            form.fields['work_order'].queryset = WorkOrder.objects.filter(
+                client_id=client_id,
+                status='completed'
+            )
+        else:
+            form.fields['work_order'].queryset = WorkOrder.objects.none()
 
-    if request.method == 'POST' and form.is_valid():
-        form.save()
-        return redirect('invoice_list')
+        # 2) set default status so validation won’t fail
+        form.fields['status'].initial = 'unpaid'
+
+        if form.is_valid():
+            invoice = form.save(commit=False)
+            # 3) manually bind the client FK from your hidden field
+            cid = request.POST.get('client')
+            if cid:
+                invoice.client = get_object_or_404(Client, id=cid)
+            invoice.save()
+            return redirect('invoice_list')
+    else:
+        form = InvoiceForm(initial={**initial_data, 'status':'unpaid'})
+        # also preload work_orders on GET
+        if client_id:
+            form.fields['work_order'].queryset = WorkOrder.objects.filter(
+                client_id=client_id,
+                status='completed'
+            )
+        else:
+            form.fields['work_order'].queryset = WorkOrder.objects.none()
 
     return render(request, 'invoices/invoice_form.html', {
         'form': form,
         'events': events,
         'invoice': None,
+        'client_id': client_id,   # for your hidden input
     })
-
 
 
 @login_required
