@@ -78,10 +78,21 @@ def invoice_list(request):
     }
     return render(request, 'invoices/invoice_list.html', context)
 
+
 @login_required
 def invoice_detail(request, invoice_id):
     invoice = get_object_or_404(Invoice, id=invoice_id)
-    return render(request, 'invoices/invoice_detail.html', {'invoice': invoice})
+
+    # grab events if there’s a linked work order
+    events = []
+    if invoice.work_order:
+        events = invoice.work_order.events.all().order_by('date')
+
+    return render(request, 'invoices/invoice_detail.html', {
+        'invoice': invoice,
+        'events': events,
+    })
+
 
 @login_required
 def invoice_create(request):
