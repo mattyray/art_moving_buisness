@@ -3,6 +3,8 @@ from datetime import datetime, timedelta, date
 from workorders.models import Event
 from invoices.models import Invoice
 from django.db.models import Q
+from datetime import date
+
 
 def parse_mmddyy(date_str):
     return datetime.strptime(date_str, '%m-%d-%y').date()
@@ -41,18 +43,16 @@ def week_detail(request, date):
         'query': q,
     }
     return render(request, 'calendar/week_detail.html', context)
+# calendar_app/views.py
 
 def month_detail(request):
-    # Determine month/year from GET or default to today
     today = date.today()
     month = int(request.GET.get('month', today.month))
     year  = int(request.GET.get('year',  today.year))
 
-    # Fetch all events & invoices in that month
     events   = Event.objects.filter(date__year=year, date__month=month)
     invoices = Invoice.objects.filter(due_date__year=year, due_date__month=month)
 
-    # Optional search/filter param
     q = request.GET.get('q', '')
     if q:
         events   = events.filter(
@@ -70,9 +70,9 @@ def month_detail(request):
         'events': events,
         'invoices': invoices,
         'query': q,
+        'today': today,          # ← add this
     }
     return render(request, 'calendar/month_detail.html', context)
-
 
 
 def day_detail(request, date):
