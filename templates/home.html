@@ -1,6 +1,7 @@
 <!-- templates/home.html -->
 {% extends "base.html" %}
 {% block title %}Dashboard – Art Moving Business{% endblock %}
+
 {% block content %}
   <!-- Welcome Hero -->
   <div class="text-center mb-4">
@@ -30,8 +31,16 @@
     </div>
   </div>
 
+  <!-- Calendar Navigation (Full-screen views) -->
+  {% now "m-d-y" as today %}
+  <div class="d-flex justify-content-end gap-2 mt-4 mb-2">
+    <a href="{% url 'calendar_app:month_detail' %}" class="btn btn-outline-primary">Month</a>
+    <a href="{% url 'calendar_app:week_detail' today %}" class="btn btn-outline-primary">Week</a>
+    <a href="{% url 'calendar_app:day_detail' today %}" class="btn btn-outline-primary">Day</a>
+  </div>
+
   <!-- Calendar & Legend -->
-  <div class="card mt-5 shadow-sm">
+  <div class="card shadow-sm">
     <div class="card-header">
       <h5 class="mb-0">Calendar</h5>
     </div>
@@ -42,7 +51,7 @@
         <span class="badge bg-danger me-2">Unpaid Invoice</span>
         <span class="badge bg-secondary me-2">Work Order Events</span>
         <small class="d-block text-muted mt-1">
-          Work order events are color‑coded uniquely per job.
+          Work order events are color-coded uniquely per job.
         </small>
       </div>
       <!-- FullCalendar -->
@@ -54,17 +63,28 @@
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+  function toMMDDYY(iso) {
+    // "2025-04-30" → "04-30-25"
+    let [Y, M, D] = iso.split('-');
+    return `${M}-${D}-${Y.slice(-2)}`;
+  }
+
   var calendarEl = document.getElementById("calendar");
-  if (!calendarEl) return console.error("Calendar element not found!");
+  if (!calendarEl) {
+    console.error("Calendar element not found!");
+    return;
+  }
 
   var calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: "dayGridMonth",
     height: 'auto',
+
+    // load your events
     events: async function(fetchInfo, success, fail) {
       try {
         let [wo, inv] = await Promise.all([
-          fetch("/workorders/calendar-data/workorders/").then(r=>r.json()),
-          fetch("/invoices/calendar-data/invoices/").then(r=>r.json())
+          fetch("/workorders/calendar-data/workorders/").then(r => r.json()),
+          fetch("/invoices/calendar-data/invoices/").then(r => r.json())
         ]);
         success([...wo, ...inv]);
       } catch (e) {
@@ -72,13 +92,22 @@ document.addEventListener("DOMContentLoaded", function () {
         fail(e);
       }
     },
+
+    // click an event → go to workorder/invoice
     eventClick: info => {
       if (info.event.url) {
         window.location.href = info.event.url;
         info.jsEvent.preventDefault();
       }
+    },
+
+    // click the empty day cell → go to day detail
+    dateClick: info => {
+      const mmddyy = toMMDDYY(info.dateStr);
+      window.location.href = `/calendar/day/${mmddyy}/`;
     }
   });
+
   calendar.render();
 });
 </script>
