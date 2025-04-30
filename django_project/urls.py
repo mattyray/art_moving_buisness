@@ -13,7 +13,7 @@ urlpatterns = [
     path("invoices/", include("invoices.urls")),
     path("workorders/", include("workorders.urls")),
     path("invoices/", include("invoices.urls")),
-    path('calendar/', include('calendar_app.urls')),
+    path('calendar/', include('calendar_app.urls', namespace='calendar_app')),
 
 
 ]
