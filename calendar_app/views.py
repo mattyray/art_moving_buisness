@@ -43,36 +43,6 @@ def week_detail(request, date):
         'query': q,
     }
     return render(request, 'calendar/week_detail.html', context)
-# calendar_app/views.py
-
-def month_detail(request):
-    today = date.today()
-    month = int(request.GET.get('month', today.month))
-    year  = int(request.GET.get('year',  today.year))
-
-    events   = Event.objects.filter(date__year=year, date__month=month)
-    invoices = Invoice.objects.filter(due_date__year=year, due_date__month=month)
-
-    q = request.GET.get('q', '')
-    if q:
-        events   = events.filter(
-            Q(work_order__client__name__icontains=q) |
-            Q(event_type__icontains=q)
-        )
-        invoices = invoices.filter(
-            Q(client__name__icontains=q) |
-            Q(invoice_number__icontains=q)
-        )
-
-    context = {
-        'year': year,
-        'month': month,
-        'events': events,
-        'invoices': invoices,
-        'query': q,
-        'today': today,          # ← add this
-    }
-    return render(request, 'calendar/month_detail.html', context)
 
 
 def day_detail(request, date):

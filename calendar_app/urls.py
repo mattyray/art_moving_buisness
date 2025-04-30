@@ -4,8 +4,6 @@ from . import views
 app_name = "calendar_app"
 
 urlpatterns = [
-    # Full‐screen month view (no date in URL; uses GET params or defaults)
-    path('month/', views.month_detail, name='month_detail'),
 
     # Week view: click any day in a week to see the whole week
     # e.g. /calendar/week/04-30-25/
