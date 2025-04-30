@@ -18,16 +18,17 @@
 
 {% block extra_js %}
 <script>
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
   function toMMDDYY(iso) {
-    let [Y,M,D] = iso.split("-");
+    let [Y, M, D] = iso.split("-");
     return `${M}-${D}-${Y.slice(-2)}`;
   }
+
   async function fetchSources(info, success, fail) {
     try {
       const [wo, inv] = await Promise.all([
-        fetch("/workorders/calendar-data/workorders/").then(r=>r.json()),
-        fetch("/invoices/calendar-data/invoices/").then(r=>r.json())
+        fetch("/workorders/calendar-data/workorders/").then(r => r.json()),
+        fetch("/invoices/calendar-data/invoices/").then(r => r.json())
       ]);
       success([...wo, ...inv]);
     } catch (e) {
@@ -35,28 +36,32 @@ document.addEventListener("DOMContentLoaded", function() {
       fail(e);
     }
   }
+
   function goToEventUrl(info) {
     if (info.event.url) {
       window.location.href = info.event.url;
       info.jsEvent.preventDefault();
     }
   }
+
   function goToDayDetail(info) {
     const mmddyy = toMMDDYY(info.dateStr);
     window.location.href = `/calendar/day/${mmddyy}/`;
   }
 
-  var calendarEl = document.getElementById("calendar");
+  const calendarEl = document.getElementById("calendar");
   if (!calendarEl) return console.error("Calendar element not found!");
 
-  new FullCalendar.Calendar(calendarEl, {
+  const calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: "dayGridWeek",
-    height: 'auto',
-    initialDate: "{{ start|date:'Y-MM-dd' }}",
+    height: "auto",
+    initialDate: "{{ start|date:'Y-m-d' }}",  // fixed date format
     events: fetchSources,
     eventClick: goToEventUrl,
     dateClick: goToDayDetail
-  }).render();
+  });
+
+  calendar.render();
 });
 </script>
 {% endblock %}

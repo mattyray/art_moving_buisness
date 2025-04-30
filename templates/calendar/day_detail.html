@@ -18,12 +18,12 @@
 
 {% block extra_js %}
 <script>
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
   async function fetchSources(info, success, fail) {
     try {
       const [wo, inv] = await Promise.all([
-        fetch("/workorders/calendar-data/workorders/").then(r=>r.json()),
-        fetch("/invoices/calendar-data/invoices/").then(r=>r.json())
+        fetch("/workorders/calendar-data/workorders/").then(r => r.json()),
+        fetch("/invoices/calendar-data/invoices/").then(r => r.json())
       ]);
       success([...wo, ...inv]);
     } catch (e) {
@@ -31,6 +31,7 @@ document.addEventListener("DOMContentLoaded", function() {
       fail(e);
     }
   }
+
   function goToEventUrl(info) {
     if (info.event.url) {
       window.location.href = info.event.url;
@@ -38,16 +39,18 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   }
 
-  var calendarEl = document.getElementById("calendar");
+  const calendarEl = document.getElementById("calendar");
   if (!calendarEl) return console.error("Calendar element not found!");
 
-  new FullCalendar.Calendar(calendarEl, {
+  const calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: "dayGridDay",
-    height: 'auto',
-    initialDate: "{{ day|date:'Y-MM-dd' }}",
+    height: "auto",
+    initialDate: "{{ day|date:'Y-m-d' }}",  // ✅ fixed lowercase `m`
     events: fetchSources,
     eventClick: goToEventUrl
-  }).render();
+  });
+
+  calendar.render();
 });
 </script>
 {% endblock %}
