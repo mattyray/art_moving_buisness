@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Calendar – {{ month }}/{{ year }}{% endblock %}
+{% block content %}
+  <h2>Month: {{ month }}/{{ year }}</h2>
+  <form method="get" class="mb-3">
+    <input type="text" name="q" placeholder="Search…" value="{{ query }}">
+    <button type="submit">Filter</button>
+  </form>
+  <!-- You can re-use FullCalendar here in fullscreen mode -->
+  <div id="fullcalendar"></div>
+  <a href="{% url 'calendar_app:week_detail' today|date:"m-d-y" %}" class="btn btn-outline-secondary">This Week</a>
+  <a href="{% url 'calendar_app:day_detail' today|date:"m-d-y" %}" class="btn btn-outline-secondary">Today</a>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // initialize FullCalendar similar to home, but with filters baked in
+</script>
+{% endblock %}
