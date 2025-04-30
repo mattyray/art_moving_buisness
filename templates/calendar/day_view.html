@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Schedule for {{ day }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-4">Events on {{ day|date:"F j, Y" }}</h2>
+
+  <!-- Work Order Events -->
+  <div class="mb-5">
+    <h4>Work Order Events</h4>
+    {% if work_events %}
+      <ul class="list-group">
+      {% for evt in work_events %}
+        <li class="list-group-item">
+          <strong>{{ evt.get_event_type_display }}:</strong>
+          <a href="{% url 'workorder_detail' evt.work_order.id %}">
+            Order #{{ evt.work_order.id }}
+          </a>
+          for {{ evt.work_order.client.name }}
+        </li>
+      {% endfor %}
+      </ul>
+    {% else %}
+      <p>No work-order events scheduled.</p>
+    {% endif %}
+  </div>
+
+  <!-- Invoices -->
+  <div>
+    <h4>Invoices Due</h4>
+    {% if invoices %}
+      <ul class="list-group">
+      {% for inv in invoices %}
+        <li class="list-group-item">
+          <a href="{% url 'invoice_detail' inv.id %}">
+            {{ inv.invoice_number }}
+          </a>
+          for {{ inv.client.name }} – ${{ inv.amount }}
+        </li>
+      {% endfor %}
+      </ul>
+    {% else %}
+      <p>No invoices due.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
