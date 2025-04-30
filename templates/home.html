@@ -34,7 +34,7 @@
   <!-- Calendar Navigation (Full-screen views) -->
   {% now "m-d-y" as today %}
   <div class="d-flex justify-content-end gap-2 mt-4 mb-2">
-    <a href="{% url 'calendar_app:month_detail' %}" class="btn btn-outline-primary">Month</a>
+    <a href="{% url 'home' %}" class="btn btn-outline-secondary">Month</a>
     <a href="{% url 'calendar_app:week_detail' today %}" class="btn btn-outline-primary">Week</a>
     <a href="{% url 'calendar_app:day_detail' today %}" class="btn btn-outline-primary">Day</a>
   </div>

@@ -4,7 +4,7 @@
 {% block content %}
   {% now "m-d-y" as today %}
   <div class="btn-group mb-3">
-    <a href="{% url 'calendar_app:month_detail' %}" class="btn btn-outline-secondary">Month</a>
+    <a href="{% url 'home' %}" class="btn btn-outline-secondary">Month</a>
     <a href="{% url 'calendar_app:week_detail' start|date:"m-d-y" %}" class="btn btn-outline-primary">Week</a>
     <a href="{% url 'calendar_app:day_detail' start|date:"m-d-y" %}" class="btn btn-outline-secondary">Day</a>
   </div>
@@ -55,13 +55,33 @@ document.addEventListener("DOMContentLoaded", function () {
   const calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: "dayGridWeek",
     height: "auto",
-    initialDate: "{{ start|date:'Y-m-d' }}",  // fixed date format
+    initialDate: "{{ start|date:'Y-m-d' }}",
     events: fetchSources,
     eventClick: goToEventUrl,
     dateClick: goToDayDetail
   });
 
   calendar.render();
+
+  // Make day headers clickable → route to day detail page
+  setTimeout(() => {
+    document.querySelectorAll(".fc-col-header-cell").forEach((th, i) => {
+      const start = new Date("{{ start|date:'Y-m-d' }}");
+      const thisDate = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+
+      const mm = String(thisDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(thisDate.getDate()).padStart(2, '0');
+      const yy = String(thisDate.getFullYear()).slice(-2);
+
+      th.style.cursor = "pointer";
+      th.style.textDecoration = "underline";
+      th.title = "Go to Day Detail";
+
+      th.addEventListener("click", () => {
+        window.location.href = `/calendar/day/${mm}-${dd}-${yy}/`;
+      });
+    });
+  }, 0);
 });
 </script>
 {% endblock %}

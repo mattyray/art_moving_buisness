@@ -4,7 +4,7 @@
 {% block content %}
   {% now "m-d-y" as today %}
   <div class="btn-group mb-3">
-    <a href="{% url 'calendar_app:month_detail' %}" class="btn btn-outline-secondary">Month</a>
+    <a href="{% url 'home' %}" class="btn btn-outline-secondary">Month</a>
     <a href="{% url 'calendar_app:week_detail' today %}" class="btn btn-outline-secondary">Week</a>
     <a href="{% url 'calendar_app:day_detail' today %}" class="btn btn-outline-primary">Day</a>
   </div>
@@ -13,7 +13,41 @@
     <input type="text" name="q" class="form-control" placeholder="Search…" value="{{ query }}">
   </form>
 
-  <div id="calendar"></div>
+  <div id="calendar" class="mb-5"></div>
+
+  <!-- Printable Details -->
+  <div id="printable-details" class="card shadow-sm p-4">
+    <h4 class="mb-3">Events for {{ day|date:"l, F j, Y" }}</h4>
+    
+    {% if events %}
+      <ul class="list-group mb-3">
+        {% for evt in events %}
+          <li class="list-group-item">
+            <strong>{{ evt.get_event_type_display }}</strong> –
+            <a href="{% url 'workorder_detail' evt.work_order.id %}">
+              {{ evt.work_order.client.name }}
+            </a><br>
+            <small class="text-muted">{{ evt.address }}</small>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No events scheduled.</p>
+    {% endif %}
+
+    {% if invoices %}
+      <h5 class="mt-4">Invoices Due</h5>
+      <ul class="list-group">
+        {% for inv in invoices %}
+          <li class="list-group-item text-danger">
+            Invoice {{ inv.invoice_number }} for {{ inv.client.name }} – ${{ inv.amount }}
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    <button onclick="window.print()" class="btn btn-secondary mt-4">🖨️ Print This Page</button>
+  </div>
 {% endblock %}
 
 {% block extra_js %}
@@ -40,12 +74,12 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   const calendarEl = document.getElementById("calendar");
-  if (!calendarEl) return console.error("Calendar element not found!");
+  if (!calendarEl) return;
 
   const calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: "dayGridDay",
     height: "auto",
-    initialDate: "{{ day|date:'Y-m-d' }}",  // ✅ fixed lowercase `m`
+    initialDate: "{{ day|date:'Y-m-d' }}",
     events: fetchSources,
     eventClick: goToEventUrl
   });
