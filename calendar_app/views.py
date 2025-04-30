@@ -5,10 +5,42 @@ from invoices.models import Invoice
 from django.db.models import Q
 
 def parse_mmddyy(date_str):
-    """
-    Parse strings like '04-30-25' into a datetime.date(2025,4,30).
-    """
     return datetime.strptime(date_str, '%m-%d-%y').date()
+
+def week_detail(request, date):
+    # parse and compute week start/end
+    day   = parse_mmddyy(date)
+    start = day - timedelta(days=day.weekday())
+    end   = start + timedelta(days=6)
+
+    # build a simple list of each date in that week
+    week_days = [start + timedelta(days=i) for i in range(7)]
+
+    # fetch events/invoices in the range
+    events   = Event.objects.filter(date__range=(start, end))
+    invoices = Invoice.objects.filter(due_date__range=(start, end))
+
+    # optional filtering
+    q = request.GET.get('q', '')
+    if q:
+        events   = events.filter(
+            Q(work_order__client__name__icontains=q) |
+            Q(event_type__icontains=q)
+        )
+        invoices = invoices.filter(
+            Q(client__name__icontains=q) |
+            Q(invoice_number__icontains=q)
+        )
+
+    context = {
+        'start': start,
+        'end': end,
+        'week_days': week_days,    # <-- pass this in
+        'events': events,
+        'invoices': invoices,
+        'query': q,
+    }
+    return render(request, 'calendar/week_detail.html', context)
 
 def month_detail(request):
     # Determine month/year from GET or default to today
@@ -41,36 +73,7 @@ def month_detail(request):
     }
     return render(request, 'calendar/month_detail.html', context)
 
-def week_detail(request, date):
-    # date is mm-dd-yy of any day in the week
-    day = parse_mmddyy(date)
 
-    # compute start (Monday) and end (Sunday) of that week
-    start = day - timedelta(days=day.weekday())
-    end   = start + timedelta(days=6)
-
-    events = Event.objects.filter(date__range=(start, end))
-    invoices = Invoice.objects.filter(due_date__range=(start, end))
-
-    q = request.GET.get('q', '')
-    if q:
-        events   = events.filter(
-            Q(work_order__client__name__icontains=q) |
-            Q(event_type__icontains=q)
-        )
-        invoices = invoices.filter(
-            Q(client__name__icontains=q) |
-            Q(invoice_number__icontains=q)
-        )
-
-    context = {
-        'start': start,
-        'end': end,
-        'events': events,
-        'invoices': invoices,
-        'query': q,
-    }
-    return render(request, 'calendar/week_detail.html', context)
 
 def day_detail(request, date):
     # date is mm-dd-yy

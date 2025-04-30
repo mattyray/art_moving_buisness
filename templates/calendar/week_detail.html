@@ -1,41 +1,53 @@
 {% extends "base.html" %}
 {% block title %}Week of {{ start|date:"M j, Y" }}{% endblock %}
+
 {% block content %}
   <h2>Week: {{ start|date:"M j" }} – {{ end|date:"M j, Y" }}</h2>
+
   <form method="get" class="mb-3">
     <input type="text" name="q" placeholder="Search…" value="{{ query }}">
     <button type="submit">Filter</button>
   </form>
-  <a href="{% url 'calendar_app:week_detail' start|date:"m-d-y" %}" class="btn btn-outline-primary">Refresh</a>
-  <a href="{% url 'calendar_app:month_detail' %}" class="btn btn-outline-secondary">Month</a>
-  <a href="{% url 'calendar_app:day_detail' start|date:"m-d-y" %}" class="btn btn-outline-secondary">Day</a>
-  <table class="table mt-3">
-    <thead><tr>
-      {% for d in start|get_week_days %}
-        <th>{{ d|date:"D M j" }}</th>
-      {% endfor %}
-    </tr></thead>
-    <tbody><tr>
-      {% for d in start|get_week_days %}
-        <td>
-          {% for evt in events %}
-            {% if evt.date == d %}
-              <div>
-                <strong>{{ evt.get_event_type_display }}</strong><br>
-                {{ evt.work_order.client.name }}
-              </div>
-            {% endif %}
-          {% endfor %}
-          {% for inv in invoices %}
-            {% if inv.due_date == d %}
-              <div class="text-danger">
-                Invoice: {{ inv.invoice_number }}
-              </div>
-            {% endif %}
-          {% endfor %}
-        </td>
-      {% endfor %}
-    </tr></tbody>
+
+  <div class="btn-group mb-3">
+    <a href="{% url 'calendar_app:week_detail' start|date:"m-d-y" %}" class="btn btn-outline-primary">Refresh</a>
+    <a href="{% url 'calendar_app:month_detail' %}" class="btn btn-outline-secondary">Month</a>
+    <a href="{% url 'calendar_app:day_detail' start|date:"m-d-y" %}" class="btn btn-outline-secondary">Day</a>
+  </div>
+
+  <table class="table">
+    <thead>
+      <tr>
+        {% for d in week_days %}
+          <th>{{ d|date:"D M j" }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        {% for d in week_days %}
+          <td style="vertical-align: top;">
+            {% for evt in events %}
+              {% if evt.date == d %}
+                <div class="mb-2">
+                  <strong>{{ evt.get_event_type_display }}</strong><br>
+                  {{ evt.work_order.client.name }}
+                </div>
+              {% endif %}
+            {% endfor %}
+            {% for inv in invoices %}
+              {% if inv.due_date == d %}
+                <div class="text-danger mb-2">
+                  Invoice: {{ inv.invoice_number }}
+                </div>
+              {% endif %}
+            {% endfor %}
+          </td>
+        {% endfor %}
+      </tr>
+    </tbody>
   </table>
-  <a href="{% url 'calendar_app:week_detail' start|date:"m-d-y" %}?export=pdf" class="btn btn-secondary">Export Week to PDF</a>
+
+  <a href="{% url 'calendar_app:week_detail' start|date:"m-d-y" %}?export=pdf"
+     class="btn btn-secondary mt-3">Export Week to PDF</a>
 {% endblock %}
