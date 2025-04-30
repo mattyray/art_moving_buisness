@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     'workorders',
     'clients',
     'invoices',
+    "calendar_app",
+
 
     # Third-party packages
     'crispy_forms',
