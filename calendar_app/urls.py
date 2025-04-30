@@ -1,8 +1,16 @@
 from django.urls import path
 from . import views
 
+app_name = "calendar_app"
+
 urlpatterns = [
-    path('month/', views.month_detail, name='calendar_month_detail'),
-    path('week/<str:year_week>/', views.week_detail, name='calendar_week_detail'),
-    path('day/<str:date>/', views.day_detail, name='calendar_day_detail'),
+    # Full‐screen month view (no date in URL; uses GET params or defaults)
+    path('month/', views.month_detail, name='month_detail'),
+
+    # Week view: click any day in a week to see the whole week
+    # e.g. /calendar/week/04-30-25/
+    path('week/<str:date>/', views.week_detail, name='week_detail'),
+
+    # Day view: e.g. /calendar/day/04-30-25/
+    path('day/<str:date>/', views.day_detail, name='day_detail'),
 ]
