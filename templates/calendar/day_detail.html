@@ -1,29 +1,53 @@
 {% extends "base.html" %}
 {% block title %}Day: {{ day|date:"F j, Y" }}{% endblock %}
+
 {% block content %}
-  <h2>{{ day|date:"l, F j, Y" }}</h2>
+  {% now "m-d-y" as today %}
+  <div class="btn-group mb-3">
+    <a href="{% url 'calendar_app:month_detail' %}" class="btn btn-outline-secondary">Month</a>
+    <a href="{% url 'calendar_app:week_detail' today %}" class="btn btn-outline-secondary">Week</a>
+    <a href="{% url 'calendar_app:day_detail' today %}" class="btn btn-outline-primary">Day</a>
+  </div>
+
   <form method="get" class="mb-3">
-    <input type="text" name="q" placeholder="Search…" value="{{ query }}">
-    <button type="submit">Filter</button>
+    <input type="text" name="q" class="form-control" placeholder="Search…" value="{{ query }}">
   </form>
-  <ul class="list-group">
-    {% for evt in events %}
-      <li class="list-group-item">
-        <strong>{{ evt.get_event_type_display }}</strong> for
-        <a href="{% url 'workorder_detail' evt.work_order.id %}">
-          {{ evt.work_order.client.name }}
-        </a>
-      </li>
-    {% empty %}
-      <li class="list-group-item">No events.</li>
-    {% endfor %}
-    {% for inv in invoices %}
-      <li class="list-group-item text-danger">
-        Invoice {{ inv.invoice_number }} – due today
-      </li>
-    {% endfor %}
-  </ul>
-  <a href="{% url 'calendar_app:day_detail' day|date:"m-d-y" %}?export=pdf" class="btn btn-secondary mt-3">Export Day to PDF</a>
-  <a href="{% url 'calendar_app:week_detail' day|date:"m-d-y" %}" class="btn btn-outline-secondary mt-3">Back to Week</a>
-  <a href="{% url 'calendar_app:month_detail' %}" class="btn btn-outline-secondary mt-3">Back to Month</a>
+
+  <div id="calendar"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  async function fetchSources(info, success, fail) {
+    try {
+      const [wo, inv] = await Promise.all([
+        fetch("/workorders/calendar-data/workorders/").then(r=>r.json()),
+        fetch("/invoices/calendar-data/invoices/").then(r=>r.json())
+      ]);
+      success([...wo, ...inv]);
+    } catch (e) {
+      console.error("Calendar fetch error:", e);
+      fail(e);
+    }
+  }
+  function goToEventUrl(info) {
+    if (info.event.url) {
+      window.location.href = info.event.url;
+      info.jsEvent.preventDefault();
+    }
+  }
+
+  var calendarEl = document.getElementById("calendar");
+  if (!calendarEl) return console.error("Calendar element not found!");
+
+  new FullCalendar.Calendar(calendarEl, {
+    initialView: "dayGridDay",
+    height: 'auto',
+    initialDate: "{{ day|date:'Y-MM-dd' }}",
+    events: fetchSources,
+    eventClick: goToEventUrl
+  }).render();
+});
+</script>
 {% endblock %}
