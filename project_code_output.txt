@@ -3625,11 +3625,4 @@ function createInvoice(jobId) {
 
 {% block extra_js %}
 <script>
-function createInvoice(jobId) {
-  const review = confirm(
-    "Would you like to review/edit this job before creating an invoice?"
-  );
-  window.location.href = review
-    ? `/workorders/edit/${jobId}/`
-    : `/invoices/create/?work_order=${jobId}`;
-}
+hbjdskalldkc 
