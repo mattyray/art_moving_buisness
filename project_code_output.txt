@@ -3633,4 +3633,3 @@ function createInvoice(jobId) {
     ? `/workorders/edit/${jobId}/`
     : `/invoices/create/?work_order=${jobId}`;
 }
-</script>
