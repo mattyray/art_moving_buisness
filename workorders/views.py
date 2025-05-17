@@ -278,7 +278,8 @@ def scheduled_jobs_view(request):
 @login_required
 def completed_jobs_view(request):
     query = request.GET.get('q', '')
-    jobs = WorkOrder.objects.filter(status='completed')
+    jobs = WorkOrder.objects.filter(status='completed').order_by('-completed_at')
     if query:
         jobs = jobs.filter(client__name__icontains=query)
     return render(request, 'workorders/completed_jobs.html', {'jobs': jobs, 'query': query})
+
