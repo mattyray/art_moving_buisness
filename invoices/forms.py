@@ -5,7 +5,7 @@ from workorders.models import WorkOrder
 
 class InvoiceForm(forms.ModelForm):
     client = forms.ModelChoiceField(
-        queryset=Client.objects.all(),
+        queryset=Client.objects.none(),
         widget=forms.Select(attrs={
             'class': 'form-control select2',
             'style': 'width: 100%;',
@@ -13,7 +13,7 @@ class InvoiceForm(forms.ModelForm):
         })
     )
     work_order = forms.ModelChoiceField(
-        queryset=WorkOrder.objects.none(),  # default empty
+        queryset=WorkOrder.objects.none(),
         required=False,
         widget=forms.Select(attrs={
             'class': 'form-control select2',
@@ -37,20 +37,21 @@ class InvoiceForm(forms.ModelForm):
         if 'client' in self.data:
             client_id = self.data.get('client')
         elif 'client' in self.initial:
-            client_id = self.initial['client']
+            client_id = self.initial.get('client')
         elif self.instance and self.instance.pk:
             client_id = self.instance.client_id
 
         try:
             client_id = int(client_id)
+            self.fields['client'].queryset = Client.objects.filter(id=client_id)
             self.fields['work_order'].queryset = WorkOrder.objects.filter(
                 client_id=client_id,
                 status='completed'
             )
             self.fields['work_order'].widget.attrs.pop('disabled', None)
         except (TypeError, ValueError):
+            self.fields['client'].queryset = Client.objects.none()
             self.fields['work_order'].queryset = WorkOrder.objects.none()
-
 
     class Meta:
         model = Invoice
