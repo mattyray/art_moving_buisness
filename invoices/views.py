@@ -93,7 +93,6 @@ def invoice_detail(request, invoice_id):
         'events': events,
     })
 
-
 @login_required
 def invoice_create(request):
     client_id = request.GET.get('client') or request.POST.get('client')
@@ -114,44 +113,44 @@ def invoice_create(request):
     if request.method == 'POST':
         form = InvoiceForm(request.POST)
 
-        # 1) filter work_order choices before validation
+        # 🔧 Fix: Set correct queryset for client field to avoid validation error
         if client_id:
+            form.fields['client'].queryset = Client.objects.filter(id=client_id)
             form.fields['work_order'].queryset = WorkOrder.objects.filter(
                 client_id=client_id,
                 status='completed'
             )
         else:
+            form.fields['client'].queryset = Client.objects.none()
             form.fields['work_order'].queryset = WorkOrder.objects.none()
 
-        # 2) set default status so validation won’t fail
         form.fields['status'].initial = 'unpaid'
 
         if form.is_valid():
             invoice = form.save(commit=False)
-            # 3) manually bind the client FK from your hidden field
             cid = request.POST.get('client')
             if cid:
                 invoice.client = get_object_or_404(Client, id=cid)
             invoice.save()
             return redirect('invoice_list')
     else:
-        form = InvoiceForm(initial={**initial_data, 'status':'unpaid'})
-        # also preload work_orders on GET
+        form = InvoiceForm(initial={**initial_data, 'status': 'unpaid'})
         if client_id:
+            form.fields['client'].queryset = Client.objects.filter(id=client_id)
             form.fields['work_order'].queryset = WorkOrder.objects.filter(
                 client_id=client_id,
                 status='completed'
             )
         else:
+            form.fields['client'].queryset = Client.objects.none()
             form.fields['work_order'].queryset = WorkOrder.objects.none()
 
     return render(request, 'invoices/invoice_form.html', {
         'form': form,
         'events': events,
         'invoice': None,
-        'client_id': client_id,   # for your hidden input
+        'client_id': client_id,
     })
-
 
 @login_required
 def invoice_update(request, invoice_id):
