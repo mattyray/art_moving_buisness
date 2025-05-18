@@ -32,7 +32,6 @@ class InvoiceForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Handle dynamic queryset for work_order field based on client
         client_id = None
 
         if 'client' in self.data:
@@ -42,12 +41,16 @@ class InvoiceForm(forms.ModelForm):
         elif self.instance and self.instance.pk:
             client_id = self.instance.client_id
 
-        if client_id:
+        try:
+            client_id = int(client_id)
             self.fields['work_order'].queryset = WorkOrder.objects.filter(
                 client_id=client_id,
                 status='completed'
             )
             self.fields['work_order'].widget.attrs.pop('disabled', None)
+        except (TypeError, ValueError):
+            self.fields['work_order'].queryset = WorkOrder.objects.none()
+
 
     class Meta:
         model = Invoice
