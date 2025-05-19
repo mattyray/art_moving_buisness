@@ -3625,4 +3625,3 @@ function createInvoice(jobId) {
 
 {% block extra_js %}
 <script>
-hbjdskalldkc 
