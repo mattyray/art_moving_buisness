@@ -113,7 +113,7 @@ def invoice_create(request):
     if request.method == 'POST':
         form = InvoiceForm(request.POST)
 
-        # 🔧 Fix: Set correct queryset for client field to avoid validation error
+        # Set correct queryset to avoid validation error
         if client_id:
             form.fields['client'].queryset = Client.objects.filter(id=client_id)
             form.fields['work_order'].queryset = WorkOrder.objects.filter(
@@ -125,7 +125,7 @@ def invoice_create(request):
             form.fields['work_order'].queryset = WorkOrder.objects.none()
 
         form.fields['status'].initial = 'unpaid'
-        ###
+
         if form.is_valid():
             invoice = form.save(commit=False)
             cid = request.POST.get('client')
@@ -133,10 +133,11 @@ def invoice_create(request):
                 invoice.client = get_object_or_404(Client, id=cid)
             invoice.save()
 
-            # ✅ Phase 3: Mark related WorkOrder as invoiced
+            # ✅ Auto-mark WorkOrder as invoiced
             if invoice.work_order:
                 invoice.work_order.invoiced = True
                 invoice.work_order.save(update_fields=["invoiced"])
+                messages.success(request, "Invoice created and work order marked as invoiced.")
 
             return redirect('invoice_list')
 
@@ -158,6 +159,7 @@ def invoice_create(request):
         'invoice': None,
         'client_id': client_id,
     })
+
 
 @login_required
 def invoice_update(request, invoice_id):
