@@ -263,10 +263,12 @@ def workorder_detail(request, job_id):
 def pending_jobs_view(request):
     query = request.GET.get('q', '')
     jobs = WorkOrder.objects.exclude(events__date__isnull=False)\
-                            .filter(status__in=["pending", "in_progress"])
+                            .filter(status__in=["pending", "in_progress"])\
+                            .order_by('-updated_at')  # ⬅️ Add this
     if query:
         jobs = jobs.filter(client__name__icontains=query)
     return render(request, 'workorders/pending_jobs.html', {'jobs': jobs, 'query': query})
+
 
 
 @login_required
@@ -274,10 +276,12 @@ def scheduled_jobs_view(request):
     query = request.GET.get('q', '')
     jobs = WorkOrder.objects.filter(events__date__isnull=False,
                                     status__in=["pending", "in_progress"])\
-                            .distinct()
+                            .distinct()\
+                            .order_by('-updated_at')  # ⬅️ Add this
     if query:
         jobs = jobs.filter(client__name__icontains=query)
     return render(request, 'workorders/scheduled_jobs.html', {'jobs': jobs, 'query': query})
+
 
 
 @login_required
