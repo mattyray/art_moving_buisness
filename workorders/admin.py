@@ -5,12 +5,12 @@ class EventInline(admin.TabularInline):
     model = Event
     extra = 1  # Number of extra empty forms
 
+@admin.register(WorkOrder)
 class WorkOrderAdmin(admin.ModelAdmin):
     inlines = [EventInline]
-    list_display = ['id', 'client', 'job_description', 'status']
+    list_display = ['id', 'client', 'job_description', 'status', 'invoiced', 'entered_in_qb', 'created_at', 'updated_at']
     search_fields = ['client__name', 'job_description']
-    list_filter = ['status', 'created_at', 'updated_at']
+    list_filter = ['status', 'invoiced', 'entered_in_qb', 'created_at', 'updated_at']
 
-admin.site.register(WorkOrder, WorkOrderAdmin)
 admin.site.register(JobAttachment)
 admin.site.register(JobNote)
