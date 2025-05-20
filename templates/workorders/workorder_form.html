@@ -3,7 +3,6 @@
 {% block title %}{{ job|default_if_none:"New" }} Work Order{% endblock %}
 
 {% block extra_css %}
-  <!-- Select2 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
 {% endblock %}
 
@@ -47,6 +46,16 @@
             <div class="input-group">
               <span class="input-group-text">$</span>
               {{ form.estimated_cost }}
+            </div>
+          </div>
+
+          <!-- Invoiced checkbox -->
+          <div class="col-md-6 d-flex align-items-center">
+            <div class="form-check">
+              {{ form.invoiced }}
+              <label class="form-check-label ms-2" for="{{ form.invoiced.id_for_label }}">
+                Mark as Invoiced
+              </label>
             </div>
           </div>
         </div>
@@ -118,53 +127,51 @@
   <!-- Bottom Navigation Buttons -->
   <div class="text-center">
     <a href="{% url 'workorder_list' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Work Orders</a>
-    <a href="{% url 'home' %}"             class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+    <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
   </div>
-</div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-  <!-- jQuery, Select2, Flatpickr -->
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
-  <script>
-    $(document).ready(function() {
-      $('.select2').select2({ width: '100%' });
-      flatpickr('.datepicker', { dateFormat: 'Y-m-d' });
+<script>
+$(document).ready(function() {
+  $('.select2').select2({ width: '100%' });
+  flatpickr('.datepicker', { dateFormat: 'Y-m-d' });
 
-      const formsetContainer = $('#event-forms-container');
-      const totalForms = $('#id_events-TOTAL_FORMS');
-      const emptyForm = $('#empty-form-template').html();
+  const formsetContainer = $('#event-forms-container');
+  const totalForms = $('#id_events-TOTAL_FORMS');
+  const emptyForm = $('#empty-form-template').html();
 
-      function attachRemoveEvent(btn) {
-        btn.click(function() {
-          $(this).closest('.event-form').remove();
-          updateTotalForms();
-        });
-      }
-
-      function updateTotalForms() {
-        const formCount = formsetContainer.children('.event-form').length;
-        totalForms.val(formCount);
-      }
-
-      $('#add-event').click(function() {
-        const formCount = formsetContainer.children('.event-form').length;
-        const formRegex = new RegExp('__prefix__', 'g');
-        const newForm = $(emptyForm.replace(formRegex, formCount));
-
-        formsetContainer.append(newForm);
-        attachRemoveEvent(newForm.find('.remove-event'));
-        flatpickr(newForm.find('.datepicker'), { dateFormat: 'Y-m-d' });
-        updateTotalForms();
-      });
-
-      formsetContainer.find('.remove-event').each(function() {
-        attachRemoveEvent($(this));
-      });
+  function attachRemoveEvent(btn) {
+    btn.click(function() {
+      $(this).closest('.event-form').remove();
+      updateTotalForms();
     });
-  </script>
+  }
+
+  function updateTotalForms() {
+    const formCount = formsetContainer.children('.event-form').length;
+    totalForms.val(formCount);
+  }
+
+  $('#add-event').click(function() {
+    const formCount = formsetContainer.children('.event-form').length;
+    const formRegex = new RegExp('__prefix__', 'g');
+    const newForm = $(emptyForm.replace(formRegex, formCount));
+
+    formsetContainer.append(newForm);
+    attachRemoveEvent(newForm.find('.remove-event'));
+    flatpickr(newForm.find('.datepicker'), { dateFormat: 'Y-m-d' });
+    updateTotalForms();
+  });
+
+  formsetContainer.find('.remove-event').each(function() {
+    attachRemoveEvent($(this));
+  });
+});
+</script>
 {% endblock %}
