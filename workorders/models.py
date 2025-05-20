@@ -7,6 +7,7 @@ class WorkOrder(models.Model):
         ('in_progress', 'In Progress'),
         ('completed', 'Completed'),
     ]
+
     client = models.ForeignKey(
         'clients.Client',
         on_delete=models.CASCADE,
@@ -23,6 +24,10 @@ class WorkOrder(models.Model):
     completed_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # ✅ New fields
+    invoiced = models.BooleanField(default=False)
+    entered_in_qb = models.BooleanField(default=False)
 
     def __str__(self):
         return f"WorkOrder #{self.id} for {self.client.name}"
