@@ -125,14 +125,21 @@ def invoice_create(request):
             form.fields['work_order'].queryset = WorkOrder.objects.none()
 
         form.fields['status'].initial = 'unpaid'
-
+        ###
         if form.is_valid():
             invoice = form.save(commit=False)
             cid = request.POST.get('client')
             if cid:
                 invoice.client = get_object_or_404(Client, id=cid)
             invoice.save()
+
+            # ✅ Phase 3: Mark related WorkOrder as invoiced
+            if invoice.work_order:
+                invoice.work_order.invoiced = True
+                invoice.work_order.save(update_fields=["invoiced"])
+
             return redirect('invoice_list')
+
     else:
         form = InvoiceForm(initial={**initial_data, 'status': 'unpaid'})
         if client_id:
