@@ -27,7 +27,6 @@ class WorkOrder(models.Model):
 
     # ✅ New fields
     invoiced = models.BooleanField(default=False)
-    entered_in_qb = models.BooleanField(default=False)
 
     def __str__(self):
         return f"WorkOrder #{self.id} for {self.client.name}"
