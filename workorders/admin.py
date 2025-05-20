@@ -8,9 +8,9 @@ class EventInline(admin.TabularInline):
 @admin.register(WorkOrder)
 class WorkOrderAdmin(admin.ModelAdmin):
     inlines = [EventInline]
-    list_display = ['id', 'client', 'job_description', 'status', 'invoiced', 'entered_in_qb', 'created_at', 'updated_at']
+    list_display = ['id', 'client', 'job_description', 'status', 'invoiced', 'created_at', 'updated_at']
     search_fields = ['client__name', 'job_description']
-    list_filter = ['status', 'invoiced', 'entered_in_qb', 'created_at', 'updated_at']
+    list_filter = ['status', 'invoiced', 'created_at', 'updated_at']
 
 admin.site.register(JobAttachment)
 admin.site.register(JobNote)
