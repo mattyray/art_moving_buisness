@@ -107,12 +107,14 @@
   </div>
   
   <!-- Completed Jobs Section -->
-  <div class="card mb-4">
-    <div class="card-header bg-success text-white">
-      <h5 class="mb-0">Completed Jobs</h5>
-    </div>
-    <div class="card-body p-0">
-      {% if completed_jobs %}
+  <!-- Completed – Not Yet Invoiced -->
+<div class="card mb-4">
+  <div class="card-header bg-warning text-dark">
+    <h5 class="mb-0">Completed – Not Yet Invoiced</h5>
+  </div>
+  <div class="card-body p-0">
+    {% if completed_jobs %}
+      {% with completed_jobs|dictsortreversed:"completed_at" as sorted_jobs %}
       <div class="table-responsive">
         <table class="table table-sm table-striped align-middle mb-0">
           <thead class="small">
@@ -124,36 +126,81 @@
             </tr>
           </thead>
           <tbody>
-            {% for job in completed_jobs %}
-            <tr>
-              <td>{{ job.id }}</td>
-              <td>{{ job.client.name }}</td>
-              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">
-                {{ job.job_description|truncatewords:10 }}
-              </td>
-              <td>
-                <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}" 
-                     class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}" 
-                     class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                  <button type="button" 
-                          class="btn btn-sm btn-primary w-100 w-sm-auto"
-                          onclick="createInvoice({{ job.id }})">
-                    Create Invoice
-                  </button>
-                </div>
-              </td>
-            </tr>
+            {% for job in sorted_jobs %}
+              {% if not job.invoiced %}
+              <tr>
+                <td>{{ job.id }}</td>
+                <td>{{ job.client.name }}</td>
+                <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">
+                  {{ job.job_description|truncatewords:10 }}
+                </td>
+                <td>
+                  <div class="d-flex flex-column flex-sm-row gap-2">
+                    <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                    <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                    <button type="button" class="btn btn-sm btn-primary w-100 w-sm-auto"
+                            onclick="createInvoice({{ job.id }})">Create Invoice</button>
+                  </div>
+                </td>
+              </tr>
+              {% endif %}
             {% endfor %}
           </tbody>
         </table>
       </div>
-      {% else %}
-      <p class="p-3 mb-0">No completed jobs found.</p>
-      {% endif %}
-    </div>
+      {% endwith %}
+    {% else %}
+      <p class="p-3 mb-0">No uninvoiced jobs found.</p>
+    {% endif %}
   </div>
+</div>
+
+<!-- Completed – Invoiced -->
+<div class="card mb-4">
+  <div class="card-header bg-success text-white">
+    <h5 class="mb-0">Completed – Invoiced</h5>
+  </div>
+  <div class="card-body p-0">
+    {% if completed_jobs %}
+      {% with completed_jobs|dictsortreversed:"completed_at" as sorted_jobs %}
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead class="small">
+            <tr>
+              <th>ID</th>
+              <th>Client</th>
+              <th class="d-none d-md-table-cell">Description</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for job in sorted_jobs %}
+              {% if job.invoiced %}
+              <tr>
+                <td>{{ job.id }}</td>
+                <td>{{ job.client.name }}</td>
+                <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">
+                  {{ job.job_description|truncatewords:10 }}
+                </td>
+                <td>
+                  <div class="d-flex flex-column flex-sm-row gap-2">
+                    <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                    <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                  </div>
+                </td>
+              </tr>
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endwith %}
+    {% else %}
+      <p class="p-3 mb-0">No invoiced jobs found.</p>
+    {% endif %}
+  </div>
+</div>
+
   
   <!-- Back to Dashboard Button -->
   <div class="text-center">
