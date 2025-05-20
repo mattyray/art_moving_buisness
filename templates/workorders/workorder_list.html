@@ -1,50 +1,42 @@
 {% extends "base.html" %}
 {% block title %}Work Orders{% endblock %}
+
 {% block content %}
 <div class="container">
   <h2 class="mb-4">Work Orders</h2>
-  
+
   <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
     <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
-      <a href="{% url 'pending_jobs' %}" class="btn btn-outline-primary w-100 w-sm-auto">Pending Jobs</a>
-      <a href="{% url 'scheduled_jobs' %}" class="btn btn-outline-primary w-100 w-sm-auto">Scheduled Jobs</a>
-      <a href="{% url 'completed_jobs' %}" class="btn btn-outline-primary w-100 w-sm-auto">Completed Jobs</a>
-      <a href="{% url 'workorder_create' %}" class="btn btn-outline-primary w-100 w-sm-auto">New Work Order</a>
+      <a href="{% url 'pending_jobs' %}" class="btn btn-outline-primary w-100">Pending Jobs</a>
+      <a href="{% url 'scheduled_jobs' %}" class="btn btn-outline-primary w-100">Scheduled Jobs</a>
+      <a href="{% url 'completed_jobs' %}" class="btn btn-outline-primary w-100">Completed Jobs</a>
+      <a href="{% url 'workorder_create' %}" class="btn btn-outline-primary w-100">New Work Order</a>
     </div>
   </div>
-  
-  <!-- Pending Jobs Section -->
+
+  <!-- Pending Jobs -->
   <div class="card mb-4">
-    <div class="card-header bg-secondary text-white">
-      <h5 class="mb-0">Pending Jobs</h5>
+    <div class="card-header bg-secondary text-white position-relative">
+      <h5 class="mb-0">
+        <a href="{% url 'pending_jobs' %}" class="stretched-link text-white text-decoration-none">Pending Jobs</a>
+      </h5>
     </div>
     <div class="card-body p-0">
       {% if pending_jobs %}
       <div class="table-responsive">
         <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="small">
-            <tr>
-              <th>ID</th>
-              <th>Client</th>
-              <th class="d-none d-md-table-cell">Description</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
+          <thead class="small"><tr><th>ID</th><th>Client</th><th class="d-none d-md-table-cell">Description</th><th>Actions</th></tr></thead>
           <tbody>
             {% for job in pending_jobs %}
             <tr>
               <td>{{ job.id }}</td>
               <td>{{ job.client.name }}</td>
-              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">
-                {{ job.job_description|truncatewords:10 }}
-              </td>
+              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
               <td>
                 <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}" 
-                     class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}" 
-                     class="btn btn-sm btn-warning w-100 w-sm-auto">Edit / Schedule</a>
+                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100">Edit / Schedule</a>
                 </div>
               </td>
             </tr>
@@ -52,45 +44,33 @@
           </tbody>
         </table>
       </div>
-      {% else %}
-      <p class="p-3 mb-0">No pending jobs found.</p>
-      {% endif %}
+      {% else %}<p class="p-3 mb-0">No pending jobs found.</p>{% endif %}
     </div>
   </div>
-  
-  <!-- Scheduled Jobs Section -->
+
+  <!-- Scheduled Jobs -->
   <div class="card mb-4">
-    <div class="card-header bg-info text-white">
-      <h5 class="mb-0">Scheduled Jobs</h5>
+    <div class="card-header bg-info text-white position-relative">
+      <h5 class="mb-0">
+        <a href="{% url 'scheduled_jobs' %}" class="stretched-link text-white text-decoration-none">Scheduled Jobs</a>
+      </h5>
     </div>
     <div class="card-body p-0">
       {% if scheduled_jobs %}
       <div class="table-responsive">
         <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="small">
-            <tr>
-              <th>ID</th>
-              <th>Client</th>
-              <th class="d-none d-md-table-cell">Description</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
+          <thead class="small"><tr><th>ID</th><th>Client</th><th class="d-none d-md-table-cell">Description</th><th>Actions</th></tr></thead>
           <tbody>
             {% for job in scheduled_jobs %}
             <tr>
               <td>{{ job.id }}</td>
               <td>{{ job.client.name }}</td>
-              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">
-                {{ job.job_description|truncatewords:10 }}
-              </td>
+              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
               <td>
                 <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}" 
-                     class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}" 
-                     class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                  <form method="post" action="{% url 'mark_completed' job.id %}" class="w-100 w-sm-auto">
-                    {% csrf_token %}
+                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100">Edit</a>
+                  <form method="post" action="{% url 'mark_completed' job.id %}" class="w-100">{% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-success w-100">Mark Completed</button>
                   </form>
                 </div>
@@ -100,124 +80,94 @@
           </tbody>
         </table>
       </div>
-      {% else %}
-      <p class="p-3 mb-0">No scheduled jobs found.</p>
-      {% endif %}
+      {% else %}<p class="p-3 mb-0">No scheduled jobs found.</p>{% endif %}
     </div>
   </div>
-  
-  <!-- Completed Jobs Section -->
+
   <!-- Completed – Not Yet Invoiced -->
-<div class="card mb-4">
-  <div class="card-header bg-warning text-dark">
-    <h5 class="mb-0">Completed – Not Yet Invoiced</h5>
-  </div>
-  <div class="card-body p-0">
-    {% if completed_jobs %}
-      {% with completed_jobs|dictsortreversed:"completed_at" as sorted_jobs %}
+  <div class="card mb-4">
+    <div class="card-header bg-warning text-dark position-relative">
+      <h5 class="mb-0">
+        <a href="{% url 'completed_jobs' %}" class="stretched-link text-dark text-decoration-none">Completed – Not Yet Invoiced</a>
+      </h5>
+    </div>
+    <div class="card-body p-0">
+      {% if completed_uninvoiced_jobs %}
       <div class="table-responsive">
         <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="small">
-            <tr>
-              <th>ID</th>
-              <th>Client</th>
-              <th class="d-none d-md-table-cell">Description</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
+          <thead class="small"><tr><th>ID</th><th>Client</th><th class="d-none d-md-table-cell">Description</th><th>Actions</th></tr></thead>
           <tbody>
-            {% for job in sorted_jobs %}
-              {% if not job.invoiced %}
-              <tr>
-                <td>{{ job.id }}</td>
-                <td>{{ job.client.name }}</td>
-                <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">
-                  {{ job.job_description|truncatewords:10 }}
-                </td>
-                <td>
-                  <div class="d-flex flex-column flex-sm-row gap-2">
-                    <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                    <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                    <button type="button" class="btn btn-sm btn-primary w-100 w-sm-auto"
-                            onclick="createInvoice({{ job.id }})">Create Invoice</button>
-                  </div>
-                </td>
-              </tr>
-              {% endif %}
+            {% for job in completed_uninvoiced_jobs %}
+            <tr>
+              <td>{{ job.id }}</td>
+              <td>{{ job.client.name }}</td>
+              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
+              <td>
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100">Edit</a>
+                  <form method="get" action="{% url 'invoice_create' %}" class="w-100">
+                    <input type="hidden" name="work_order" value="{{ job.id }}">
+                    <button type="submit" class="btn btn-sm btn-primary w-100">Create Invoice</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
-      {% endwith %}
-    {% else %}
-      <p class="p-3 mb-0">No uninvoiced jobs found.</p>
-    {% endif %}
+      {% else %}<p class="p-3 mb-0">No completed jobs awaiting invoicing.</p>{% endif %}
+    </div>
   </div>
-</div>
 
-<!-- Completed – Invoiced -->
-<div class="card mb-4">
-  <div class="card-header bg-success text-white">
-    <h5 class="mb-0">Completed – Invoiced</h5>
-  </div>
-  <div class="card-body p-0">
-    {% if completed_jobs %}
-      {% with completed_jobs|dictsortreversed:"completed_at" as sorted_jobs %}
+  <!-- Completed – Invoiced -->
+  <div class="card mb-4">
+    <div class="card-header bg-success text-white position-relative">
+      <h5 class="mb-0">
+        <a href="{% url 'completed_jobs' %}" class="stretched-link text-white text-decoration-none">Completed – Invoiced</a>
+      </h5>
+    </div>
+    <div class="card-body p-0">
+      {% if completed_invoiced_jobs %}
       <div class="table-responsive">
         <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="small">
-            <tr>
-              <th>ID</th>
-              <th>Client</th>
-              <th class="d-none d-md-table-cell">Description</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
+          <thead class="small"><tr><th>ID</th><th>Client</th><th class="d-none d-md-table-cell">Description</th><th>Actions</th></tr></thead>
           <tbody>
-            {% for job in sorted_jobs %}
-              {% if job.invoiced %}
-              <tr>
-                <td>{{ job.id }}</td>
-                <td>{{ job.client.name }}</td>
-                <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">
-                  {{ job.job_description|truncatewords:10 }}
-                </td>
-                <td>
-                  <div class="d-flex flex-column flex-sm-row gap-2">
-                    <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                    <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                  </div>
-                </td>
-              </tr>
-              {% endif %}
+            {% for job in completed_invoiced_jobs %}
+            <tr>
+              <td>{{ job.id }}</td>
+              <td>{{ job.client.name }}</td>
+              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
+              <td>
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100">Edit</a>
+                </div>
+              </td>
+            </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
-      {% endwith %}
-    {% else %}
-      <p class="p-3 mb-0">No invoiced jobs found.</p>
-    {% endif %}
+      {% else %}<p class="p-3 mb-0">No invoiced jobs found.</p>{% endif %}
+    </div>
   </div>
-</div>
 
-  
-  <!-- Back to Dashboard Button -->
+  <!-- Back to Dashboard -->
   <div class="text-center">
-    <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+    <a href="{% url 'home' %}" class="btn btn-secondary w-100">Back to Dashboard</a>
   </div>
 </div>
+{% endblock %}
 
 {% block extra_js %}
 <script>
 function createInvoice(jobId) {
-  const review = confirm(
-    "Would you like to review/edit this job before creating an invoice?"
-  );
+  const review = confirm("Would you like to review/edit this job before creating an invoice?");
   window.location.href = review
     ? `/workorders/edit/${jobId}/`
     : `/invoices/create/?work_order=${jobId}`;
 }
 </script>
-{% endblock %}
 {% endblock %}
