@@ -3,35 +3,23 @@
 {% block content %}
 <div class="container">
   <h2 class="mb-4">Completed Jobs</h2>
-  
+
   <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
     <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
-      <a href="{% url 'pending_jobs' %}"     class="btn btn-outline-primary w-100 w-sm-auto">Pending Jobs</a>
-      <a href="{% url 'scheduled_jobs' %}"   class="btn btn-outline-primary w-100 w-sm-auto">Scheduled Jobs</a>
-      <a href="{% url 'completed_jobs' %}"   class="btn btn-outline-primary w-100 w-sm-auto">Completed Jobs</a>
-      <a href="{% url 'workorder_create' %}" class="btn btn-outline-primary w-100 w-sm-auto">New Work Order</a>
+      <a href="{% url 'pending_jobs' %}" class="btn btn-outline-primary w-100 w-sm-auto">Pending Jobs</a>
+      <a href="{% url 'scheduled_jobs' %}" class="btn btn-outline-primary w-100 w-sm-auto">Scheduled Jobs</a>
+      <a href="{% url 'completed_jobs' %}" class="btn btn-outline-primary w-100 w-sm-auto">Completed Jobs</a>
     </div>
   </div>
-  
-  <!-- Search Bar -->
-  <form method="get" class="mb-4">
-    <div class="input-group">
-      <input type="text"
-             name="q"
-             class="form-control"
-             placeholder="Search by client name…"
-             value="{{ query }}">
-      <button type="submit" class="btn btn-primary">Search</button>
-    </div>
-  </form>
-  
-  <div class="card shadow-sm mb-4">
-    <div class="card-header bg-success text-white">
-      <h5 class="mb-0">Completed Jobs - Newest First</h5>
+
+  <!-- Uninvoiced Section -->
+  <div class="card mb-4">
+    <div class="card-header bg-warning text-dark">
+      <h5 class="mb-0">Completed – Not Yet Invoiced</h5>
     </div>
     <div class="card-body p-0">
-      {% if jobs %}
+      {% if uninvoiced_jobs %}
       <div class="table-responsive">
         <table class="table table-sm table-striped align-middle mb-0">
           <thead class="small">
@@ -43,24 +31,16 @@
             </tr>
           </thead>
           <tbody>
-            {% for job in jobs %}
+            {% for job in uninvoiced_jobs %}
             <tr>
               <td>{{ job.id }}</td>
               <td>{{ job.client.name }}</td>
-              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">
-                {{ job.job_description|truncatewords:10 }}
-              </td>
+              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
               <td>
                 <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}"
-                     class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}"
-                     class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                  <button type="button"
-                          class="btn btn-sm btn-primary w-100 w-sm-auto"
-                          onclick="createInvoice({{ job.id }})">
-                    Create Invoice
-                  </button>
+                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                  <button type="button" class="btn btn-sm btn-primary w-100 w-sm-auto" onclick="createInvoice({{ job.id }})">Create Invoice</button>
                 </div>
               </td>
             </tr>
@@ -69,17 +49,54 @@
         </table>
       </div>
       {% else %}
-      <p class="p-3 mb-0">No completed jobs found.</p>
+      <p class="p-3 mb-0">No uninvoiced jobs found.</p>
       {% endif %}
     </div>
   </div>
-  
-  <!-- Back Buttons -->
+
+  <!-- Invoiced Section -->
+  <div class="card mb-4">
+    <div class="card-header bg-success text-white">
+      <h5 class="mb-0">Completed – Invoiced</h5>
+    </div>
+    <div class="card-body p-0">
+      {% if invoiced_jobs %}
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead class="small">
+            <tr>
+              <th>ID</th>
+              <th>Client</th>
+              <th class="d-none d-md-table-cell">Description</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for job in invoiced_jobs %}
+            <tr>
+              <td>{{ job.id }}</td>
+              <td>{{ job.client.name }}</td>
+              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
+              <td>
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="p-3 mb-0">No invoiced jobs found.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Back Button -->
   <div class="text-center">
-    <a href="{% url 'workorder_list' %}"
-       class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Work Orders</a>
-    <a href="{% url 'home' %}"
-       class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+    <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
   </div>
 </div>
 {% endblock %}
@@ -87,9 +104,7 @@
 {% block extra_js %}
 <script>
 function createInvoice(jobId) {
-  const review = confirm(
-    "Would you like to review/edit this job before creating an invoice?"
-  );
+  const review = confirm("Would you like to review/edit this job before creating an invoice?");
   window.location.href = review
     ? `/workorders/edit/${jobId}/`
     : `/invoices/create/?work_order=${jobId}`;

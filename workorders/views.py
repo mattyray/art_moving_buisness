@@ -74,27 +74,32 @@ def workorder_calendar_data(request):
 
     return JsonResponse(events, safe=False)
 
-
 @login_required
 def workorder_list(request):
     query = request.GET.get('q', '')
+
     pending_jobs = WorkOrder.objects.exclude(events__date__isnull=False)\
                                     .filter(status__in=["pending", "in_progress"])
-    scheduled_jobs = WorkOrder.objects.filter(events__date__isnull=False,
-                                              status__in=["pending", "in_progress"])\
-                                      .distinct()
-    completed_jobs = WorkOrder.objects.filter(status='completed')
+    scheduled_jobs = WorkOrder.objects.filter(
+        events__date__isnull=False,
+        status__in=["pending", "in_progress"]
+    ).distinct()
+
+    completed_invoiced_jobs = WorkOrder.objects.filter(status='completed', invoiced=True)
+    completed_uninvoiced_jobs = WorkOrder.objects.filter(status='completed', invoiced=False)
 
     if query:
         pending_jobs = pending_jobs.filter(client__name__icontains=query)
         scheduled_jobs = scheduled_jobs.filter(client__name__icontains=query)
-        completed_jobs = completed_jobs.filter(client__name__icontains=query)
+        completed_invoiced_jobs = completed_invoiced_jobs.filter(client__name__icontains=query)
+        completed_uninvoiced_jobs = completed_uninvoiced_jobs.filter(client__name__icontains=query)
 
     context = {
         'query': query,
-        'pending_jobs': pending_jobs.order_by('-updated_at')[:3],
-        'scheduled_jobs': scheduled_jobs.order_by('-updated_at')[:3],
-        'completed_jobs': completed_jobs.order_by('-updated_at')[:3],
+        'pending_jobs': pending_jobs.order_by('-updated_at'),
+        'scheduled_jobs': scheduled_jobs.order_by('-updated_at'),
+        'completed_invoiced_jobs': completed_invoiced_jobs.order_by('-completed_at')[:3],
+        'completed_uninvoiced_jobs': completed_uninvoiced_jobs.order_by('-completed_at')[:3],
     }
     return render(request, 'workorders/workorder_list.html', context)
 
@@ -258,10 +263,12 @@ def workorder_detail(request, job_id):
 def pending_jobs_view(request):
     query = request.GET.get('q', '')
     jobs = WorkOrder.objects.exclude(events__date__isnull=False)\
-                            .filter(status__in=["pending", "in_progress"])
+                            .filter(status__in=["pending", "in_progress"])\
+                            .order_by('-updated_at')  # ⬅️ Add this
     if query:
         jobs = jobs.filter(client__name__icontains=query)
     return render(request, 'workorders/pending_jobs.html', {'jobs': jobs, 'query': query})
+
 
 
 @login_required
@@ -269,17 +276,28 @@ def scheduled_jobs_view(request):
     query = request.GET.get('q', '')
     jobs = WorkOrder.objects.filter(events__date__isnull=False,
                                     status__in=["pending", "in_progress"])\
-                            .distinct()
+                            .distinct()\
+                            .order_by('-updated_at')  # ⬅️ Add this
     if query:
         jobs = jobs.filter(client__name__icontains=query)
     return render(request, 'workorders/scheduled_jobs.html', {'jobs': jobs, 'query': query})
 
 
+
 @login_required
 def completed_jobs_view(request):
     query = request.GET.get('q', '')
-    jobs = WorkOrder.objects.filter(status='completed').order_by('-completed_at')
-    if query:
-        jobs = jobs.filter(client__name__icontains=query)
-    return render(request, 'workorders/completed_jobs.html', {'jobs': jobs, 'query': query})
 
+    uninvoiced_jobs = WorkOrder.objects.filter(status='completed', invoiced=False).order_by('-completed_at')
+    invoiced_jobs = WorkOrder.objects.filter(status='completed', invoiced=True).order_by('-completed_at')
+
+    if query:
+        uninvoiced_jobs = uninvoiced_jobs.filter(client__name__icontains=query)
+        invoiced_jobs = invoiced_jobs.filter(client__name__icontains=query)
+
+    context = {
+        'query': query,
+        'uninvoiced_jobs': uninvoiced_jobs,
+        'invoiced_jobs': invoiced_jobs,
+    }
+    return render(request, 'workorders/completed_jobs.html', context)
