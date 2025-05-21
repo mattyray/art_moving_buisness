@@ -318,6 +318,7 @@ class WorkOrder(models.Model):
         ('in_progress', 'In Progress'),
         ('completed', 'Completed'),
     ]
+
     client = models.ForeignKey(
         'clients.Client',
         on_delete=models.CASCADE,
@@ -334,6 +335,9 @@ class WorkOrder(models.Model):
     completed_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # ✅ New fields
+    invoiced = models.BooleanField(default=False)
 
     def __str__(self):
         return f"WorkOrder #{self.id} for {self.client.name}"
@@ -460,27 +464,32 @@ def workorder_calendar_data(request):
 
     return JsonResponse(events, safe=False)
 
-
 @login_required
 def workorder_list(request):
     query = request.GET.get('q', '')
+
     pending_jobs = WorkOrder.objects.exclude(events__date__isnull=False)\
                                     .filter(status__in=["pending", "in_progress"])
-    scheduled_jobs = WorkOrder.objects.filter(events__date__isnull=False,
-                                              status__in=["pending", "in_progress"])\
-                                      .distinct()
-    completed_jobs = WorkOrder.objects.filter(status='completed')
+    scheduled_jobs = WorkOrder.objects.filter(
+        events__date__isnull=False,
+        status__in=["pending", "in_progress"]
+    ).distinct()
+
+    completed_invoiced_jobs = WorkOrder.objects.filter(status='completed', invoiced=True)
+    completed_uninvoiced_jobs = WorkOrder.objects.filter(status='completed', invoiced=False)
 
     if query:
         pending_jobs = pending_jobs.filter(client__name__icontains=query)
         scheduled_jobs = scheduled_jobs.filter(client__name__icontains=query)
-        completed_jobs = completed_jobs.filter(client__name__icontains=query)
+        completed_invoiced_jobs = completed_invoiced_jobs.filter(client__name__icontains=query)
+        completed_uninvoiced_jobs = completed_uninvoiced_jobs.filter(client__name__icontains=query)
 
     context = {
         'query': query,
-        'pending_jobs': pending_jobs.order_by('-updated_at')[:3],
-        'scheduled_jobs': scheduled_jobs.order_by('-updated_at')[:3],
-        'completed_jobs': completed_jobs.order_by('-updated_at')[:3],
+        'pending_jobs': pending_jobs.order_by('-updated_at'),
+        'scheduled_jobs': scheduled_jobs.order_by('-updated_at'),
+        'completed_invoiced_jobs': completed_invoiced_jobs.order_by('-completed_at')[:3],
+        'completed_uninvoiced_jobs': completed_uninvoiced_jobs.order_by('-completed_at')[:3],
     }
     return render(request, 'workorders/workorder_list.html', context)
 
@@ -644,10 +653,12 @@ def workorder_detail(request, job_id):
 def pending_jobs_view(request):
     query = request.GET.get('q', '')
     jobs = WorkOrder.objects.exclude(events__date__isnull=False)\
-                            .filter(status__in=["pending", "in_progress"])
+                            .filter(status__in=["pending", "in_progress"])\
+                            .order_by('-updated_at')  # ⬅️ Add this
     if query:
         jobs = jobs.filter(client__name__icontains=query)
     return render(request, 'workorders/pending_jobs.html', {'jobs': jobs, 'query': query})
+
 
 
 @login_required
@@ -655,19 +666,31 @@ def scheduled_jobs_view(request):
     query = request.GET.get('q', '')
     jobs = WorkOrder.objects.filter(events__date__isnull=False,
                                     status__in=["pending", "in_progress"])\
-                            .distinct()
+                            .distinct()\
+                            .order_by('-updated_at')  # ⬅️ Add this
     if query:
         jobs = jobs.filter(client__name__icontains=query)
     return render(request, 'workorders/scheduled_jobs.html', {'jobs': jobs, 'query': query})
 
 
+
 @login_required
 def completed_jobs_view(request):
     query = request.GET.get('q', '')
-    jobs = WorkOrder.objects.filter(status='completed')
+
+    uninvoiced_jobs = WorkOrder.objects.filter(status='completed', invoiced=False).order_by('-completed_at')
+    invoiced_jobs = WorkOrder.objects.filter(status='completed', invoiced=True).order_by('-completed_at')
+
     if query:
-        jobs = jobs.filter(client__name__icontains=query)
-    return render(request, 'workorders/completed_jobs.html', {'jobs': jobs, 'query': query})
+        uninvoiced_jobs = uninvoiced_jobs.filter(client__name__icontains=query)
+        invoiced_jobs = invoiced_jobs.filter(client__name__icontains=query)
+
+    context = {
+        'query': query,
+        'uninvoiced_jobs': uninvoiced_jobs,
+        'invoiced_jobs': invoiced_jobs,
+    }
+    return render(request, 'workorders/completed_jobs.html', context)
 
 
 ===== workorders/forms.py =====
@@ -686,29 +709,32 @@ class WorkOrderForm(forms.ModelForm):
         label="Client"
     )
 
+    invoiced = forms.BooleanField(
+        required=False,
+        label="Mark as Invoiced?",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+
     class Meta:
         model = WorkOrder
         fields = [
             'client',
             'job_description',
             'estimated_cost',
+            'invoiced',
         ]
 
     def __init__(self, *args, **kwargs):
-        super(WorkOrderForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         Client = apps.get_model('clients', 'Client')
         self.fields['client'].queryset = Client.objects.all()
 
-        # Make job_description optional
         self.fields['job_description'].required = False
-
-        # Make estimated_cost optional and style it
         self.fields['estimated_cost'].required = False
         self.fields['estimated_cost'].widget.attrs.update({
             'class': 'form-control',
             'placeholder': '0.00'
         })
-
 
 class EventForm(forms.ModelForm):
     date = forms.DateField(
@@ -718,7 +744,6 @@ class EventForm(forms.ModelForm):
             'placeholder': 'YYYY-MM-DD'
         })
     )
-    # allow blank / add a blank choice so required=False works
     event_type = forms.ChoiceField(
         required=False,
         choices=[('', '---------')] + Event.EVENT_TYPES,
@@ -735,7 +760,6 @@ class EventForm(forms.ModelForm):
         model = Event
         fields = ['event_type', 'address', 'date']
 
-
 EventFormSet = inlineformset_factory(
     WorkOrder,
     Event,
@@ -743,16 +767,6 @@ EventFormSet = inlineformset_factory(
     extra=1,
     can_delete=True
 )
-
-
-EventFormSet = inlineformset_factory(
-    WorkOrder,
-    Event,
-    form=EventForm,
-    extra=1,
-    can_delete=True
-)
-
 
 class JobAttachmentForm(forms.ModelForm):
     file = forms.FileField(required=False)
@@ -760,7 +774,6 @@ class JobAttachmentForm(forms.ModelForm):
     class Meta:
         model = JobAttachment
         fields = ['file']
-
 
 class JobNoteForm(forms.ModelForm):
     note = forms.CharField(required=False, widget=forms.Textarea, label="Note")
@@ -804,13 +817,13 @@ class EventInline(admin.TabularInline):
     model = Event
     extra = 1  # Number of extra empty forms
 
+@admin.register(WorkOrder)
 class WorkOrderAdmin(admin.ModelAdmin):
     inlines = [EventInline]
-    list_display = ['id', 'client', 'job_description', 'status']
+    list_display = ['id', 'client', 'job_description', 'status', 'invoiced', 'created_at', 'updated_at']
     search_fields = ['client__name', 'job_description']
-    list_filter = ['status', 'created_at', 'updated_at']
+    list_filter = ['status', 'invoiced', 'created_at', 'updated_at']
 
-admin.site.register(WorkOrder, WorkOrderAdmin)
 admin.site.register(JobAttachment)
 admin.site.register(JobNote)
 
@@ -1048,7 +1061,6 @@ def invoice_detail(request, invoice_id):
         'events': events,
     })
 
-
 @login_required
 def invoice_create(request):
     client_id = request.GET.get('client') or request.POST.get('client')
@@ -1069,42 +1081,51 @@ def invoice_create(request):
     if request.method == 'POST':
         form = InvoiceForm(request.POST)
 
-        # 1) filter work_order choices before validation
+        # Set correct queryset to avoid validation error
         if client_id:
+            form.fields['client'].queryset = Client.objects.filter(id=client_id)
             form.fields['work_order'].queryset = WorkOrder.objects.filter(
                 client_id=client_id,
                 status='completed'
             )
         else:
+            form.fields['client'].queryset = Client.objects.none()
             form.fields['work_order'].queryset = WorkOrder.objects.none()
 
-        # 2) set default status so validation won’t fail
         form.fields['status'].initial = 'unpaid'
 
         if form.is_valid():
             invoice = form.save(commit=False)
-            # 3) manually bind the client FK from your hidden field
             cid = request.POST.get('client')
             if cid:
                 invoice.client = get_object_or_404(Client, id=cid)
             invoice.save()
+
+            # ✅ Auto-mark WorkOrder as invoiced
+            if invoice.work_order:
+                invoice.work_order.invoiced = True
+                invoice.work_order.save(update_fields=["invoiced"])
+                messages.success(request, "Invoice created and work order marked as invoiced.")
+
             return redirect('invoice_list')
+
     else:
-        form = InvoiceForm(initial={**initial_data, 'status':'unpaid'})
-        # also preload work_orders on GET
+        form = InvoiceForm(initial={**initial_data, 'status': 'unpaid'})
         if client_id:
+            form.fields['client'].queryset = Client.objects.filter(id=client_id)
             form.fields['work_order'].queryset = WorkOrder.objects.filter(
                 client_id=client_id,
                 status='completed'
             )
         else:
+            form.fields['client'].queryset = Client.objects.none()
             form.fields['work_order'].queryset = WorkOrder.objects.none()
 
     return render(request, 'invoices/invoice_form.html', {
         'form': form,
         'events': events,
         'invoice': None,
-        'client_id': client_id,   # for your hidden input
+        'client_id': client_id,
     })
 
 
@@ -1242,7 +1263,7 @@ from workorders.models import WorkOrder
 
 class InvoiceForm(forms.ModelForm):
     client = forms.ModelChoiceField(
-        queryset=Client.objects.all(),
+        queryset=Client.objects.all(),  # Use all() so form always validates client ID
         widget=forms.Select(attrs={
             'class': 'form-control select2',
             'style': 'width: 100%;',
@@ -1250,7 +1271,7 @@ class InvoiceForm(forms.ModelForm):
         })
     )
     work_order = forms.ModelChoiceField(
-        queryset=WorkOrder.objects.none(),  # default empty
+        queryset=WorkOrder.objects.none(),
         required=False,
         widget=forms.Select(attrs={
             'class': 'form-control select2',
@@ -1269,22 +1290,24 @@ class InvoiceForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Handle dynamic queryset for work_order field based on client
         client_id = None
 
         if 'client' in self.data:
             client_id = self.data.get('client')
         elif 'client' in self.initial:
-            client_id = self.initial['client']
+            client_id = self.initial.get('client')
         elif self.instance and self.instance.pk:
             client_id = self.instance.client_id
 
-        if client_id:
+        try:
+            client_id = int(client_id)
             self.fields['work_order'].queryset = WorkOrder.objects.filter(
                 client_id=client_id,
                 status='completed'
             )
             self.fields['work_order'].widget.attrs.pop('disabled', None)
+        except (TypeError, ValueError):
+            self.fields['work_order'].queryset = WorkOrder.objects.none()
 
     class Meta:
         model = Invoice
@@ -1353,8 +1376,8 @@ ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=[
     "localhost",
     "127.0.0.1",
     "art-moving-buisness-0a734245a61f.herokuapp.com",
-    # "your-custom-domain.com",
-    # "www.your-custom-domain.com"
+    "ejartmover.net",
+    "www.ejartmover.net"
 ])
 
 # ✅ Installed Apps
@@ -2797,6 +2820,21 @@ document.addEventListener("DOMContentLoaded", function () {
     {% block content %}{% endblock %}
   </main>
 
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+    {% if messages %}
+      {% for message in messages %}
+        <div class="toast align-items-center text-white bg-success border-0 show" role="alert" aria-live="assertive" aria-atomic="true">
+          <div class="d-flex">
+            <div class="toast-body">
+              {{ message }}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>
+        </div>
+      {% endfor %}
+    {% endif %}
+  </div>
+
   <!-- Footer -->
   <footer class="bg-dark text-white text-center py-3 mt-auto">
     <div class="container">
@@ -2839,35 +2877,23 @@ document.addEventListener("DOMContentLoaded", function () {
 {% block content %}
 <div class="container">
   <h2 class="mb-4">Completed Jobs</h2>
-  
+
   <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
     <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
-      <a href="{% url 'pending_jobs' %}"     class="btn btn-outline-primary w-100 w-sm-auto">Pending Jobs</a>
-      <a href="{% url 'scheduled_jobs' %}"   class="btn btn-outline-primary w-100 w-sm-auto">Scheduled Jobs</a>
-      <a href="{% url 'completed_jobs' %}"   class="btn btn-outline-primary w-100 w-sm-auto">Completed Jobs</a>
-      <a href="{% url 'workorder_create' %}" class="btn btn-outline-primary w-100 w-sm-auto">New Work Order</a>
+      <a href="{% url 'pending_jobs' %}" class="btn btn-outline-primary w-100 w-sm-auto">Pending Jobs</a>
+      <a href="{% url 'scheduled_jobs' %}" class="btn btn-outline-primary w-100 w-sm-auto">Scheduled Jobs</a>
+      <a href="{% url 'completed_jobs' %}" class="btn btn-outline-primary w-100 w-sm-auto">Completed Jobs</a>
     </div>
   </div>
-  
-  <!-- Search Bar -->
-  <form method="get" class="mb-4">
-    <div class="input-group">
-      <input type="text"
-             name="q"
-             class="form-control"
-             placeholder="Search by client name…"
-             value="{{ query }}">
-      <button type="submit" class="btn btn-primary">Search</button>
-    </div>
-  </form>
-  
-  <div class="card shadow-sm mb-4">
-    <div class="card-header bg-success text-white">
-      <h5 class="mb-0">Completed Jobs</h5>
+
+  <!-- Uninvoiced Section -->
+  <div class="card mb-4">
+    <div class="card-header bg-warning text-dark">
+      <h5 class="mb-0">Completed – Not Yet Invoiced</h5>
     </div>
     <div class="card-body p-0">
-      {% if jobs %}
+      {% if uninvoiced_jobs %}
       <div class="table-responsive">
         <table class="table table-sm table-striped align-middle mb-0">
           <thead class="small">
@@ -2879,24 +2905,16 @@ document.addEventListener("DOMContentLoaded", function () {
             </tr>
           </thead>
           <tbody>
-            {% for job in jobs %}
+            {% for job in uninvoiced_jobs %}
             <tr>
               <td>{{ job.id }}</td>
               <td>{{ job.client.name }}</td>
-              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">
-                {{ job.job_description|truncatewords:10 }}
-              </td>
+              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
               <td>
                 <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}"
-                     class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}"
-                     class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                  <button type="button"
-                          class="btn btn-sm btn-primary w-100 w-sm-auto"
-                          onclick="createInvoice({{ job.id }})">
-                    Create Invoice
-                  </button>
+                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                  <button type="button" class="btn btn-sm btn-primary w-100 w-sm-auto" onclick="createInvoice({{ job.id }})">Create Invoice</button>
                 </div>
               </td>
             </tr>
@@ -2905,17 +2923,54 @@ document.addEventListener("DOMContentLoaded", function () {
         </table>
       </div>
       {% else %}
-      <p class="p-3 mb-0">No completed jobs found.</p>
+      <p class="p-3 mb-0">No uninvoiced jobs found.</p>
       {% endif %}
     </div>
   </div>
-  
-  <!-- Back Buttons -->
+
+  <!-- Invoiced Section -->
+  <div class="card mb-4">
+    <div class="card-header bg-success text-white">
+      <h5 class="mb-0">Completed – Invoiced</h5>
+    </div>
+    <div class="card-body p-0">
+      {% if invoiced_jobs %}
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead class="small">
+            <tr>
+              <th>ID</th>
+              <th>Client</th>
+              <th class="d-none d-md-table-cell">Description</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for job in invoiced_jobs %}
+            <tr>
+              <td>{{ job.id }}</td>
+              <td>{{ job.client.name }}</td>
+              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
+              <td>
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="p-3 mb-0">No invoiced jobs found.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Back Button -->
   <div class="text-center">
-    <a href="{% url 'workorder_list' %}"
-       class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Work Orders</a>
-    <a href="{% url 'home' %}"
-       class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+    <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
   </div>
 </div>
 {% endblock %}
@@ -2923,9 +2978,7 @@ document.addEventListener("DOMContentLoaded", function () {
 {% block extra_js %}
 <script>
 function createInvoice(jobId) {
-  const review = confirm(
-    "Would you like to review/edit this job before creating an invoice?"
-  );
+  const review = confirm("Would you like to review/edit this job before creating an invoice?");
   window.location.href = review
     ? `/workorders/edit/${jobId}/`
     : `/invoices/create/?work_order=${jobId}`;
@@ -3130,7 +3183,6 @@ function createInvoice(jobId) {
 {% block title %}{{ job|default_if_none:"New" }} Work Order{% endblock %}
 
 {% block extra_css %}
-  <!-- Select2 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
 {% endblock %}
 
@@ -3174,6 +3226,16 @@ function createInvoice(jobId) {
             <div class="input-group">
               <span class="input-group-text">$</span>
               {{ form.estimated_cost }}
+            </div>
+          </div>
+
+          <!-- Invoiced checkbox -->
+          <div class="col-md-6 d-flex align-items-center">
+            <div class="form-check">
+              {{ form.invoiced }}
+              <label class="form-check-label ms-2" for="{{ form.invoiced.id_for_label }}">
+                Mark as Invoiced
+              </label>
             </div>
           </div>
         </div>
@@ -3237,7 +3299,7 @@ function createInvoice(jobId) {
 
     <!-- Submit Buttons -->
     <div class="d-flex justify-content-end gap-2 mb-4">
-      <button type="submit" name="update_only" class="btn btn-success">Create / Update</button>
+      <button type="submit" name="update_only" class="btn btn-success">Create</button>
       <button type="submit" name="create_invoice" class="btn btn-danger">Update &amp; Create Invoice</button>
     </div>
   </form>
@@ -3245,55 +3307,53 @@ function createInvoice(jobId) {
   <!-- Bottom Navigation Buttons -->
   <div class="text-center">
     <a href="{% url 'workorder_list' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Work Orders</a>
-    <a href="{% url 'home' %}"             class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+    <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
   </div>
-</div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-  <!-- jQuery, Select2, Flatpickr -->
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
-  <script>
-    $(document).ready(function() {
-      $('.select2').select2({ width: '100%' });
-      flatpickr('.datepicker', { dateFormat: 'Y-m-d' });
+<script>
+$(document).ready(function() {
+  $('.select2').select2({ width: '100%' });
+  flatpickr('.datepicker', { dateFormat: 'Y-m-d' });
 
-      const formsetContainer = $('#event-forms-container');
-      const totalForms = $('#id_events-TOTAL_FORMS');
-      const emptyForm = $('#empty-form-template').html();
+  const formsetContainer = $('#event-forms-container');
+  const totalForms = $('#id_events-TOTAL_FORMS');
+  const emptyForm = $('#empty-form-template').html();
 
-      function attachRemoveEvent(btn) {
-        btn.click(function() {
-          $(this).closest('.event-form').remove();
-          updateTotalForms();
-        });
-      }
-
-      function updateTotalForms() {
-        const formCount = formsetContainer.children('.event-form').length;
-        totalForms.val(formCount);
-      }
-
-      $('#add-event').click(function() {
-        const formCount = formsetContainer.children('.event-form').length;
-        const formRegex = new RegExp('__prefix__', 'g');
-        const newForm = $(emptyForm.replace(formRegex, formCount));
-
-        formsetContainer.append(newForm);
-        attachRemoveEvent(newForm.find('.remove-event'));
-        flatpickr(newForm.find('.datepicker'), { dateFormat: 'Y-m-d' });
-        updateTotalForms();
-      });
-
-      formsetContainer.find('.remove-event').each(function() {
-        attachRemoveEvent($(this));
-      });
+  function attachRemoveEvent(btn) {
+    btn.click(function() {
+      $(this).closest('.event-form').remove();
+      updateTotalForms();
     });
-  </script>
+  }
+
+  function updateTotalForms() {
+    const formCount = formsetContainer.children('.event-form').length;
+    totalForms.val(formCount);
+  }
+
+  $('#add-event').click(function() {
+    const formCount = formsetContainer.children('.event-form').length;
+    const formRegex = new RegExp('__prefix__', 'g');
+    const newForm = $(emptyForm.replace(formRegex, formCount));
+
+    formsetContainer.append(newForm);
+    attachRemoveEvent(newForm.find('.remove-event'));
+    flatpickr(newForm.find('.datepicker'), { dateFormat: 'Y-m-d' });
+    updateTotalForms();
+  });
+
+  formsetContainer.find('.remove-event').each(function() {
+    attachRemoveEvent($(this));
+  });
+});
+</script>
 {% endblock %}
 
 
@@ -3462,51 +3522,43 @@ function createInvoice(jobId) {
 ===== templates/workorders/workorder_list.html =====
 {% extends "base.html" %}
 {% block title %}Work Orders{% endblock %}
+
 {% block content %}
 <div class="container">
   <h2 class="mb-4">Work Orders</h2>
-  
+
   <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
     <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
-      <a href="{% url 'pending_jobs' %}" class="btn btn-outline-primary w-100 w-sm-auto">Pending Jobs</a>
-      <a href="{% url 'scheduled_jobs' %}" class="btn btn-outline-primary w-100 w-sm-auto">Scheduled Jobs</a>
-      <a href="{% url 'completed_jobs' %}" class="btn btn-outline-primary w-100 w-sm-auto">Completed Jobs</a>
-      <a href="{% url 'workorder_create' %}" class="btn btn-outline-primary w-100 w-sm-auto">New Work Order</a>
+      <a href="{% url 'pending_jobs' %}" class="btn btn-outline-primary w-100">Pending Jobs</a>
+      <a href="{% url 'scheduled_jobs' %}" class="btn btn-outline-primary w-100">Scheduled Jobs</a>
+      <a href="{% url 'completed_jobs' %}" class="btn btn-outline-primary w-100">Completed Jobs</a>
+      <a href="{% url 'workorder_create' %}" class="btn btn-outline-primary w-100">New Work Order</a>
     </div>
   </div>
-  
-  <!-- Pending Jobs Section -->
+
+  <!-- Pending Jobs -->
   <div class="card mb-4">
-    <div class="card-header bg-secondary text-white">
-      <h5 class="mb-0">Pending Jobs</h5>
+    <div class="card-header bg-secondary text-white position-relative">
+      <h5 class="mb-0">
+        <a href="{% url 'pending_jobs' %}" class="stretched-link text-white text-decoration-none">Pending Jobs</a>
+      </h5>
     </div>
     <div class="card-body p-0">
       {% if pending_jobs %}
       <div class="table-responsive">
         <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="small">
-            <tr>
-              <th>ID</th>
-              <th>Client</th>
-              <th class="d-none d-md-table-cell">Description</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
+          <thead class="small"><tr><th>ID</th><th>Client</th><th class="d-none d-md-table-cell">Description</th><th>Actions</th></tr></thead>
           <tbody>
             {% for job in pending_jobs %}
             <tr>
               <td>{{ job.id }}</td>
               <td>{{ job.client.name }}</td>
-              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">
-                {{ job.job_description|truncatewords:10 }}
-              </td>
+              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
               <td>
                 <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}" 
-                     class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}" 
-                     class="btn btn-sm btn-warning w-100 w-sm-auto">Edit / Schedule</a>
+                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100">Edit / Schedule</a>
                 </div>
               </td>
             </tr>
@@ -3514,45 +3566,33 @@ function createInvoice(jobId) {
           </tbody>
         </table>
       </div>
-      {% else %}
-      <p class="p-3 mb-0">No pending jobs found.</p>
-      {% endif %}
+      {% else %}<p class="p-3 mb-0">No pending jobs found.</p>{% endif %}
     </div>
   </div>
-  
-  <!-- Scheduled Jobs Section -->
+
+  <!-- Scheduled Jobs -->
   <div class="card mb-4">
-    <div class="card-header bg-info text-white">
-      <h5 class="mb-0">Scheduled Jobs</h5>
+    <div class="card-header bg-info text-white position-relative">
+      <h5 class="mb-0">
+        <a href="{% url 'scheduled_jobs' %}" class="stretched-link text-white text-decoration-none">Scheduled Jobs</a>
+      </h5>
     </div>
     <div class="card-body p-0">
       {% if scheduled_jobs %}
       <div class="table-responsive">
         <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="small">
-            <tr>
-              <th>ID</th>
-              <th>Client</th>
-              <th class="d-none d-md-table-cell">Description</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
+          <thead class="small"><tr><th>ID</th><th>Client</th><th class="d-none d-md-table-cell">Description</th><th>Actions</th></tr></thead>
           <tbody>
             {% for job in scheduled_jobs %}
             <tr>
               <td>{{ job.id }}</td>
               <td>{{ job.client.name }}</td>
-              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">
-                {{ job.job_description|truncatewords:10 }}
-              </td>
+              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
               <td>
                 <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}" 
-                     class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}" 
-                     class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                  <form method="post" action="{% url 'mark_completed' job.id %}" class="w-100 w-sm-auto">
-                    {% csrf_token %}
+                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100">Edit</a>
+                  <form method="post" action="{% url 'mark_completed' job.id %}" class="w-100">{% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-success w-100">Mark Completed</button>
                   </form>
                 </div>
@@ -3562,48 +3602,36 @@ function createInvoice(jobId) {
           </tbody>
         </table>
       </div>
-      {% else %}
-      <p class="p-3 mb-0">No scheduled jobs found.</p>
-      {% endif %}
+      {% else %}<p class="p-3 mb-0">No scheduled jobs found.</p>{% endif %}
     </div>
   </div>
-  
-  <!-- Completed Jobs Section -->
+
+  <!-- Completed – Not Yet Invoiced -->
   <div class="card mb-4">
-    <div class="card-header bg-success text-white">
-      <h5 class="mb-0">Completed Jobs</h5>
+    <div class="card-header bg-warning text-dark position-relative">
+      <h5 class="mb-0">
+        <a href="{% url 'completed_jobs' %}" class="stretched-link text-dark text-decoration-none">Completed – Not Yet Invoiced</a>
+      </h5>
     </div>
     <div class="card-body p-0">
-      {% if completed_jobs %}
+      {% if completed_uninvoiced_jobs %}
       <div class="table-responsive">
         <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="small">
-            <tr>
-              <th>ID</th>
-              <th>Client</th>
-              <th class="d-none d-md-table-cell">Description</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
+          <thead class="small"><tr><th>ID</th><th>Client</th><th class="d-none d-md-table-cell">Description</th><th>Actions</th></tr></thead>
           <tbody>
-            {% for job in completed_jobs %}
+            {% for job in completed_uninvoiced_jobs %}
             <tr>
               <td>{{ job.id }}</td>
               <td>{{ job.client.name }}</td>
-              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">
-                {{ job.job_description|truncatewords:10 }}
-              </td>
+              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
               <td>
                 <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}" 
-                     class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}" 
-                     class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                  <button type="button" 
-                          class="btn btn-sm btn-primary w-100 w-sm-auto"
-                          onclick="createInvoice({{ job.id }})">
-                    Create Invoice
-                  </button>
+                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100">Edit</a>
+                  <form method="get" action="{% url 'invoice_create' %}" class="w-100">
+                    <input type="hidden" name="work_order" value="{{ job.id }}">
+                    <button type="submit" class="btn btn-sm btn-primary w-100">Create Invoice</button>
+                  </form>
                 </div>
               </td>
             </tr>
@@ -3611,17 +3639,57 @@ function createInvoice(jobId) {
           </tbody>
         </table>
       </div>
-      {% else %}
-      <p class="p-3 mb-0">No completed jobs found.</p>
-      {% endif %}
+      {% else %}<p class="p-3 mb-0">No completed jobs awaiting invoicing.</p>{% endif %}
     </div>
   </div>
-  
-  <!-- Back to Dashboard Button -->
+
+  <!-- Completed – Invoiced -->
+  <div class="card mb-4">
+    <div class="card-header bg-success text-white position-relative">
+      <h5 class="mb-0">
+        <a href="{% url 'completed_jobs' %}" class="stretched-link text-white text-decoration-none">Completed – Invoiced</a>
+      </h5>
+    </div>
+    <div class="card-body p-0">
+      {% if completed_invoiced_jobs %}
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead class="small"><tr><th>ID</th><th>Client</th><th class="d-none d-md-table-cell">Description</th><th>Actions</th></tr></thead>
+          <tbody>
+            {% for job in completed_invoiced_jobs %}
+            <tr>
+              <td>{{ job.id }}</td>
+              <td>{{ job.client.name }}</td>
+              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
+              <td>
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100">Edit</a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}<p class="p-3 mb-0">No invoiced jobs found.</p>{% endif %}
+    </div>
+  </div>
+
+  <!-- Back to Dashboard -->
   <div class="text-center">
-    <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+    <a href="{% url 'home' %}" class="btn btn-secondary w-100">Back to Dashboard</a>
   </div>
 </div>
+{% endblock %}
 
 {% block extra_js %}
 <script>
+function createInvoice(jobId) {
+  const review = confirm("Would you like to review/edit this job before creating an invoice?");
+  window.location.href = review
+    ? `/workorders/edit/${jobId}/`
+    : `/invoices/create/?work_order=${jobId}`;
+}
+</script>
+{% endblock %}
