@@ -4,10 +4,11 @@ from django.utils import timezone
 
 class Invoice(models.Model):
     STATUS_CHOICES = [
-        ('unpaid', 'Unpaid'),
-        ('paid', 'Paid'),
-        ('overdue', 'Overdue'),
+        ('unpaid', 'Not in QuickBooks'),
+        ('paid', 'In QuickBooks'),
+        ('overdue', 'Overdue'),  # This one stays the same unless you want a new label
     ]
+
     
     invoice_number = models.CharField(max_length=50, unique=True, blank=True)
     client = models.ForeignKey('clients.Client', on_delete=models.CASCADE, related_name='invoices')

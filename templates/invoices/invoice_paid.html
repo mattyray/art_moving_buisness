@@ -1,17 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Paid Invoices{% endblock %}
+{% block title %}In QuickBooks{% endblock %}
+
 {% block content %}
 <div class="container">
-  <h2 class="mb-4">Paid Invoices</h2>
-  
-  <!-- Navigation Buttons for Invoice Categories -->
+  <h2 class="mb-4">In QuickBooks</h2>
+
+  <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
-    <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger me-2">Unpaid Invoices</a>
-    <a href="{% url 'invoice_paid' %}" class="btn btn-outline-danger me-2">Paid Invoices</a>
-    <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue Invoices</a>
-    <a href="{% url 'invoice_create' %}" class="btn btn-danger">New Invoice</a>
+    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-success w-100 w-sm-auto">In QuickBooks</a>
+      <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger w-100 w-sm-auto">Not in QuickBooks</a>
+      <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-warning w-100 w-sm-auto">Overdue</a>
+    </div>
   </div>
-  
+
   <!-- Search Bar -->
   <form method="get" class="mb-4">
     <div class="input-group">
@@ -19,44 +21,43 @@
       <button type="submit" class="btn btn-primary">Search</button>
     </div>
   </form>
-  
+
   <div class="card shadow-sm">
-    <div class="card-header bg-info text-white">Paid Invoices</div>
-    <div class="card-body">
+    <div class="card-header bg-success text-white">In QuickBooks</div>
+    <div class="card-body p-0">
       {% if invoices %}
-      <table class="table table-sm">
-        <thead>
-          <tr>
-            <th>Invoice Number</th>
-            <th>Client</th>
-            <th>Amount</th>
-            <th>Date Created</th>
-            <th>Due Date</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for inv in invoices %}
-          <tr>
-            <td>{{ inv.invoice_number }}</td>
-            <td>{{ inv.client.name }}</td>
-            <td>${{ inv.amount }}</td>
-            <td>{{ inv.date_created|date:"m-d-y" }}</td>
-            <td>{{ inv.due_date|date:"m-d-y" }}</td>
-            <td>
-              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
-              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead class="small">
+            <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            {% for inv in invoices %}
+            <tr>
+              <td>{{ inv.invoice_number }}</td>
+              <td>{{ inv.client.name }}</td>
+              <td>${{ inv.amount }}</td>
+              <td>
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                  <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
       {% else %}
-      <p>No paid invoices found.</p>
+      <p class="p-3 mb-0">No paid invoices found.</p>
       {% endif %}
     </div>
   </div>
-  <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">Back to Invoice Overview</a>
-  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+
+  <!-- Navigation Buttons -->
+  <div class="text-center mt-4">
+    <a href="{% url 'invoice_list' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Invoice Overview</a>
+    <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+  </div>
 </div>
 {% endblock %}
