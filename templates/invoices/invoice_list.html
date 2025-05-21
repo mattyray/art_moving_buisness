@@ -46,7 +46,7 @@
                   <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
                   <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
                   <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="w-100 w-sm-auto">{% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-success w-100">Mark as Paid</button>
+                    <button type="submit" class="btn btn-sm btn-success w-100">Mark in QuickBooks</button>
                   </form>
                 </div>
               </td>
