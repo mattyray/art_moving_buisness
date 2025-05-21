@@ -1,8 +1,6 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags static %}
-{% block title %}
-  {% if invoice %}Edit Invoice{% else %}Create Invoice{% endif %}
-{% endblock %}
+{% block title %}Edit Invoice{% endblock %}
 
 {% block extra_css %}
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -11,16 +9,15 @@
 
 {% block content %}
 <div class="container">
-  <h2 class="mb-4">
-    {% if invoice %}Edit Invoice{% else %}Create Invoice{% endif %}
-  </h2>
+  <h2 class="mb-4">Edit Invoice</h2>
 
   <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
-    <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger me-2">Unpaid</a>
-    <a href="{% url 'invoice_paid' %}" class="btn btn-outline-danger me-2">Paid</a>
-    <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue</a>
-    <a href="{% url 'invoice_create' %}" class="btn btn-danger">New</a>
+    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+      <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-primary w-100 w-sm-auto">Not In QuickBooks</a>
+      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-success w-100 w-sm-auto">In QuickBooks</a>
+      <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-warning w-100 w-sm-auto">Overdue</a>
+    </div>
   </div>
 
   <!-- Events List -->
@@ -37,30 +34,14 @@
     </div>
   {% endif %}
 
-  {# Load Client for Work Order selection #}
-  {% if not invoice %}
-    <form method="get" class="mb-4">
-      {{ form.client|as_crispy_field }}
-      <button type="submit" class="btn btn-outline-primary">Load Jobs</button>
-    </form>
-  {% endif %}
-
+  <!-- Invoice Form -->
   <form method="post" id="invoice-form">
     {% csrf_token %}
-    <input 
-    type="hidden" 
-    name="client" 
-    value="{{ client_id }}"
-  >
-  <input 
-    type="hidden" 
-    name="status" 
-    value="unpaid"
-  >
-  
+    <input type="hidden" name="client" value="{{ client_id }}">
+    <input type="hidden" name="status" value="unpaid">
+
     {{ form.work_order|as_crispy_field }}
 
-    <!-- Amount with $ prefix -->
     <div class="mb-3">
       <label for="id_amount" class="form-label">Amount</label>
       <div class="input-group">
@@ -72,13 +53,14 @@
     {{ form.due_date|as_crispy_field }}
     {{ form.notes|as_crispy_field }}
 
-    <button type="submit" class="btn btn-success">
-      {% if invoice %}Update Invoice{% else %}Create Invoice{% endif %}
-    </button>
+    <button type="submit" class="btn btn-success">Update Invoice</button>
   </form>
 
-  <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">Back to Invoice Overview</a>
-  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+  <!-- Navigation Links -->
+  <div class="mt-4 text-center">
+    <a href="{% url 'invoice_list' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Invoice Overview</a>
+    <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+  </div>
 </div>
 {% endblock %}
 
@@ -91,7 +73,6 @@ document.addEventListener("DOMContentLoaded", function () {
   const clientSelect = $('#id_client');
   const workOrderSelect = document.getElementById('id_work_order');
 
-  // Initialize Select2
   clientSelect.select2({
     placeholder: 'Search for a client…',
     allowClear: true,
@@ -105,7 +86,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Fetch completed work orders when client selected
   clientSelect.on('select2:select', function (e) {
     const clientId = e.params.data.id;
 
@@ -142,10 +122,7 @@ document.addEventListener("DOMContentLoaded", function () {
       });
   });
 
-  // Initialize Flatpickr on due date input
-  flatpickr("#id_due_date", {
-    dateFormat: "Y-m-d"
-  });
+  flatpickr("#id_due_date", { dateFormat: "Y-m-d" });
 });
 </script>
 {% endblock %}

@@ -3,16 +3,22 @@
 
 {% block content %}
   {% now "m-d-y" as today %}
-  <div class="btn-group mb-3">
-    <a href="{% url 'home' %}" class="btn btn-outline-secondary">Month</a>
-    <a href="{% url 'calendar_app:week_detail' start|date:"m-d-y" %}" class="btn btn-outline-primary">Week</a>
-    <a href="{% url 'calendar_app:day_detail' start|date:"m-d-y" %}" class="btn btn-outline-secondary">Day</a>
+
+  <!-- View Navigation Buttons -->
+  <div class="mb-3 text-center">
+    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+      <a href="{% url 'home' %}" class="btn btn-outline-secondary w-100 w-sm-auto">Month</a>
+      <a href="{% url 'calendar_app:week_detail' today %}" class="btn btn-outline-primary w-100 w-sm-auto">Week</a>
+      <a href="{% url 'calendar_app:day_detail' today %}" class="btn btn-outline-secondary w-100 w-sm-auto">Day</a>
+    </div>
   </div>
 
+  <!-- Search -->
   <form method="get" class="mb-3">
     <input type="text" name="q" class="form-control" placeholder="Search…" value="{{ query }}">
   </form>
 
+  <!-- Calendar -->
   <div id="calendar"></div>
 {% endblock %}
 
@@ -26,11 +32,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
   async function fetchSources(info, success, fail) {
     try {
-      const [wo, inv] = await Promise.all([
-        fetch("/workorders/calendar-data/workorders/").then(r => r.json()),
-        fetch("/invoices/calendar-data/invoices/").then(r => r.json())
-      ]);
-      success([...wo, ...inv]);
+      const wo = await fetch("/workorders/calendar-data/workorders/").then(r => r.json());
+      success(wo);  // 🔥 Removed invoice events
     } catch (e) {
       console.error("Calendar fetch error:", e);
       fail(e);

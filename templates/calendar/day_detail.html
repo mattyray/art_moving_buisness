@@ -3,16 +3,22 @@
 
 {% block content %}
   {% now "m-d-y" as today %}
-  <div class="btn-group mb-3">
-    <a href="{% url 'home' %}" class="btn btn-outline-secondary">Month</a>
-    <a href="{% url 'calendar_app:week_detail' today %}" class="btn btn-outline-secondary">Week</a>
-    <a href="{% url 'calendar_app:day_detail' today %}" class="btn btn-outline-primary">Day</a>
+
+  <!-- View Switcher Buttons -->
+  <div class="mb-3 text-center">
+    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+      <a href="{% url 'home' %}" class="btn btn-outline-secondary w-100 w-sm-auto">Month</a>
+      <a href="{% url 'calendar_app:week_detail' today %}" class="btn btn-outline-primary w-100 w-sm-auto">Week</a>
+      <a href="{% url 'calendar_app:day_detail' today %}" class="btn btn-outline-secondary w-100 w-sm-auto">Day</a>
+    </div>
   </div>
 
+  <!-- Search -->
   <form method="get" class="mb-3">
     <input type="text" name="q" class="form-control" placeholder="Search…" value="{{ query }}">
   </form>
 
+  <!-- Calendar -->
   <div id="calendar" class="mb-5"></div>
 
   <!-- Printable Details -->
@@ -35,17 +41,6 @@
       <p>No events scheduled.</p>
     {% endif %}
 
-    {% if invoices %}
-      <h5 class="mt-4">Invoices Due</h5>
-      <ul class="list-group">
-        {% for inv in invoices %}
-          <li class="list-group-item text-danger">
-            Invoice {{ inv.invoice_number }} for {{ inv.client.name }} – ${{ inv.amount }}
-          </li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-
     <button onclick="window.print()" class="btn btn-secondary mt-4">🖨️ Print This Page</button>
   </div>
 {% endblock %}
@@ -55,11 +50,8 @@
 document.addEventListener("DOMContentLoaded", function () {
   async function fetchSources(info, success, fail) {
     try {
-      const [wo, inv] = await Promise.all([
-        fetch("/workorders/calendar-data/workorders/").then(r => r.json()),
-        fetch("/invoices/calendar-data/invoices/").then(r => r.json())
-      ]);
-      success([...wo, ...inv]);
+      const wo = await fetch("/workorders/calendar-data/workorders/").then(r => r.json());
+      success(wo);  // 🔥 Removed invoice events
     } catch (e) {
       console.error("Calendar fetch error:", e);
       fail(e);
