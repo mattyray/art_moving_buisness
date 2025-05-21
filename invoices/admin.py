@@ -8,7 +8,7 @@ class InvoiceAdmin(admin.ModelAdmin):
     search_fields = ('invoice_number', 'client__name')
     ordering = ('-date_created',)
     date_hierarchy = 'due_date'
-    readonly_fields = ('date_created', 'updated_at')
+    readonly_fields = ['date_created']
 
     fieldsets = (
         (None, {
