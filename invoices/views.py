@@ -204,6 +204,11 @@ def invoice_create(request):
             invoice = form.save(commit=False)
             invoice.status = 'unpaid'
             invoice.date_created = timezone.now()
+
+            if work_order:
+                invoice.work_order = work_order
+                invoice.client = work_order.client  # ✅ set the client here
+
             invoice.save()
             messages.success(request, "Invoice created successfully.")
             return redirect('invoice_detail', invoice_id=invoice.id)
