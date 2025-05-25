@@ -66,9 +66,9 @@ def invoice_list(request):
             Q(invoice_number__icontains=query) | Q(client__name__icontains=query)
         )
     
-    unpaid_invoices = unpaid_invoices.order_by('-date_created')[:3]
-    paid_invoices = paid_invoices.order_by('-date_created')[:3]
-    overdue_invoices = overdue_invoices.order_by('-date_created')[:3]
+    unpaid_invoices = unpaid_invoices.order_by('-date_created')[:5]
+    paid_invoices = paid_invoices.order_by('-date_created')[:5]
+    overdue_invoices = overdue_invoices.order_by('-date_created')[:5]
     
     context = {
         'query': query,
