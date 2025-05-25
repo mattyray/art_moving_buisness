@@ -183,6 +183,44 @@ def invoice_overdue(request):
         )
     return render(request, 'invoices/invoice_overdue.html', {'invoices': invoices, 'query': query})
 
+
+@login_required
+def invoice_create(request):
+    work_order_id = request.GET.get('work_order')
+    work_order = None
+    events = []
+
+    if work_order_id:
+        try:
+            work_order = WorkOrder.objects.get(id=work_order_id)
+            events = work_order.events.all()
+        except WorkOrder.DoesNotExist:
+            messages.error(request, "Invalid work order.")
+            return redirect('invoice_list')
+
+    if request.method == "POST":
+        form = InvoiceForm(request.POST)
+        if form.is_valid():
+            invoice = form.save(commit=False)
+            invoice.status = 'unpaid'
+            invoice.date_created = timezone.now()
+            invoice.save()
+            messages.success(request, "Invoice created successfully.")
+            return redirect('invoice_detail', invoice_id=invoice.id)
+    else:
+        form = InvoiceForm(initial={'work_order': work_order})
+
+    # Only allow selecting completed work orders
+    form.fields['work_order'].queryset = WorkOrder.objects.filter(status='completed')
+
+    return render(request, 'invoices/invoice_form.html', {
+        'form': form,
+        'client_id': work_order.client.id if work_order else None,
+        'events': events,
+    })
+
+
+
 # ---------- NEW AJAX VIEWS BELOW ----------
 # ---------- AJAX VIEWS ----------
 
