@@ -934,10 +934,11 @@ from django.utils import timezone
 
 class Invoice(models.Model):
     STATUS_CHOICES = [
-        ('unpaid', 'Unpaid'),
-        ('paid', 'Paid'),
-        ('overdue', 'Overdue'),
+        ('unpaid', 'Not in QuickBooks'),
+        ('paid', 'In QuickBooks'),
+        ('overdue', 'Overdue'),  # This one stays the same unless you want a new label
     ]
+
     
     invoice_number = models.CharField(max_length=50, unique=True, blank=True)
     client = models.ForeignKey('clients.Client', on_delete=models.CASCADE, related_name='invoices')
@@ -1059,73 +1060,6 @@ def invoice_detail(request, invoice_id):
     return render(request, 'invoices/invoice_detail.html', {
         'invoice': invoice,
         'events': events,
-    })
-
-@login_required
-def invoice_create(request):
-    client_id = request.GET.get('client') or request.POST.get('client')
-    work_order_id = request.GET.get('work_order') or request.POST.get('work_order')
-
-    events = []
-    initial_data = {}
-
-    if work_order_id:
-        wo = get_object_or_404(WorkOrder, id=work_order_id)
-        client_id = wo.client.id
-        events = wo.events.all()
-        initial_data['client'] = client_id
-        initial_data['work_order'] = work_order_id
-    elif client_id:
-        initial_data['client'] = client_id
-
-    if request.method == 'POST':
-        form = InvoiceForm(request.POST)
-
-        # Set correct queryset to avoid validation error
-        if client_id:
-            form.fields['client'].queryset = Client.objects.filter(id=client_id)
-            form.fields['work_order'].queryset = WorkOrder.objects.filter(
-                client_id=client_id,
-                status='completed'
-            )
-        else:
-            form.fields['client'].queryset = Client.objects.none()
-            form.fields['work_order'].queryset = WorkOrder.objects.none()
-
-        form.fields['status'].initial = 'unpaid'
-
-        if form.is_valid():
-            invoice = form.save(commit=False)
-            cid = request.POST.get('client')
-            if cid:
-                invoice.client = get_object_or_404(Client, id=cid)
-            invoice.save()
-
-            # ✅ Auto-mark WorkOrder as invoiced
-            if invoice.work_order:
-                invoice.work_order.invoiced = True
-                invoice.work_order.save(update_fields=["invoiced"])
-                messages.success(request, "Invoice created and work order marked as invoiced.")
-
-            return redirect('invoice_list')
-
-    else:
-        form = InvoiceForm(initial={**initial_data, 'status': 'unpaid'})
-        if client_id:
-            form.fields['client'].queryset = Client.objects.filter(id=client_id)
-            form.fields['work_order'].queryset = WorkOrder.objects.filter(
-                client_id=client_id,
-                status='completed'
-            )
-        else:
-            form.fields['client'].queryset = Client.objects.none()
-            form.fields['work_order'].queryset = WorkOrder.objects.none()
-
-    return render(request, 'invoices/invoice_form.html', {
-        'form': form,
-        'events': events,
-        'invoice': None,
-        'client_id': client_id,
     })
 
 
@@ -1258,28 +1192,9 @@ def ajax_get_active_workorders(request):
 ===== invoices/forms.py =====
 from django import forms
 from .models import Invoice
-from clients.models import Client
 from workorders.models import WorkOrder
 
 class InvoiceForm(forms.ModelForm):
-    client = forms.ModelChoiceField(
-        queryset=Client.objects.all(),  # Use all() so form always validates client ID
-        widget=forms.Select(attrs={
-            'class': 'form-control select2',
-            'style': 'width: 100%;',
-            'placeholder': 'Search for a client...',
-        })
-    )
-    work_order = forms.ModelChoiceField(
-        queryset=WorkOrder.objects.none(),
-        required=False,
-        widget=forms.Select(attrs={
-            'class': 'form-control select2',
-            'style': 'width: 100%;',
-            'placeholder': 'Select a work order...',
-            'disabled': 'disabled',
-        })
-    )
     due_date = forms.DateField(
         widget=forms.DateInput(attrs={
             'class': 'form-control datepicker',
@@ -1287,38 +1202,21 @@ class InvoiceForm(forms.ModelForm):
         })
     )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        client_id = None
-
-        if 'client' in self.data:
-            client_id = self.data.get('client')
-        elif 'client' in self.initial:
-            client_id = self.initial.get('client')
-        elif self.instance and self.instance.pk:
-            client_id = self.instance.client_id
-
-        try:
-            client_id = int(client_id)
-            self.fields['work_order'].queryset = WorkOrder.objects.filter(
-                client_id=client_id,
-                status='completed'
-            )
-            self.fields['work_order'].widget.attrs.pop('disabled', None)
-        except (TypeError, ValueError):
-            self.fields['work_order'].queryset = WorkOrder.objects.none()
-
     class Meta:
         model = Invoice
         fields = [
-            'client',
             'work_order',
             'due_date',
             'amount',
             'status',
             'notes',
         ]
+        widgets = {
+            'work_order': forms.Select(attrs={'class': 'form-control select2'}),
+            'amount': forms.NumberInput(attrs={'class': 'form-control'}),
+            'status': forms.Select(attrs={'class': 'form-control'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
 
 
 ===== invoices/urls.py =====
@@ -1327,7 +1225,7 @@ from . import views
 
 urlpatterns = [
     path('', views.invoice_list, name='invoice_list'),
-    path('create/', views.invoice_create, name='invoice_create'),
+   # path('create/', views.invoice_create, name='invoice_create'),
     path('<int:invoice_id>/', views.invoice_detail, name='invoice_detail'),
     path('<int:invoice_id>/edit/', views.invoice_update, name='invoice_update'),
     path('<int:invoice_id>/delete/', views.invoice_delete, name='invoice_delete'),
@@ -1349,7 +1247,27 @@ urlpatterns = [
 from django.contrib import admin
 from .models import Invoice
 
-admin.site.register(Invoice)
+@admin.register(Invoice)
+class InvoiceAdmin(admin.ModelAdmin):
+    list_display = ('invoice_number', 'client', 'amount', 'status', 'due_date', 'date_created')
+    list_filter = ('status', 'due_date', 'date_created')
+    search_fields = ('invoice_number', 'client__name')
+    ordering = ('-date_created',)
+    date_hierarchy = 'due_date'
+    readonly_fields = ['date_created']
+
+    fieldsets = (
+        (None, {
+            'fields': ('invoice_number', 'client', 'work_order', 'amount', 'status')
+        }),
+        ('Dates', {
+            'fields': ('due_date', 'date_created', 'updated_at')
+        }),
+        ('Additional Info', {
+            'fields': ('notes',),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 ===== django_project/settings.py =====
@@ -1798,8 +1716,6 @@ application = get_wsgi_application()
     <div class="card-body">
       <!-- Legend -->
       <div class="mb-3">
-        <span class="badge bg-success me-2">Paid Invoice</span>
-        <span class="badge bg-danger me-2">Unpaid Invoice</span>
         <span class="badge bg-secondary me-2">Work Order Events</span>
         <small class="d-block text-muted mt-1">
           Work order events are color-coded uniquely per job.
@@ -1830,11 +1746,8 @@ document.addEventListener("DOMContentLoaded", function () {
     height: 'auto',
     events: async function(fetchInfo, success, fail) {
       try {
-        const [wo, inv] = await Promise.all([
-          fetch("/workorders/calendar-data/workorders/").then(r => r.json()),
-          fetch("/invoices/calendar-data/invoices/").then(r => r.json())
-        ]);
-        success([...wo, ...inv]);
+        const workOrders = await fetch("/workorders/calendar-data/workorders/").then(r => r.json());
+        success(workOrders);  // ✅ Only load Work Order events
       } catch (e) {
         console.error("Calendar fetch error:", e);
         fail(e);
@@ -1864,16 +1777,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
 {% block content %}
   {% now "m-d-y" as today %}
-  <div class="btn-group mb-3">
-    <a href="{% url 'home' %}" class="btn btn-outline-secondary">Month</a>
-    <a href="{% url 'calendar_app:week_detail' today %}" class="btn btn-outline-secondary">Week</a>
-    <a href="{% url 'calendar_app:day_detail' today %}" class="btn btn-outline-primary">Day</a>
+
+  <!-- View Switcher Buttons -->
+  <div class="mb-3 text-center">
+    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+      <a href="{% url 'home' %}" class="btn btn-outline-secondary w-100 w-sm-auto">Month</a>
+      <a href="{% url 'calendar_app:week_detail' today %}" class="btn btn-outline-primary w-100 w-sm-auto">Week</a>
+      <a href="{% url 'calendar_app:day_detail' today %}" class="btn btn-outline-secondary w-100 w-sm-auto">Day</a>
+    </div>
   </div>
 
+  <!-- Search -->
   <form method="get" class="mb-3">
     <input type="text" name="q" class="form-control" placeholder="Search…" value="{{ query }}">
   </form>
 
+  <!-- Calendar -->
   <div id="calendar" class="mb-5"></div>
 
   <!-- Printable Details -->
@@ -1896,17 +1815,6 @@ document.addEventListener("DOMContentLoaded", function () {
       <p>No events scheduled.</p>
     {% endif %}
 
-    {% if invoices %}
-      <h5 class="mt-4">Invoices Due</h5>
-      <ul class="list-group">
-        {% for inv in invoices %}
-          <li class="list-group-item text-danger">
-            Invoice {{ inv.invoice_number }} for {{ inv.client.name }} – ${{ inv.amount }}
-          </li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-
     <button onclick="window.print()" class="btn btn-secondary mt-4">🖨️ Print This Page</button>
   </div>
 {% endblock %}
@@ -1916,11 +1824,8 @@ document.addEventListener("DOMContentLoaded", function () {
 document.addEventListener("DOMContentLoaded", function () {
   async function fetchSources(info, success, fail) {
     try {
-      const [wo, inv] = await Promise.all([
-        fetch("/workorders/calendar-data/workorders/").then(r => r.json()),
-        fetch("/invoices/calendar-data/invoices/").then(r => r.json())
-      ]);
-      success([...wo, ...inv]);
+      const wo = await fetch("/workorders/calendar-data/workorders/").then(r => r.json());
+      success(wo);  // 🔥 Removed invoice events
     } catch (e) {
       console.error("Calendar fetch error:", e);
       fail(e);
@@ -1957,16 +1862,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
 {% block content %}
   {% now "m-d-y" as today %}
-  <div class="btn-group mb-3">
-    <a href="{% url 'home' %}" class="btn btn-outline-secondary">Month</a>
-    <a href="{% url 'calendar_app:week_detail' start|date:"m-d-y" %}" class="btn btn-outline-primary">Week</a>
-    <a href="{% url 'calendar_app:day_detail' start|date:"m-d-y" %}" class="btn btn-outline-secondary">Day</a>
+
+  <!-- View Navigation Buttons -->
+  <div class="mb-3 text-center">
+    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+      <a href="{% url 'home' %}" class="btn btn-outline-secondary w-100 w-sm-auto">Month</a>
+      <a href="{% url 'calendar_app:week_detail' today %}" class="btn btn-outline-primary w-100 w-sm-auto">Week</a>
+      <a href="{% url 'calendar_app:day_detail' today %}" class="btn btn-outline-secondary w-100 w-sm-auto">Day</a>
+    </div>
   </div>
 
+  <!-- Search -->
   <form method="get" class="mb-3">
     <input type="text" name="q" class="form-control" placeholder="Search…" value="{{ query }}">
   </form>
 
+  <!-- Calendar -->
   <div id="calendar"></div>
 {% endblock %}
 
@@ -1980,11 +1891,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
   async function fetchSources(info, success, fail) {
     try {
-      const [wo, inv] = await Promise.all([
-        fetch("/workorders/calendar-data/workorders/").then(r => r.json()),
-        fetch("/invoices/calendar-data/invoices/").then(r => r.json())
-      ]);
-      success([...wo, ...inv]);
+      const wo = await fetch("/workorders/calendar-data/workorders/").then(r => r.json());
+      success(wo);  // 🔥 Removed invoice events
     } catch (e) {
       console.error("Calendar fetch error:", e);
       fail(e);
@@ -2043,19 +1951,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
 ===== templates/invoices/invoice_paid.html =====
 {% extends "base.html" %}
-{% block title %}Paid Invoices{% endblock %}
+{% block title %}In QuickBooks{% endblock %}
+
 {% block content %}
 <div class="container">
-  <h2 class="mb-4">Paid Invoices</h2>
-  
-  <!-- Navigation Buttons for Invoice Categories -->
+  <h2 class="mb-4">In QuickBooks</h2>
+
+  <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
-    <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger me-2">Unpaid Invoices</a>
-    <a href="{% url 'invoice_paid' %}" class="btn btn-outline-danger me-2">Paid Invoices</a>
-    <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue Invoices</a>
-    <a href="{% url 'invoice_create' %}" class="btn btn-danger">New Invoice</a>
+    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-success w-100 w-sm-auto">In QuickBooks</a>
+      <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger w-100 w-sm-auto">Not in QuickBooks</a>
+      <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-warning w-100 w-sm-auto">Overdue</a>
+    </div>
   </div>
-  
+
   <!-- Search Bar -->
   <form method="get" class="mb-4">
     <div class="input-group">
@@ -2063,64 +1973,65 @@ document.addEventListener("DOMContentLoaded", function () {
       <button type="submit" class="btn btn-primary">Search</button>
     </div>
   </form>
-  
+
   <div class="card shadow-sm">
-    <div class="card-header bg-info text-white">Paid Invoices</div>
-    <div class="card-body">
+    <div class="card-header bg-success text-white">In QuickBooks</div>
+    <div class="card-body p-0">
       {% if invoices %}
-      <table class="table table-sm">
-        <thead>
-          <tr>
-            <th>Invoice Number</th>
-            <th>Client</th>
-            <th>Amount</th>
-            <th>Date Created</th>
-            <th>Due Date</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for inv in invoices %}
-          <tr>
-            <td>{{ inv.invoice_number }}</td>
-            <td>{{ inv.client.name }}</td>
-            <td>${{ inv.amount }}</td>
-            <td>{{ inv.date_created|date:"m-d-y" }}</td>
-            <td>{{ inv.due_date|date:"m-d-y" }}</td>
-            <td>
-              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
-              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead class="small">
+            <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            {% for inv in invoices %}
+            <tr>
+              <td>{{ inv.invoice_number }}</td>
+              <td>{{ inv.client.name }}</td>
+              <td>${{ inv.amount }}</td>
+              <td>
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                  <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
       {% else %}
-      <p>No paid invoices found.</p>
+      <p class="p-3 mb-0">No paid invoices found.</p>
       {% endif %}
     </div>
   </div>
-  <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">Back to Invoice Overview</a>
-  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+
+  <!-- Navigation Buttons -->
+  <div class="text-center mt-4">
+    <a href="{% url 'invoice_list' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Invoice Overview</a>
+    <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+  </div>
 </div>
 {% endblock %}
 
 
 ===== templates/invoices/invoice_unpaid.html =====
 {% extends "base.html" %}
-{% block title %}Unpaid Invoices{% endblock %}
+{% block title %}Not in QuickBooks{% endblock %}
+
 {% block content %}
 <div class="container">
-  <h2 class="mb-4">Unpaid Invoices</h2>
-  
-  <!-- Navigation Buttons for Invoice Categories -->
+  <h2 class="mb-4">Not in QuickBooks</h2>
+
+  <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
-    <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger me-2">Unpaid Invoices</a>
-    <a href="{% url 'invoice_paid' %}" class="btn btn-outline-danger me-2">Paid Invoices</a>
-    <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue Invoices</a>
-    <a href="{% url 'invoice_create' %}" class="btn btn-danger">New Invoice</a>
+    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-success w-100 w-sm-auto">In QuickBooks</a>
+      <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger w-100 w-sm-auto">Not in QuickBooks</a>
+      <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-warning w-100 w-sm-auto">Overdue</a>
+    </div>
   </div>
-  
+
   <!-- Search Bar -->
   <form method="get" class="mb-4">
     <div class="input-group">
@@ -2128,49 +2039,47 @@ document.addEventListener("DOMContentLoaded", function () {
       <button type="submit" class="btn btn-primary">Search</button>
     </div>
   </form>
-  
+
   <div class="card shadow-sm">
-    <div class="card-header bg-info text-white">Unpaid Invoices</div>
-    <div class="card-body">
+    <div class="card-header bg-danger text-white">Not in QuickBooks</div>
+    <div class="card-body p-0">
       {% if invoices %}
-      <table class="table table-sm">
-        <thead>
-          <tr>
-            <th>Invoice Number</th>
-            <th>Client</th>
-            <th>Amount</th>
-            <th>Date Created</th>
-            <th>Due Date</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for inv in invoices %}
-          <tr>
-            <td>{{ inv.invoice_number }}</td>
-            <td>{{ inv.client.name }}</td>
-            <td>${{ inv.amount }}</td>
-            <td>{{ inv.date_created|date:"m-d-y" }}</td>
-            <td>{{ inv.due_date|date:"m-d-y" }}</td>
-            <td>
-              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
-              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
-              <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" style="display:inline;">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-success">Mark as Paid</button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead class="small">
+            <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            {% for inv in invoices %}
+            <tr>
+              <td>{{ inv.invoice_number }}</td>
+              <td>{{ inv.client.name }}</td>
+              <td>${{ inv.amount }}</td>
+              <td>
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                  <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                  <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="w-100 w-sm-auto">{% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success w-100">Mark as Paid</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
       {% else %}
-      <p>No unpaid invoices found.</p>
+      <p class="p-3 mb-0">No unpaid invoices found.</p>
       {% endif %}
     </div>
   </div>
-  <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">Back to Invoice Overview</a>
-  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+
+  <!-- Navigation Buttons -->
+  <div class="text-center mt-4">
+    <a href="{% url 'invoice_list' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Invoice Overview</a>
+    <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+  </div>
 </div>
 {% endblock %}
 
@@ -2179,14 +2088,39 @@ document.addEventListener("DOMContentLoaded", function () {
 {% extends "base.html" %}
 {% block title %}Delete Invoice{% endblock %}
 {% block content %}
-<div class="container">
-  <h2>Delete Invoice {{ invoice.invoice_number }}</h2>
-  <p>Are you sure you want to delete this invoice?</p>
-  <form method="post">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-danger">Yes, delete it</button>
-    <a href="{% url 'invoice_detail' invoice.id %}" class="btn btn-secondary">Cancel</a>
-  </form>
+<div class="container py-4">
+
+  <!-- Navigation Buttons -->
+  <div class="mb-4 text-center">
+    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+      <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger w-100 w-sm-auto">Not In QuickBooks</a>
+      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-success w-100 w-sm-auto">In QuickBooks</a>
+      <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-warning w-100 w-sm-auto">Overdue</a>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation -->
+  <div class="card shadow-sm">
+    <div class="card-header bg-danger text-white">
+      <h5 class="mb-0">Delete Invoice #{{ invoice.invoice_number }}</h5>
+    </div>
+    <div class="card-body">
+      <p>Are you sure you want to delete this invoice?</p>
+      <form method="post">
+        {% csrf_token %}
+        <div class="d-flex flex-column flex-sm-row gap-2">
+          <button type="submit" class="btn btn-danger w-100 w-sm-auto">Yes, Delete It</button>
+          <a href="{% url 'invoice_detail' invoice.id %}" class="btn btn-secondary w-100 w-sm-auto">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="text-center mt-4">
+    <a href="{% url 'invoice_list' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Invoices</a>
+    <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+  </div>
+
 </div>
 {% endblock %}
 
@@ -2194,18 +2128,20 @@ document.addEventListener("DOMContentLoaded", function () {
 ===== templates/invoices/invoice_overdue.html =====
 {% extends "base.html" %}
 {% block title %}Overdue Invoices{% endblock %}
+
 {% block content %}
 <div class="container">
-  <h2 class="mb-4">Overdue Invoices</h2>
-  
-  <!-- Navigation Buttons for Invoice Categories -->
+  <h2 class="mb-4">Overdue Invoices - Not In Use</h2>
+
+  <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
-    <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger me-2">Unpaid Invoices</a>
-    <a href="{% url 'invoice_paid' %}" class="btn btn-outline-danger me-2">Paid Invoices</a>
-    <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue Invoices</a>
-    <a href="{% url 'invoice_create' %}" class="btn btn-danger">New Invoice</a>
+    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-success w-100 w-sm-auto">In QuickBooks</a>
+      <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger w-100 w-sm-auto">Not in QuickBooks</a>
+      <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-warning w-100 w-sm-auto">Overdue</a>
+    </div>
   </div>
-  
+
   <!-- Search Bar -->
   <form method="get" class="mb-4">
     <div class="input-group">
@@ -2213,49 +2149,47 @@ document.addEventListener("DOMContentLoaded", function () {
       <button type="submit" class="btn btn-primary">Search</button>
     </div>
   </form>
-  
+
   <div class="card shadow-sm">
-    <div class="card-header bg-info text-white">Overdue Invoices</div>
-    <div class="card-body">
+    <div class="card-header bg-warning text-dark">Overdue Invoices</div>
+    <div class="card-body p-0">
       {% if invoices %}
-      <table class="table table-sm">
-        <thead>
-          <tr>
-            <th>Invoice Number</th>
-            <th>Client</th>
-            <th>Amount</th>
-            <th>Date Created</th>
-            <th>Due Date</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for inv in invoices %}
-          <tr>
-            <td>{{ inv.invoice_number }}</td>
-            <td>{{ inv.client.name }}</td>
-            <td>${{ inv.amount }}</td>
-            <td>{{ inv.date_created|date:"m-d-y" }}</td>
-            <td>{{ inv.due_date|date:"m-d-y" }}</td>
-            <td>
-              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
-              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
-              <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" style="display:inline;">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-success">Mark as Paid</button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead class="small">
+            <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            {% for inv in invoices %}
+            <tr>
+              <td>{{ inv.invoice_number }}</td>
+              <td>{{ inv.client.name }}</td>
+              <td>${{ inv.amount }}</td>
+              <td>
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                  <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                  <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="w-100 w-sm-auto">{% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success w-100">Mark as Paid</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
       {% else %}
-      <p>No overdue invoices found.</p>
+      <p class="p-3 mb-0">No overdue invoices found.</p>
       {% endif %}
     </div>
   </div>
-  <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">Back to Invoice Overview</a>
-  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+
+  <!-- Navigation -->
+  <div class="text-center mt-4">
+    <a href="{% url 'invoice_list' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Invoice Overview</a>
+    <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+  </div>
 </div>
 {% endblock %}
 
@@ -2292,7 +2226,16 @@ document.addEventListener("DOMContentLoaded", function() {
 {% block content %}
 <div class="container">
   <h2 class="mb-4">Invoice Overview</h2>
-  
+
+  <!-- Navigation Buttons -->
+  <div class="mb-4 text-center">
+    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-success w-100 w-sm-auto">In QuickBooks</a>
+      <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger w-100 w-sm-auto">Not in QuickBooks</a>
+      <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-warning w-100 w-sm-auto">Overdue</a>
+    </div>
+  </div>
+
   <!-- Search Bar -->
   <form method="get" class="mb-4">
     <div class="input-group">
@@ -2300,195 +2243,164 @@ document.addEventListener("DOMContentLoaded", function() {
       <button type="submit" class="btn btn-primary">Search</button>
     </div>
   </form>
-  
-  <!-- Navigation Buttons for Invoice Categories -->
-  <div class="mb-4 text-center">
-    <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger me-2">Unpaid Invoices</a>
-    <a href="{% url 'invoice_paid' %}" class="btn btn-outline-danger me-2">Paid Invoices</a>
-    <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue Invoices</a>
-    <a href="{% url 'invoice_create' %}" class="btn btn-danger">New Invoice</a>
-  </div>
-  
-  <!-- Unpaid Invoices Card -->
+
+  <!-- Not In QuickBooks -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header bg-danger text-white">
-      <h4>Unpaid Invoices</h4>
+    <div class="card-header bg-danger text-white position-relative">
+      <h5 class="mb-0">
+        <a href="{% url 'invoice_unpaid' %}" class="stretched-link text-white text-decoration-none">Not in QuickBooks</a>
+      </h5>
     </div>
-    <div class="card-body">
+    <div class="card-body p-0">
       {% if unpaid_invoices %}
-      <table class="table table-sm">
-        <thead>
-          <tr>
-            <th>Invoice Number</th>
-            <th>Client</th>
-            <th>Amount</th>
-            <th>Date Created</th>
-            <th>Due Date</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for inv in unpaid_invoices %}
-          <tr>
-            <td>{{ inv.invoice_number }}</td>
-            <td>{{ inv.client.name }}</td>
-            <td>${{ inv.amount }}</td>
-            <td>{{ inv.date_created|date:"m-d-y" }}</td>
-            <td>{{ inv.due_date|date:"m-d-y" }}</td>
-            <td>
-              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
-              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
-              <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" style="display:inline;">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-success">Mark as Paid</button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <p>No unpaid invoices found.</p>
-      {% endif %}
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead class="small">
+            <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            {% for inv in unpaid_invoices %}
+            <tr>
+              <td>{{ inv.invoice_number }}</td>
+              <td>{{ inv.client.name }}</td>
+              <td>${{ inv.amount }}</td>
+              <td>
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                  <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                  <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="w-100 w-sm-auto">{% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success w-100">Mark in QuickBooks</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}<p class="p-3 mb-0">No unpaid invoices found.</p>{% endif %}
     </div>
   </div>
-  
-  <!-- Paid Invoices Card -->
+
+  <!-- In QuickBooks -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header bg-success text-white">
-      <h4>Paid Invoices</h4>
+    <div class="card-header bg-success text-white position-relative">
+      <h5 class="mb-0">
+        <a href="{% url 'invoice_paid' %}" class="stretched-link text-white text-decoration-none">In QuickBooks</a>
+      </h5>
     </div>
-    <div class="card-body">
+    <div class="card-body p-0">
       {% if paid_invoices %}
-      <table class="table table-sm">
-        <thead>
-          <tr>
-            <th>Invoice Number</th>
-            <th>Client</th>
-            <th>Amount</th>
-            <th>Date Created</th>
-            <th>Due Date</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for inv in paid_invoices %}
-          <tr>
-            <td>{{ inv.invoice_number }}</td>
-            <td>{{ inv.client.name }}</td>
-            <td>${{ inv.amount }}</td>
-            <td>{{ inv.date_created|date:"m-d-y" }}</td>
-            <td>{{ inv.due_date|date:"m-d-y" }}</td>
-            <td>
-              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
-              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <p>No paid invoices found.</p>
-      {% endif %}
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead class="small">
+            <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            {% for inv in paid_invoices %}
+            <tr>
+              <td>{{ inv.invoice_number }}</td>
+              <td>{{ inv.client.name }}</td>
+              <td>${{ inv.amount }}</td>
+              <td>
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                  <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}<p class="p-3 mb-0">No paid invoices found.</p>{% endif %}
     </div>
   </div>
-  
-  <!-- Overdue Invoices Card -->
+
+  <!-- Overdue Invoices -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header bg-warning text-white">
-      <h4>Overdue Invoices</h4>
+    <div class="card-header bg-warning text-white position-relative">
+      <h5 class="mb-0">
+        <a href="{% url 'invoice_overdue' %}" class="stretched-link text-white text-decoration-none">Overdue Invoices</a>
+      </h5>
     </div>
-    <div class="card-body">
+    <div class="card-body p-0">
       {% if overdue_invoices %}
-      <table class="table table-sm">
-        <thead>
-          <tr>
-            <th>Invoice Number</th>
-            <th>Client</th>
-            <th>Amount</th>
-            <th>Date Created</th>
-            <th>Due Date</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for inv in overdue_invoices %}
-          <tr>
-            <td>{{ inv.invoice_number }}</td>
-            <td>{{ inv.client.name }}</td>
-            <td>${{ inv.amount }}</td>
-            <td>{{ inv.date_created|date:"m-d-y" }}</td>
-            <td>{{ inv.due_date|date:"m-d-y" }}</td>
-            <td>
-              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
-              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
-              <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#dueDateModal" data-invoice-id="{{ inv.id }}">
-                Set Paid Date
-              </button>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <p>No overdue invoices found.</p>
-      {% endif %}
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead class="small">
+            <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            {% for inv in overdue_invoices %}
+            <tr>
+              <td>{{ inv.invoice_number }}</td>
+              <td>{{ inv.client.name }}</td>
+              <td>${{ inv.amount }}</td>
+              <td>
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                  <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                  <button type="button" class="btn btn-sm btn-success w-100 w-sm-auto" data-bs-toggle="modal" data-bs-target="#dueDateModal" data-invoice-id="{{ inv.id }}">
+                    Set Paid Date
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}<p class="p-3 mb-0">No overdue invoices found.</p>{% endif %}
     </div>
   </div>
-  
-  <!-- Back Navigation -->
-  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+
+  <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto mt-3">Back to Dashboard</a>
 </div>
 
-<!-- Due Date Modal -->
+<!-- Modal for Setting Paid Date -->
 <div class="modal fade" id="dueDateModal" tabindex="-1" aria-labelledby="dueDateModalLabel" aria-hidden="true">
   <div class="modal-dialog">
-    <form method="post" id="dueDateForm">
-      {% csrf_token %}
+    <form method="post" id="dueDateForm">{% csrf_token %}
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="dueDateModalLabel">Set Paid Date</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <p>Select the paid date:</p>
-          <input type="text" name="new_due_date" class="form-control datepicker" placeholder="m-d-y" required>
+          <input type="text" name="new_due_date" class="form-control datepicker" placeholder="YYYY-MM-DD" required>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-success">Update Due Date</button>
+          <button type="submit" class="btn btn-success">Update</button>
         </div>
       </div>
     </form>
   </div>
 </div>
+{% endblock %}
 
 {% block extra_js %}
 <script>
-document.addEventListener("DOMContentLoaded", function() {
-  // Initialize Flatpickr for date inputs in the modal
+document.addEventListener("DOMContentLoaded", function () {
   flatpickr(".datepicker", { dateFormat: "Y-m-d" });
-  
-  // Set the action URL for the due date modal based on the invoice ID
-  var dueDateModal = document.getElementById('dueDateModal');
-  dueDateModal.addEventListener('show.bs.modal', function (event) {
-    var button = event.relatedTarget;
-    var invoiceId = button.getAttribute('data-invoice-id');
-    var form = document.getElementById('dueDateForm');
-    form.action = '/invoices/' + invoiceId + '/update_due_date/';
+
+  const dueDateModal = document.getElementById("dueDateModal");
+  dueDateModal.addEventListener("show.bs.modal", function (event) {
+    const button = event.relatedTarget;
+    const invoiceId = button.getAttribute("data-invoice-id");
+    const form = document.getElementById("dueDateForm");
+    form.action = `/invoices/${invoiceId}/update_due_date/`;
   });
 });
 </script>
-{% endblock %}
 {% endblock %}
 
 
 ===== templates/invoices/invoice_form.html =====
 {% extends "base.html" %}
 {% load crispy_forms_tags static %}
-{% block title %}
-  {% if invoice %}Edit Invoice{% else %}Create Invoice{% endif %}
-{% endblock %}
+{% block title %}Edit Invoice{% endblock %}
 
 {% block extra_css %}
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -2497,16 +2409,15 @@ document.addEventListener("DOMContentLoaded", function() {
 
 {% block content %}
 <div class="container">
-  <h2 class="mb-4">
-    {% if invoice %}Edit Invoice{% else %}Create Invoice{% endif %}
-  </h2>
+  <h2 class="mb-4">Edit Invoice</h2>
 
   <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
-    <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger me-2">Unpaid</a>
-    <a href="{% url 'invoice_paid' %}" class="btn btn-outline-danger me-2">Paid</a>
-    <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue</a>
-    <a href="{% url 'invoice_create' %}" class="btn btn-danger">New</a>
+    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+      <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-primary w-100 w-sm-auto">Not In QuickBooks</a>
+      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-success w-100 w-sm-auto">In QuickBooks</a>
+      <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-warning w-100 w-sm-auto">Overdue</a>
+    </div>
   </div>
 
   <!-- Events List -->
@@ -2523,30 +2434,14 @@ document.addEventListener("DOMContentLoaded", function() {
     </div>
   {% endif %}
 
-  {# Load Client for Work Order selection #}
-  {% if not invoice %}
-    <form method="get" class="mb-4">
-      {{ form.client|as_crispy_field }}
-      <button type="submit" class="btn btn-outline-primary">Load Jobs</button>
-    </form>
-  {% endif %}
-
+  <!-- Invoice Form -->
   <form method="post" id="invoice-form">
     {% csrf_token %}
-    <input 
-    type="hidden" 
-    name="client" 
-    value="{{ client_id }}"
-  >
-  <input 
-    type="hidden" 
-    name="status" 
-    value="unpaid"
-  >
-  
+    <input type="hidden" name="client" value="{{ client_id }}">
+    <input type="hidden" name="status" value="unpaid">
+
     {{ form.work_order|as_crispy_field }}
 
-    <!-- Amount with $ prefix -->
     <div class="mb-3">
       <label for="id_amount" class="form-label">Amount</label>
       <div class="input-group">
@@ -2558,13 +2453,14 @@ document.addEventListener("DOMContentLoaded", function() {
     {{ form.due_date|as_crispy_field }}
     {{ form.notes|as_crispy_field }}
 
-    <button type="submit" class="btn btn-success">
-      {% if invoice %}Update Invoice{% else %}Create Invoice{% endif %}
-    </button>
+    <button type="submit" class="btn btn-success">Update Invoice</button>
   </form>
 
-  <a href="{% url 'invoice_list' %}" class="btn btn-secondary mt-3">Back to Invoice Overview</a>
-  <a href="{% url 'home' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+  <!-- Navigation Links -->
+  <div class="mt-4 text-center">
+    <a href="{% url 'invoice_list' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Invoice Overview</a>
+    <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+  </div>
 </div>
 {% endblock %}
 
@@ -2577,7 +2473,6 @@ document.addEventListener("DOMContentLoaded", function () {
   const clientSelect = $('#id_client');
   const workOrderSelect = document.getElementById('id_work_order');
 
-  // Initialize Select2
   clientSelect.select2({
     placeholder: 'Search for a client…',
     allowClear: true,
@@ -2591,7 +2486,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Fetch completed work orders when client selected
   clientSelect.on('select2:select', function (e) {
     const clientId = e.params.data.id;
 
@@ -2628,10 +2522,7 @@ document.addEventListener("DOMContentLoaded", function () {
       });
   });
 
-  // Initialize Flatpickr on due date input
-  flatpickr("#id_due_date", {
-    dateFormat: "Y-m-d"
-  });
+  flatpickr("#id_due_date", { dateFormat: "Y-m-d" });
 });
 </script>
 {% endblock %}
@@ -2641,16 +2532,20 @@ document.addEventListener("DOMContentLoaded", function () {
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
 {% block title %}Invoice Detail{% endblock %}
+
 {% block content %}
 <div class="container">
-  <!-- Navigation Buttons for Invoice Categories -->
+
+  <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
-    <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger me-2">Unpaid Invoices</a>
-    <a href="{% url 'invoice_paid' %}" class="btn btn-outline-danger me-2">Paid Invoices</a>
-    <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-danger me-2">Overdue Invoices</a>
-    <a href="{% url 'invoice_create' %}" class="btn btn-danger">New Invoice</a>
+    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
+      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-success w-100 w-sm-auto">In QuickBooks</a>
+      <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger w-100 w-sm-auto">Not in QuickBooks</a>
+      <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-warning w-100 w-sm-auto">Overdue</a>
+    </div>
   </div>
-  
+
+  <!-- Invoice Details Card -->
   <div class="card shadow-sm mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
       <h2>Invoice {{ invoice.invoice_number }} Details</h2>
@@ -2669,7 +2564,7 @@ document.addEventListener("DOMContentLoaded", function () {
       {% if invoice.notes %}
         <p><strong>Notes:</strong> {{ invoice.notes }}</p>
       {% endif %}
-      
+
       {% if invoice.work_order %}
       <hr>
       <h4>Associated Work Order Details</h4>
@@ -2677,21 +2572,19 @@ document.addEventListener("DOMContentLoaded", function () {
       <p><strong>Description:</strong> {{ invoice.work_order.job_description }}</p>
       <p><strong>Estimated Cost:</strong> ${{ invoice.work_order.estimated_cost }}</p>
       <p><strong>Status:</strong> {{ invoice.work_order.get_status_display }}</p>
-      
+
       {% if events %}
       <hr>
       <h4>Scheduled Events</h4>
       <ul>
         {% for event in events %}
-          <li>
-            <strong>{{ event.get_event_type_display }}:</strong>
-            {{ event.address }} — {{ event.date|date:"Y-m-d" }}
-          </li>
+        <li>
+          <strong>{{ event.get_event_type_display }}:</strong>
+          {{ event.address }} — {{ event.date|date:"Y-m-d" }}
+        </li>
         {% endfor %}
       </ul>
       {% endif %}
-    
-      
       {% else %}
         <p><strong>Work Order:</strong> Not linked</p>
       {% endif %}
@@ -2700,23 +2593,20 @@ document.addEventListener("DOMContentLoaded", function () {
       <button class="btn btn-primary" onclick="window.print();">Print Invoice</button>
     </div>
   </div>
-  
+
   <!-- Navigation Row -->
-  <div class="mt-4 d-flex justify-content-between">
-    <div>
-      <a href="{% url 'invoice_list' %}" class="btn btn-secondary">Back to Invoice Overview</a>
-      <a href="{% url 'home' %}" class="btn btn-secondary">Back to Dashboard</a>
+  <div class="mt-4 d-flex justify-content-between flex-column flex-sm-row gap-2">
+    <div class="d-flex flex-column flex-sm-row gap-2">
+      <a href="{% url 'invoice_list' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Invoice Overview</a>
+      <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
     </div>
-    <div>
-      <a href="{% url 'invoice_delete' invoice.id %}" class="btn btn-danger">Delete Invoice</a>
-    </div>
+    <a href="{% url 'invoice_delete' invoice.id %}" class="btn btn-danger w-100 w-sm-auto">Delete Invoice</a>
   </div>
 </div>
 {% endblock %}
 
 
 ===== templates/base.html =====
-<!-- templates/base.html -->
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
@@ -2735,9 +2625,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   <!-- Custom CSS -->
   <link rel="stylesheet" href="{% static 'css/custom.css' %}">
-
   <link href="https://fonts.cdnfonts.com/css/open-dyslexic" rel="stylesheet">
-
 
   <!-- FullCalendar CSS -->
   <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
@@ -2807,10 +2695,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
         <h6 class="text-uppercase mt-4 mb-2">Invoicing</h6>
         <a href="{% url 'invoice_list' %}" class="list-group-item list-group-item-action"><i class="bi bi-receipt me-2"></i>Overview</a>
-        <a href="{% url 'invoice_unpaid' %}" class="list-group-item list-group-item-action text-danger"><i class="bi bi-clock me-2"></i>Unpaid</a>
-        <a href="{% url 'invoice_paid' %}" class="list-group-item list-group-item-action text-success"><i class="bi bi-check2-circle me-2"></i>Paid</a>
+        <a href="{% url 'invoice_unpaid' %}" class="list-group-item list-group-item-action text-danger"><i class="bi bi-clock me-2"></i>Not In QuickBooks</a>
+        <a href="{% url 'invoice_paid' %}" class="list-group-item list-group-item-action text-success"><i class="bi bi-check2-circle me-2"></i>In QuickBooks</a>
         <a href="{% url 'invoice_overdue' %}" class="list-group-item list-group-item-action text-warning"><i class="bi bi-exclamation-circle me-2"></i>Overdue</a>
-        <a href="{% url 'invoice_create' %}" class="list-group-item list-group-item-action text-danger"><i class="bi bi-plus-circle me-2"></i>New Invoice</a>
       </div>
     </div>
   </div>
@@ -2820,7 +2707,7 @@ document.addEventListener("DOMContentLoaded", function () {
     {% block content %}{% endblock %}
   </main>
 
-    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+  <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
     {% if messages %}
       {% for message in messages %}
         <div class="toast align-items-center text-white bg-success border-0 show" role="alert" aria-live="assertive" aria-atomic="true">
@@ -2881,9 +2768,10 @@ document.addEventListener("DOMContentLoaded", function () {
   <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
     <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
-      <a href="{% url 'pending_jobs' %}" class="btn btn-outline-primary w-100 w-sm-auto">Pending Jobs</a>
-      <a href="{% url 'scheduled_jobs' %}" class="btn btn-outline-primary w-100 w-sm-auto">Scheduled Jobs</a>
-      <a href="{% url 'completed_jobs' %}" class="btn btn-outline-primary w-100 w-sm-auto">Completed Jobs</a>
+      <a href="{% url 'pending_jobs' %}" class="btn btn-outline-primary w-100">Pending Jobs</a>
+      <a href="{% url 'scheduled_jobs' %}" class="btn btn-outline-primary w-100">Scheduled Jobs</a>
+      <a href="{% url 'completed_jobs' %}" class="btn btn-outline-primary w-100">Completed Jobs</a>
+      <a href="{% url 'workorder_create' %}" class="btn btn-outline-primary w-100">New Work Order</a>
     </div>
   </div>
 
@@ -3628,10 +3516,7 @@ $(document).ready(function() {
                 <div class="d-flex flex-column flex-sm-row gap-2">
                   <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100">View</a>
                   <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100">Edit</a>
-                  <form method="get" action="{% url 'invoice_create' %}" class="w-100">
-                    <input type="hidden" name="work_order" value="{{ job.id }}">
-                    <button type="submit" class="btn btn-sm btn-primary w-100">Create Invoice</button>
-                  </form>
+                  <button type="button" class="btn btn-sm btn-primary w-100" onclick="createInvoice({{ job.id }})">Create Invoice</button>
                 </div>
               </td>
             </tr>
