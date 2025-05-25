@@ -183,7 +183,6 @@ def invoice_overdue(request):
         )
     return render(request, 'invoices/invoice_overdue.html', {'invoices': invoices, 'query': query})
 
-
 @login_required
 def invoice_create(request):
     work_order_id = request.GET.get('work_order')
@@ -205,9 +204,12 @@ def invoice_create(request):
             invoice.status = 'unpaid'
             invoice.date_created = timezone.now()
 
+            # 🔧 Auto-assign client from work_order
             if work_order:
+                invoice.client = work_order.client
                 invoice.work_order = work_order
-                invoice.client = work_order.client  # ✅ set the client here
+                work_order.invoiced = True  # ✅ Mark as invoiced
+                work_order.save()
 
             invoice.save()
             messages.success(request, "Invoice created successfully.")
@@ -215,7 +217,7 @@ def invoice_create(request):
     else:
         form = InvoiceForm(initial={'work_order': work_order})
 
-    # Only allow selecting completed work orders
+    # Limit work order choices to completed ones
     form.fields['work_order'].queryset = WorkOrder.objects.filter(status='completed')
 
     return render(request, 'invoices/invoice_form.html', {
