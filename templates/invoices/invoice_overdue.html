@@ -8,9 +8,9 @@
   <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
     <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
-      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-success w-100 w-sm-auto">In QuickBooks</a>
-      <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger w-100 w-sm-auto">Not in QuickBooks</a>
-      <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-warning w-100 w-sm-auto">Overdue</a>
+      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-success w-100 w-sm-auto">In QuickBooks - Paid</a>
+      <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger w-100 w-sm-auto">Not in QuickBooks - Unpaid</a>
+      <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-warning w-100 w-sm-auto">Overdue - Ignore</a>
     </div>
   </div>
 
@@ -23,7 +23,7 @@
   </form>
 
   <div class="card shadow-sm">
-    <div class="card-header bg-warning text-dark">Overdue Invoices</div>
+    <div class="card-header bg-warning text-dark">Overdue Invoices - Ignore</div>
     <div class="card-body p-0">
       {% if invoices %}
       <div class="table-responsive">

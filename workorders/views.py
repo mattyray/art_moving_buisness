@@ -96,10 +96,10 @@ def workorder_list(request):
 
     context = {
         'query': query,
-        'pending_jobs': pending_jobs.order_by('-updated_at'),
-        'scheduled_jobs': scheduled_jobs.order_by('-updated_at'),
-        'completed_invoiced_jobs': completed_invoiced_jobs.order_by('-completed_at')[:3],
-        'completed_uninvoiced_jobs': completed_uninvoiced_jobs.order_by('-completed_at')[:3],
+        'pending_jobs': pending_jobs.order_by('-updated_at')[:5],
+        'scheduled_jobs': scheduled_jobs.order_by('-updated_at')[:5],
+        'completed_invoiced_jobs': completed_invoiced_jobs.order_by('-completed_at')[:5],
+        'completed_uninvoiced_jobs': completed_uninvoiced_jobs.order_by('-completed_at')[:5],
     }
     return render(request, 'workorders/workorder_list.html', context)
 
