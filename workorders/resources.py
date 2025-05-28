@@ -1,13 +1,30 @@
-from import_export import resources
+from import_export import resources, fields
+from import_export.widgets import DateTimeWidget
 from .models import WorkOrder
 
 class WorkOrderResource(resources.ModelResource):
+    completed_at = fields.Field(
+        column_name='completed_at',
+        attribute='completed_at',
+        widget=DateTimeWidget(format='%Y-%m-%d %H:%M:%S')
+    )
+    created_at = fields.Field(
+        column_name='created_at',
+        attribute='created_at',
+        widget=DateTimeWidget(format='%Y-%m-%d %H:%M:%S')
+    )
+    updated_at = fields.Field(
+        column_name='updated_at',
+        attribute='updated_at',
+        widget=DateTimeWidget(format='%Y-%m-%d %H:%M:%S')
+    )
+
     class Meta:
         model = WorkOrder
-        import_id_fields = ['id']  # You can skip this if you're not importing with IDs
+        import_id_fields = ['id']
         fields = (
             'id',
-            'client',          # This must match a valid Client ID
+            'client',
             'job_description',
             'estimated_cost',
             'status',
@@ -20,4 +37,4 @@ class WorkOrderResource(resources.ModelResource):
         report_skipped = True
 
     def skip_row(self, instance, original, row, import_validation_errors=None):
-        return not instance.job_description  # Skip empty jobs
+        return not instance.job_description
