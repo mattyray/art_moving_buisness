@@ -24,7 +24,7 @@ class WorkOrderResource(resources.ModelResource):
         import_id_fields = ['id']
         fields = (
             'id',
-            'client',
+            'client_id',  # 👈 change this from 'client'
             'job_description',
             'estimated_cost',
             'status',

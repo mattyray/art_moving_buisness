@@ -7,7 +7,7 @@ from .resources import ClientResource
 @admin.register(Client)
 class ClientAdmin(ImportExportModelAdmin):
     resource_class = ClientResource
-    list_display = ('name', 'email', 'phone', 'address')
+    list_display = ('id', 'name', 'email', 'phone', 'address')
 
 
 
