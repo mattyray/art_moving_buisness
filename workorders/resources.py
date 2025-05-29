@@ -1,8 +1,14 @@
 from import_export import resources, fields
-from import_export.widgets import DateTimeWidget
+from import_export.widgets import ForeignKeyWidget, DateTimeWidget
 from .models import WorkOrder
+from clients.models import Client
 
 class WorkOrderResource(resources.ModelResource):
+    client = fields.Field(
+        column_name='client_id',
+        attribute='client',
+        widget=ForeignKeyWidget(Client, 'id')  # 👈 Tells it to lookup Client by ID
+    )
     completed_at = fields.Field(
         column_name='completed_at',
         attribute='completed_at',
@@ -24,7 +30,7 @@ class WorkOrderResource(resources.ModelResource):
         import_id_fields = ['id']
         fields = (
             'id',
-            'client_id',  # 👈 change this from 'client'
+            'client',  # 👈 Must match the attribute name
             'job_description',
             'estimated_cost',
             'status',
