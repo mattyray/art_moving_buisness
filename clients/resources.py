@@ -4,8 +4,8 @@ from .models import Client
 class ClientResource(resources.ModelResource):
     class Meta:
         model = Client
-        import_id_fields = []
-        fields = ('id', 'name', 'email', 'phone', 'address')  # 👈 added 'id'
+        import_id_fields = ['id']
+        fields = ('id', 'name', 'email', 'phone', 'address')
         skip_unchanged = True
         report_skipped = True
 
