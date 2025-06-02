@@ -1,23 +1,41 @@
 #!/bin/bash
 
-# Set timestamp
-TIMESTAMP=$(date +%F)
-
-# Set output paths
+# Set environment
+DATE=$(date +%Y-%m-%d)
 BACKUP_DIR="backups"
-JSON_FILE="$BACKUP_DIR/full_backup_${TIMESTAMP}.json"
-B64_FILE="$BACKUP_DIR/full_backup_${TIMESTAMP}.b64"
+JSON_FILE="$BACKUP_DIR/full_backup_${DATE}.json"
+B64_FILE="$BACKUP_DIR/full_backup_${DATE}.b64"
+DUMP_FILE="$BACKUP_DIR/full_backup_${DATE}.dump"
+EMAIL="mnraynor90@gmail.com"
+APP_NAME="art-moving-buisness"
 
-# Dump production database using Heroku (with quoted command)
-echo "Dumping Heroku production database..."
-heroku run --app art-moving-buisness "python manage.py dumpdata --natural-foreign --natural-primary -e contenttypes -e auth.permission --indent 2" > "$JSON_FILE"
+echo "📦 Dumping Heroku production database as JSON..."
+heroku run --app $APP_NAME python manage.py dumpdata > "$JSON_FILE"
 
-# Encode JSON to base64 (macOS syntax)
-echo "Encoding JSON to base64..."
+if [ ! -s "$JSON_FILE" ]; then
+  echo "❌ JSON dump failed or file is empty."
+  exit 1
+fi
+
+echo "🔐 Encoding JSON to base64..."
 base64 -i "$JSON_FILE" -o "$B64_FILE"
+
+echo "📦 Downloading raw .dump of production database..."
+heroku pg:backups:capture --app $APP_NAME
+heroku pg:backups:download --app $APP_NAME --output "$DUMP_FILE"
+
+if [ ! -s "$DUMP_FILE" ]; then
+  echo "❌ .dump file generation failed."
+  exit 1
+fi
 
 echo "✅ Backup complete:"
 echo "- JSON: $JSON_FILE"
 echo "- Base64: $B64_FILE"
+echo "- .dump: $DUMP_FILE"
 
-echo "Backup for $DATE completed successfully." | mail -s "Database Backup Complete - $DATE" mnraynor90@gmail.com
+# Email confirmation
+echo "Backup completed on $DATE. Files created:
+- $JSON_FILE
+- $B64_FILE
+- $DUMP_FILE" | mail -s "🎯 Backup Completed for Art Moving DB ($DATE)" "$EMAIL"
