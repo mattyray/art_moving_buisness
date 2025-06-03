@@ -14,10 +14,10 @@
     </div>
   </div>
 
-  <!-- Uninvoiced Section -->
+  <!-- Completed – Not Yet Paid -->
   <div class="card mb-4">
     <div class="card-header bg-warning text-dark">
-      <h5 class="mb-0">Completed – Not Yet Invoiced</h5>
+      <h5 class="mb-0">Completed – Not Yet Paid</h5>
     </div>
     <div class="card-body p-0">
       {% if uninvoiced_jobs %}
@@ -50,15 +50,15 @@
         </table>
       </div>
       {% else %}
-      <p class="p-3 mb-0">No uninvoiced jobs found.</p>
+      <p class="p-3 mb-0">No completed jobs awaiting payment.</p>
       {% endif %}
     </div>
   </div>
 
-  <!-- Invoiced Section -->
+  <!-- Completed – Paid -->
   <div class="card mb-4">
     <div class="card-header bg-success text-white">
-      <h5 class="mb-0">Completed – Invoiced</h5>
+      <h5 class="mb-0">Completed – Paid</h5>
     </div>
     <div class="card-body p-0">
       {% if invoiced_jobs %}
@@ -90,7 +90,7 @@
         </table>
       </div>
       {% else %}
-      <p class="p-3 mb-0">No invoiced jobs found.</p>
+      <p class="p-3 mb-0">No paid jobs found.</p>
       {% endif %}
     </div>
   </div>

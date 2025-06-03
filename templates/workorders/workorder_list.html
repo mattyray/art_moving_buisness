@@ -84,11 +84,11 @@
     </div>
   </div>
 
-  <!-- Completed – Not Yet Invoiced -->
+  <!-- Completed – Not Yet Invoiced -->  <!-- Completed – Not Yet Paid -->
   <div class="card mb-4">
     <div class="card-header bg-warning text-dark position-relative">
       <h5 class="mb-0">
-        <a href="{% url 'completed_jobs' %}" class="stretched-link text-dark text-decoration-none">Completed – Not Yet Invoiced</a>
+        <a href="{% url 'completed_jobs' %}" class="stretched-link text-dark text-decoration-none">Completed – Not Yet Paid</a>
       </h5>
     </div>
     <div class="card-body p-0">
@@ -114,15 +114,15 @@
           </tbody>
         </table>
       </div>
-      {% else %}<p class="p-3 mb-0">No completed jobs awaiting invoicing.</p>{% endif %}
+      {% else %}<p class="p-3 mb-0">No completed jobs awaiting payment.</p>{% endif %}
     </div>
   </div>
 
-  <!-- Completed – Invoiced -->
+  <!-- Completed – Paid -->
   <div class="card mb-4">
     <div class="card-header bg-success text-white position-relative">
       <h5 class="mb-0">
-        <a href="{% url 'completed_jobs' %}" class="stretched-link text-white text-decoration-none">Completed – Invoiced</a>
+        <a href="{% url 'completed_jobs' %}" class="stretched-link text-white text-decoration-none">Completed – Paid</a>
       </h5>
     </div>
     <div class="card-body p-0">
@@ -147,9 +147,10 @@
           </tbody>
         </table>
       </div>
-      {% else %}<p class="p-3 mb-0">No invoiced jobs found.</p>{% endif %}
+      {% else %}<p class="p-3 mb-0">No paid jobs found.</p>{% endif %}
     </div>
   </div>
+
 
   <!-- Back to Dashboard -->
   <div class="text-center">
