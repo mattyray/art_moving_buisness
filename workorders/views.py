@@ -24,10 +24,9 @@ def workorder_pdf(request, pk):
     return response
 
 
-
 @login_required
 def workorder_calendar_data(request):
-    """Returns scheduled events for calendar display, color‐coding events by work order."""
+    """Returns scheduled and completed events for calendar display, excluding pending jobs."""
     events = []
 
     # A simple palette to pick a distinct color per work order:
@@ -38,7 +37,7 @@ def workorder_calendar_data(request):
     def get_color(wo_id):
         return palette[wo_id % len(palette)]
 
-    # Scheduled Event objects (only non‐completed jobs)
+    # Scheduled Event objects (only non-completed jobs)
     scheduled_events = Event.objects.filter(
         date__isnull=False,
         work_order__status__in=["pending", "in_progress"]
@@ -49,17 +48,6 @@ def workorder_calendar_data(request):
             "start": evt.date.isoformat(),
             "color": get_color(evt.work_order.id),
             "url": f"/workorders/detail/{evt.work_order.id}/",
-        })
-
-    # Pending jobs (no scheduled events yet)
-    pending_jobs = WorkOrder.objects.exclude(events__date__isnull=False)\
-                                    .filter(status__in=["pending", "in_progress"])
-    for wo in pending_jobs:
-        events.append({
-            "title": f"Pending: {wo.client.name}",
-            "start": wo.created_at.date().isoformat(),
-            "color": "gray",
-            "url": f"/workorders/detail/{wo.id}/",
         })
 
     # Completed jobs
@@ -73,6 +61,7 @@ def workorder_calendar_data(request):
         })
 
     return JsonResponse(events, safe=False)
+
 
 @login_required
 def workorder_list(request):
