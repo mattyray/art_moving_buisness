@@ -84,7 +84,7 @@
     </div>
   </div>
 
-  <!-- Completed – Not Yet Invoiced -->  <!-- Completed – Not Yet Paid -->
+  <!-- Completed – Not Yet Paid -->
   <div class="card mb-4">
     <div class="card-header bg-warning text-dark position-relative">
       <h5 class="mb-0">
@@ -107,6 +107,9 @@
                   <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100">View</a>
                   <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100">Edit</a>
                   <button type="button" class="btn btn-sm btn-primary w-100" onclick="createInvoice({{ job.id }})">Create Invoice</button>
+                  <form method="post" action="{% url 'mark_paid' job.id %}" class="w-100">{% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success w-100">Mark as Paid</button>
+                  </form>
                 </div>
               </td>
             </tr>
@@ -150,7 +153,6 @@
       {% else %}<p class="p-3 mb-0">No paid jobs found.</p>{% endif %}
     </div>
   </div>
-
 
   <!-- Back to Dashboard -->
   <div class="text-center">

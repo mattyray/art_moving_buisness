@@ -203,6 +203,18 @@ def mark_completed(request, job_id):
         messages.success(request, "Work order marked as completed.")
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('workorder_list')))
 
+@login_required
+def mark_paid(request, job_id):
+    workorder = get_object_or_404(WorkOrder, id=job_id)
+
+    if workorder.status == 'completed' and not workorder.invoiced:
+        workorder.invoiced = True
+        workorder.save()
+        messages.success(request, f"Work order #{job_id} marked as paid.")
+
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('completed_jobs')))
+
+
 
 @login_required
 def workorder_detail(request, job_id):
