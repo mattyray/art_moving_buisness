@@ -37,4 +37,4 @@ echo "- Base64: $B64_FILE"
 echo "- .dump: $DUMP_FILE"
 
 # Email confirmation
-echo -e "✅ Daily backup completed successfully on $DATE.\n\nFiles created:\n- $JSON_FILE\n- $B64_FILE\n- $DUMP_FILE" | mail -s "🎯 Backup Completed for Art Moving DB ($DATE)" "$EMAIL"
+echo -e "✅ Daily backup completed successfully on $DATE.\n\nFiles created:\n- $JSON_FILE\n- $B64_FILE\n- $DUMP_FILE" | msmtp "$EMAIL"
