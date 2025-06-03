@@ -14,6 +14,8 @@ urlpatterns = [
     path('mark_completed/<int:job_id>/', views.mark_completed, name='mark_completed'),
 
     path('detail/<int:job_id>/', views.workorder_detail, name='workorder_detail'),
+    path('mark_paid/<int:job_id>/', views.mark_paid, name='mark_paid'),
+
 
     # Calendar JSON API
     path("calendar-data/workorders/", views.workorder_calendar_data, name="workorder_calendar_data"),
