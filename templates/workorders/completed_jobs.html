@@ -42,6 +42,9 @@
                   <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
                   <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
                   <button type="button" class="btn btn-sm btn-primary w-100 w-sm-auto" onclick="createInvoice({{ job.id }})">Create Invoice</button>
+                  <form method="post" action="{% url 'mark_paid' job.id %}" class="w-100">{% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success w-100 w-sm-auto">Mark as Paid</button>
+                  </form>
                 </div>
               </td>
             </tr>
