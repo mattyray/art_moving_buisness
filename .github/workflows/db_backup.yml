@@ -8,6 +8,8 @@ on:
 jobs:
   backup:
     runs-on: ubuntu-latest
+    env:
+      HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
     steps:
       - name: Checkout Repo (Required for Actions)
         uses: actions/checkout@v3
@@ -15,11 +17,6 @@ jobs:
       - name: Install Heroku CLI
         run: |
           curl https://cli-assets.heroku.com/install.sh | sh
-
-      - name: Heroku Login
-        run: echo "${{ secrets.HEROKU_API_KEY }}" | heroku auth:token
-        env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
 
       - name: Trigger Heroku DB Backup
         run: heroku pg:backups:capture --app ${{ secrets.HEROKU_APP_NAME }}
