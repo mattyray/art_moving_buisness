@@ -18,17 +18,42 @@ jobs:
         run: |
           curl https://cli-assets.heroku.com/install.sh | sh
 
-      - name: Trigger Heroku DB Backup
+      - name: Trigger Heroku PG Backup (.dump format)
         run: heroku pg:backups:capture --app ${{ secrets.HEROKU_APP_NAME }}
 
-      - name: Download Latest Backup as JSON
+      - name: Download .dump file
         run: |
           BACKUP_URL=$(heroku pg:backups:url --app ${{ secrets.HEROKU_APP_NAME }})
-          curl -o full_backup_$(date +%F).json "$BACKUP_URL"
-          echo "Downloaded: full_backup_$(date +%F).json"
+          curl -o full_backup_$(date +%F).dump "$BACKUP_URL"
+          echo "Downloaded .dump backup"
 
-      - name: Upload Backup Artifact
+      - name: Dump readable JSON via manage.py
+        run: |
+          heroku run python manage.py dumpdata --app ${{ secrets.HEROKU_APP_NAME }} > full_backup_$(date +%F).json
+          echo "Dumped Django JSON fixture"
+
+      - name: Upload Both Backup Files
         uses: actions/upload-artifact@v4
         with:
           name: full_backup_${{ github.run_id }}
-          path: full_backup_*.json
+          path: |
+            full_backup_*.json
+            full_backup_*.dump
+
+    # Notify on failure
+    if: failure()
+    steps:
+      - name: Send failure notification email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "❌ DB Backup Failed: ${{ github.workflow }}"
+          to: mnraynor90@gmail.com
+          from: GitHub Actions <${{ secrets.EMAIL_USERNAME }}>
+          body: |
+            The daily database backup for ${{ secrets.HEROKU_APP_NAME }} failed.
+
+            Check the logs here: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
