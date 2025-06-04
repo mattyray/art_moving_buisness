@@ -40,8 +40,10 @@ jobs:
             full_backup_*.json
             full_backup_*.dump
 
-    # Notify on failure
+  notify-on-failure:
+    needs: backup
     if: failure()
+    runs-on: ubuntu-latest
     steps:
       - name: Send failure notification email
         uses: dawidd6/action-send-mail@v3
@@ -56,4 +58,5 @@ jobs:
           body: |
             The daily database backup for ${{ secrets.HEROKU_APP_NAME }} failed.
 
-            Check the logs here: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Check the logs here:
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
