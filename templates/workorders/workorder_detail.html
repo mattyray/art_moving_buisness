@@ -29,6 +29,40 @@
     </div>
   </div>
 
+  <!-- Client Information -->
+  <div class="card mb-4">
+    <div class="card-header bg-info text-white">
+      <h5 class="mb-0">Client Information</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Name:</strong> {{ job.client.name }}</p>
+          <p class="mb-1"><strong>Email:</strong> {{ job.client.email|default:"Not provided" }}</p>
+          <p class="mb-1"><strong>Phone:</strong> {{ job.client.phone|default:"Not provided" }}</p>
+        </div>
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Service Address:</strong> {{ job.client.address|default:"Not provided" }}</p>
+          <p class="mb-1"><strong>Billing Address:</strong> 
+            {% if job.client.billing_address %}
+              {{ job.client.billing_address }}
+            {% else %}
+              <em>Same as service address</em>
+            {% endif %}
+          </p>
+        </div>
+      </div>
+      <div class="mt-3">
+        <a href="{% url 'client_detail' job.client.id %}" class="btn btn-sm btn-outline-info">
+          <i class="bi bi-person-circle me-1"></i>View Full Client Profile
+        </a>
+        <a href="{% url 'client_edit' job.client.id %}" class="btn btn-sm btn-outline-warning">
+          <i class="bi bi-pencil me-1"></i>Edit Client Info
+        </a>
+      </div>
+    </div>
+  </div>
+
   <!-- Scheduled Events -->
   <div class="card mb-4">
     <div class="card-header bg-primary text-white">
