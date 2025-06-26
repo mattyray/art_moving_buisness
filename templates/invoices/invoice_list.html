@@ -7,9 +7,9 @@
   <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
     <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
-      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-success w-100 w-sm-auto">In QuickBooks - Paid</a>
-      <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger w-100 w-sm-auto">Not in QuickBooks - Unpaid</a>
-      <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-warning w-100 w-sm-auto">Overdue - Ignore</a>
+      <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger w-100 w-sm-auto">Not in QuickBooks</a>
+      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-warning w-100 w-sm-auto">In QuickBooks</a>
+      <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-success w-100 w-sm-auto">Paid</a>
     </div>
   </div>
 
@@ -25,7 +25,7 @@
   <div class="card shadow-sm mb-4">
     <div class="card-header bg-danger text-white position-relative">
       <h5 class="mb-0">
-        <a href="{% url 'invoice_unpaid' %}" class="stretched-link text-white text-decoration-none">Not in QuickBooks - Unpaid</a>
+        <a href="{% url 'invoice_unpaid' %}" class="stretched-link text-white text-decoration-none">Not in QuickBooks</a>
       </h5>
     </div>
     <div class="card-body p-0">
@@ -46,7 +46,7 @@
                   <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
                   <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
                   <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="w-100 w-sm-auto">{% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-success w-100">Mark in QuickBooks - Paid</button>
+                    <button type="submit" class="btn btn-sm btn-success w-100">Mark as In QuickBooks</button>
                   </form>
                 </div>
               </td>
@@ -61,9 +61,9 @@
 
   <!-- In QuickBooks -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header bg-success text-white position-relative">
+    <div class="card-header bg-warning text-white position-relative">
       <h5 class="mb-0">
-        <a href="{% url 'invoice_paid' %}" class="stretched-link text-white text-decoration-none">In QuickBooks - Paid</a>
+        <a href="{% url 'invoice_paid' %}" class="stretched-link text-white text-decoration-none">In QuickBooks</a>
       </h5>
     </div>
     <div class="card-body p-0">
@@ -83,6 +83,9 @@
                 <div class="d-flex flex-column flex-sm-row gap-2">
                   <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
                   <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                  <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="w-100 w-sm-auto">{% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success w-100">Mark as Paid</button>
+                  </form>
                 </div>
               </td>
             </tr>
@@ -90,15 +93,15 @@
           </tbody>
         </table>
       </div>
-      {% else %}<p class="p-3 mb-0">No paid invoices found.</p>{% endif %}
+      {% else %}<p class="p-3 mb-0">No invoices in QuickBooks found.</p>{% endif %}
     </div>
   </div>
 
-  <!-- Overdue Invoices -->
+  <!-- Paid Invoices -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header bg-warning text-white position-relative">
+    <div class="card-header bg-success text-white position-relative">
       <h5 class="mb-0">
-        <a href="{% url 'invoice_overdue' %}" class="stretched-link text-white text-decoration-none">Overdue Invoices</a>
+        <a href="{% url 'invoice_overdue' %}" class="stretched-link text-white text-decoration-none">Paid</a>
       </h5>
     </div>
     <div class="card-body p-0">
@@ -118,9 +121,6 @@
                 <div class="d-flex flex-column flex-sm-row gap-2">
                   <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
                   <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                  <button type="button" class="btn btn-sm btn-success w-100 w-sm-auto" data-bs-toggle="modal" data-bs-target="#dueDateModal" data-invoice-id="{{ inv.id }}">
-                    Set Paid Date
-                  </button>
                 </div>
               </td>
             </tr>
@@ -128,47 +128,10 @@
           </tbody>
         </table>
       </div>
-      {% else %}<p class="p-3 mb-0">No overdue invoices found.</p>{% endif %}
+      {% else %}<p class="p-3 mb-0">No paid invoices found.</p>{% endif %}
     </div>
   </div>
 
   <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto mt-3">Back to Dashboard</a>
 </div>
-
-<!-- Modal for Setting Paid Date -->
-<div class="modal fade" id="dueDateModal" tabindex="-1" aria-labelledby="dueDateModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <form method="post" id="dueDateForm">{% csrf_token %}
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="dueDateModalLabel">Set Paid Date</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <input type="text" name="new_due_date" class="form-control datepicker" placeholder="YYYY-MM-DD" required>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-success">Update</button>
-        </div>
-      </div>
-    </form>
-  </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  flatpickr(".datepicker", { dateFormat: "Y-m-d" });
-
-  const dueDateModal = document.getElementById("dueDateModal");
-  dueDateModal.addEventListener("show.bs.modal", function (event) {
-    const button = event.relatedTarget;
-    const invoiceId = button.getAttribute("data-invoice-id");
-    const form = document.getElementById("dueDateForm");
-    form.action = `/invoices/${invoiceId}/update_due_date/`;
-  });
-});
-</script>
 {% endblock %}
