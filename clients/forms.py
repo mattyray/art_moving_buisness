@@ -4,4 +4,4 @@ from .models import Client
 class ClientForm(forms.ModelForm):
     class Meta:
         model = Client
-        fields = ['name', 'email', 'phone', 'address']
+        fields = ['name', 'email', 'phone', 'address', 'billing_address']  # ✅ ADDED billing_address
