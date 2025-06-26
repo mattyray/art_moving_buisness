@@ -18,14 +18,12 @@ def invoice_delete(request, invoice_id):
         return redirect('invoice_list')
     return render(request, 'invoices/invoice_confirm_delete.html', {'invoice': invoice})
 
-# ❌ REMOVED: invoice_calendar_data - invoices no longer on calendar
-
 @login_required
 def invoice_list(request):
     query = request.GET.get('q', '')
     unpaid_invoices = Invoice.objects.filter(status='unpaid')
-    in_quickbooks_invoices = Invoice.objects.filter(status='in_quickbooks')  # ✅ Updated
-    paid_invoices = Invoice.objects.filter(status='paid')  # ✅ Updated
+    in_quickbooks_invoices = Invoice.objects.filter(status='in_quickbooks')
+    paid_invoices = Invoice.objects.filter(status='paid')
     
     if query:
         unpaid_invoices = unpaid_invoices.filter(
@@ -45,8 +43,8 @@ def invoice_list(request):
     context = {
         'query': query,
         'unpaid_invoices': unpaid_invoices,
-        'paid_invoices': in_quickbooks_invoices,  # ✅ Template expects 'paid_invoices'
-        'overdue_invoices': paid_invoices,  # ✅ Template expects 'overdue_invoices'
+        'paid_invoices': in_quickbooks_invoices,  # Template expects 'paid_invoices' for middle section
+        'overdue_invoices': paid_invoices,  # Template expects 'overdue_invoices' for final section
     }
     return render(request, 'invoices/invoice_list.html', context)
 
@@ -82,7 +80,7 @@ def invoice_update(request, invoice_id):
     if invoice.client:
         form.fields['work_order'].queryset = WorkOrder.objects.filter(
             client=invoice.client,
-            status='completed'  # ✅ Only completed work orders
+            status='completed'
         )
 
     # Handle save
@@ -93,7 +91,7 @@ def invoice_update(request, invoice_id):
     return render(request, 'invoices/invoice_form.html', {
         'form': form,
         'events': events,
-        'invoice': invoice,  # so template knows this is "edit" mode
+        'invoice': invoice,
     })
 
 @login_required
@@ -103,15 +101,13 @@ def mark_invoice_paid(request, invoice_id):
     if invoice.status == 'unpaid':
         invoice.status = 'in_quickbooks'
         invoice.save()
-        messages.warning(request, "Invoice marked as In QuickBooks.")  # ✅ Yellow toast
+        messages.warning(request, "Invoice marked as In QuickBooks.")
     elif invoice.status == 'in_quickbooks':
         invoice.status = 'paid'
         invoice.save()
-        messages.success(request, "Invoice marked as Paid.")  # ✅ Green toast
+        messages.success(request, "Invoice marked as Paid.")
     
     return redirect('invoice_list')
-
-# ❌ REMOVED: update_due_date - no more due dates
 
 @login_required
 def get_workorders_for_client(request):
@@ -119,6 +115,7 @@ def get_workorders_for_client(request):
     work_orders = WorkOrder.objects.filter(client_id=client_id).values('id', 'job_description', 'estimated_cost')
     return JsonResponse(list(work_orders), safe=False)
 
+# ✅ RENAMED: invoice_unpaid (already had correct name)
 @login_required
 def invoice_unpaid(request):
     query = request.GET.get('q', '')
@@ -129,25 +126,27 @@ def invoice_unpaid(request):
         )
     return render(request, 'invoices/invoice_unpaid.html', {'invoices': invoices, 'query': query})
 
+# ✅ RENAMED: invoice_paid -> invoice_in_quickbooks (shows 'in_quickbooks' status)
+@login_required
+def invoice_in_quickbooks(request):
+    query = request.GET.get('q', '')
+    invoices = Invoice.objects.filter(status='in_quickbooks').order_by('-date_created')
+    if query:
+        invoices = invoices.filter(
+            Q(invoice_number__icontains=query) | Q(client__name__icontains=query)
+        )
+    return render(request, 'invoices/invoice_in_quickbooks.html', {'invoices': invoices, 'query': query})
+
+# ✅ RENAMED: invoice_overdue -> invoice_paid (shows 'paid' status)
 @login_required
 def invoice_paid(request):
     query = request.GET.get('q', '')
-    invoices = Invoice.objects.filter(status='in_quickbooks').order_by('-date_created')  # ✅ Updated
+    invoices = Invoice.objects.filter(status='paid').order_by('-date_created')
     if query:
         invoices = invoices.filter(
             Q(invoice_number__icontains=query) | Q(client__name__icontains=query)
         )
     return render(request, 'invoices/invoice_paid.html', {'invoices': invoices, 'query': query})
-
-@login_required
-def invoice_overdue(request):
-    query = request.GET.get('q', '')
-    invoices = Invoice.objects.filter(status='paid').order_by('-date_created')  # ✅ Updated
-    if query:
-        invoices = invoices.filter(
-            Q(invoice_number__icontains=query) | Q(client__name__icontains=query)
-        )
-    return render(request, 'invoices/invoice_overdue.html', {'invoices': invoices, 'query': query})
 
 @login_required
 def invoice_create(request):
@@ -170,11 +169,10 @@ def invoice_create(request):
             invoice.status = 'unpaid'
             invoice.date_created = timezone.now()
 
-            # 🔧 Auto-assign client from work_order
             if work_order:
                 invoice.client = work_order.client
                 invoice.work_order = work_order
-                work_order.invoiced = True  # ✅ Mark as invoiced
+                work_order.invoiced = True
                 work_order.save()
 
             invoice.save()
@@ -183,7 +181,6 @@ def invoice_create(request):
     else:
         form = InvoiceForm(initial={'work_order': work_order})
 
-    # Limit work order choices to completed ones
     form.fields['work_order'].queryset = WorkOrder.objects.filter(status='completed')
 
     return render(request, 'invoices/invoice_form.html', {
@@ -204,9 +201,7 @@ def ajax_get_clients(request):
 
 @login_required
 def ajax_get_active_workorders(request):
-    """
-    Return JSON list of completed work orders for a given client.
-    """
+    """Return JSON list of completed work orders for a given client."""
     client_id = request.GET.get('client_id')
     if not client_id:
         return JsonResponse([], safe=False)
