@@ -87,8 +87,8 @@
         <h6 class="text-uppercase mt-4 mb-2">Invoicing</h6>
         <a href="{% url 'invoice_list' %}" class="list-group-item list-group-item-action"><i class="bi bi-receipt me-2"></i>Overview</a>
         <a href="{% url 'invoice_unpaid' %}" class="list-group-item list-group-item-action text-danger"><i class="bi bi-clock me-2"></i>Not In QuickBooks</a>
-        <a href="{% url 'invoice_paid' %}" class="list-group-item list-group-item-action text-success"><i class="bi bi-check2-circle me-2"></i>In QuickBooks</a>
-        <a href="{% url 'invoice_overdue' %}" class="list-group-item list-group-item-action text-warning"><i class="bi bi-exclamation-circle me-2"></i>Overdue</a>
+        <a href="{% url 'invoice_in_quickbooks' %}" class="list-group-item list-group-item-action text-warning"><i class="bi bi-hourglass me-2"></i>In QuickBooks</a>
+        <a href="{% url 'invoice_paid' %}" class="list-group-item list-group-item-action text-success"><i class="bi bi-check2-circle me-2"></i>Paid</a>
       </div>
     </div>
   </div>
