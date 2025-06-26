@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags static %}
-{% block title %}Edit Invoice{% endblock %}
+{% block title %}{% if creating %}Create Invoice{% else %}Edit Invoice{% endif %}{% endblock %}
 
 {% block extra_css %}
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -8,7 +8,7 @@
 
 {% block content %}
 <div class="container">
-  <h2 class="mb-4">Edit Invoice</h2>
+  <h2 class="mb-4">{% if creating %}Create Invoice{% else %}Edit Invoice{% endif %}</h2>
 
   <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
@@ -19,8 +19,79 @@
     </div>
   </div>
 
-  <!-- Work Order Information Reference (If Available) -->
-  {% if invoice.work_order %}
+  <!-- Work Order Information Reference (Create Mode) -->
+  {% if creating and work_order %}
+  <div class="card mb-4 bg-light">
+    <div class="card-header bg-info text-white">
+      <h5 class="mb-0">Creating Invoice For This Job</h5>
+    </div>
+    <div class="card-body">
+      
+      <!-- Complete Client Information -->
+      <h6>Client Information</h6>
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Name:</strong> {{ work_order.client.name }}</p>
+          <p class="mb-1"><strong>Email:</strong> {{ work_order.client.email|default:"Not provided" }}</p>
+          <p class="mb-1"><strong>Phone:</strong> {{ work_order.client.phone|default:"Not provided" }}</p>
+        </div>
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Address:</strong> {{ work_order.client.address|default:"Not provided" }}</p>
+          <p class="mb-1"><strong>Billing Address:</strong> 
+            {% if work_order.client.billing_address %}
+              {{ work_order.client.billing_address }}
+            {% else %}
+              <em>Not specified</em>
+            {% endif %}
+          </p>
+        </div>
+      </div>
+
+      <!-- Work Order Details -->
+      <h6>Work Order Details</h6>
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Work Order ID:</strong> {{ work_order.id }}</p>
+          <p class="mb-1"><strong>Status:</strong> {{ work_order.get_status_display }}</p>
+        </div>
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Estimated Cost:</strong> ${{ work_order.estimated_cost }}</p>
+        </div>
+      </div>
+      
+      <!-- Job Description -->
+      {% if work_order.job_description %}
+      <h6>Job Description</h6>
+      <div class="bg-white p-3 rounded border mb-3">
+        {{ work_order.job_description }}
+      </div>
+      {% endif %}
+
+      <!-- Scheduled Events -->
+      {% if events %}
+      <h6>Scheduled Events</h6>
+      <div class="row">
+        {% for event in events %}
+        <div class="col-md-6 mb-2">
+          <div class="card border">
+            <div class="card-body py-2">
+              <h6 class="card-title text-primary mb-1">{{ event.get_event_type_display }}</h6>
+              <p class="card-text mb-1 small"><strong>Date:</strong> {{ event.date|date:"M d, Y" }}</p>
+              <p class="card-text mb-0 small"><strong>Address:</strong> {{ event.address }}</p>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+        <p class="mb-0"><strong>Scheduled Events:</strong> No events scheduled</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Work Order Information Reference (Edit Mode) -->
+  {% if not creating and invoice.work_order %}
   <div class="card mb-4 bg-light">
     <div class="card-header bg-info text-white">
       <h5 class="mb-0">Work Order Reference Information</h5>
@@ -93,7 +164,7 @@
   <!-- Invoice Form -->
   <div class="card">
     <div class="card-header bg-primary text-white">
-      <h5 class="mb-0">Edit Invoice Details</h5>
+      <h5 class="mb-0">{% if creating %}Invoice Details{% else %}Edit Invoice Details{% endif %}</h5>
     </div>
     <div class="card-body">
       <form method="post" id="invoice-form">
@@ -109,18 +180,27 @@
             <span class="input-group-text">$</span>
             {{ form.amount }}
           </div>
+          {% if creating and work_order.estimated_cost %}
+          <small class="form-text text-muted">Pre-filled from work order estimated cost (${{ work_order.estimated_cost }})</small>
+          {% endif %}
         </div>
 
         {{ form.notes|as_crispy_field }}
 
-        <button type="submit" class="btn btn-success">Update Invoice</button>
+        <button type="submit" class="btn btn-success">
+          {% if creating %}Create Invoice{% else %}Update Invoice{% endif %}
+        </button>
       </form>
     </div>
   </div>
 
   <!-- Navigation Links -->
   <div class="mt-4 text-center">
+    {% if creating %}
+    <a href="{% url 'completed_jobs' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Completed Jobs</a>
+    {% else %}
     <a href="{% url 'invoice_list' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Invoice Overview</a>
+    {% endif %}
     <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
   </div>
 </div>
@@ -134,54 +214,56 @@ document.addEventListener("DOMContentLoaded", function () {
   const clientSelect = $('#id_client');
   const workOrderSelect = document.getElementById('id_work_order');
 
-  clientSelect.select2({
-    placeholder: 'Search for a client…',
-    allowClear: true,
-    minimumInputLength: 1,
-    ajax: {
-      url: "{% url 'ajax_get_clients' %}",
-      dataType: 'json',
-      delay: 250,
-      data: params => ({ q: params.term }),
-      processResults: data => ({ results: data })
-    }
-  });
+  if (clientSelect.length) {
+    clientSelect.select2({
+      placeholder: 'Search for a client…',
+      allowClear: true,
+      minimumInputLength: 1,
+      ajax: {
+        url: "{% url 'ajax_get_clients' %}",
+        dataType: 'json',
+        delay: 250,
+        data: params => ({ q: params.term }),
+        processResults: data => ({ results: data })
+      }
+    });
 
-  clientSelect.on('select2:select', function (e) {
-    const clientId = e.params.data.id;
+    clientSelect.on('select2:select', function (e) {
+      const clientId = e.params.data.id;
 
-    workOrderSelect.disabled = true;
-    workOrderSelect.innerHTML = '<option>Loading...</option>';
+      workOrderSelect.disabled = true;
+      workOrderSelect.innerHTML = '<option>Loading...</option>';
 
-    fetch(`/invoices/ajax_get_active_workorders/?client_id=${clientId}`)
-      .then(response => response.json())
-      .then(data => {
-        workOrderSelect.innerHTML = '';
+      fetch(`/invoices/ajax_get_active_workorders/?client_id=${clientId}`)
+        .then(response => response.json())
+        .then(data => {
+          workOrderSelect.innerHTML = '';
 
-        if (data.length === 0) {
-          const opt = document.createElement('option');
-          opt.text = 'No completed work orders';
-          opt.disabled = true;
-          opt.selected = true;
-          workOrderSelect.add(opt);
-        } else {
-          const placeholder = document.createElement('option');
-          placeholder.text = 'Select a work order…';
-          placeholder.disabled = true;
-          placeholder.selected = true;
-          workOrderSelect.add(placeholder);
-
-          data.forEach(item => {
+          if (data.length === 0) {
             const opt = document.createElement('option');
-            opt.value = item.id;
-            opt.text = item.text;
+            opt.text = 'No completed work orders';
+            opt.disabled = true;
+            opt.selected = true;
             workOrderSelect.add(opt);
-          });
-        }
+          } else {
+            const placeholder = document.createElement('option');
+            placeholder.text = 'Select a work order…';
+            placeholder.disabled = true;
+            placeholder.selected = true;
+            workOrderSelect.add(placeholder);
 
-        workOrderSelect.disabled = false;
-      });
-  });
+            data.forEach(item => {
+              const opt = document.createElement('option');
+              opt.value = item.id;
+              opt.text = item.text;
+              workOrderSelect.add(opt);
+            });
+          }
+
+          workOrderSelect.disabled = false;
+        });
+    });
+  }
 });
 </script>
 {% endblock %}
