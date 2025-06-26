@@ -4,7 +4,6 @@
 
 {% block extra_css %}
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet" />
 {% endblock %}
 
 {% block content %}
@@ -14,9 +13,9 @@
   <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
     <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
-      <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-primary w-100 w-sm-auto">Not In QuickBooks</a>
-      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-success w-100 w-sm-auto">In QuickBooks</a>
-      <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-warning w-100 w-sm-auto">Overdue</a>
+      <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger w-100 w-sm-auto">Not In QuickBooks</a>
+      <a href="{% url 'invoice_in_quickbooks' %}" class="btn btn-outline-warning w-100 w-sm-auto">In QuickBooks</a>
+      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-success w-100 w-sm-auto">Paid</a>
     </div>
   </div>
 
@@ -50,7 +49,6 @@
       </div>
     </div>
 
-    {{ form.due_date|as_crispy_field }}
     {{ form.notes|as_crispy_field }}
 
     <button type="submit" class="btn btn-success">Update Invoice</button>
@@ -66,7 +64,6 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -121,8 +118,6 @@ document.addEventListener("DOMContentLoaded", function () {
         workOrderSelect.disabled = false;
       });
   });
-
-  flatpickr("#id_due_date", { dateFormat: "Y-m-d" });
 });
 </script>
 {% endblock %}
