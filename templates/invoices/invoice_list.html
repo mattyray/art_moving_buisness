@@ -8,8 +8,8 @@
   <div class="mb-4 text-center">
     <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
       <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger w-100 w-sm-auto">Not in QuickBooks</a>
-      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-warning w-100 w-sm-auto">In QuickBooks</a>
-      <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-success w-100 w-sm-auto">Paid</a>
+      <a href="{% url 'invoice_in_quickbooks' %}" class="btn btn-outline-warning w-100 w-sm-auto">In QuickBooks</a>
+      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-success w-100 w-sm-auto">Paid</a>
     </div>
   </div>
 
@@ -63,7 +63,7 @@
   <div class="card shadow-sm mb-4">
     <div class="card-header bg-warning text-white position-relative">
       <h5 class="mb-0">
-        <a href="{% url 'invoice_paid' %}" class="stretched-link text-white text-decoration-none">In QuickBooks</a>
+        <a href="{% url 'invoice_in_quickbooks' %}" class="stretched-link text-white text-decoration-none">In QuickBooks</a>
       </h5>
     </div>
     <div class="card-body p-0">
@@ -101,7 +101,7 @@
   <div class="card shadow-sm mb-4">
     <div class="card-header bg-success text-white position-relative">
       <h5 class="mb-0">
-        <a href="{% url 'invoice_overdue' %}" class="stretched-link text-white text-decoration-none">Paid</a>
+        <a href="{% url 'invoice_paid' %}" class="stretched-link text-white text-decoration-none">Paid</a>
       </h5>
     </div>
     <div class="card-body p-0">
