@@ -63,21 +63,17 @@
         <div class="d-md-none">
           {% for inv in unpaid_invoices %}
           <div class="border-bottom p-3">
-            <div class="row align-items-center">
-              <div class="col-8">
-                <div><strong>Invoice #{{ inv.invoice_number }}</strong></div>
-                <div class="text-muted small">{{ inv.client.name }}</div>
-                <div class="text-success">${{ inv.amount }}</div>
-              </div>
-              <div class="col-4">
-                <div class="d-flex flex-column gap-2">
-                  <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100">View</a>
-                  <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100">Edit</a>
-                  <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="w-100">{% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-success w-100">Mark as In QB</button>
-                  </form>
-                </div>
-              </div>
+            <div class="mb-2">
+              <div><strong>Invoice #{{ inv.invoice_number }}</strong></div>
+              <div class="text-muted small">{{ inv.client.name }}</div>
+              <div class="text-success fw-bold">${{ inv.amount }}</div>
+            </div>
+            <div class="d-flex flex-column gap-2">
+              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+              <form method="post" action="{% url 'mark_invoice_paid' inv.id %}">{% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-success w-100">Mark as In QuickBooks</button>
+              </form>
             </div>
           </div>
           {% endfor %}
@@ -128,21 +124,17 @@
         <div class="d-md-none">
           {% for inv in paid_invoices %}
           <div class="border-bottom p-3">
-            <div class="row align-items-center">
-              <div class="col-8">
-                <div><strong>Invoice #{{ inv.invoice_number }}</strong></div>
-                <div class="text-muted small">{{ inv.client.name }}</div>
-                <div class="text-success">${{ inv.amount }}</div>
-              </div>
-              <div class="col-4">
-                <div class="d-flex flex-column gap-2">
-                  <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100">View</a>
-                  <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100">Edit</a>
-                  <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="w-100">{% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-success w-100">Mark as Paid</button>
-                  </form>
-                </div>
-              </div>
+            <div class="mb-2">
+              <div><strong>Invoice #{{ inv.invoice_number }}</strong></div>
+              <div class="text-muted small">{{ inv.client.name }}</div>
+              <div class="text-success fw-bold">${{ inv.amount }}</div>
+            </div>
+            <div class="d-flex flex-column gap-2">
+              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+              <form method="post" action="{% url 'mark_invoice_paid' inv.id %}">{% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-success w-100">Mark as Paid</button>
+              </form>
             </div>
           </div>
           {% endfor %}
@@ -190,18 +182,14 @@
         <div class="d-md-none">
           {% for inv in overdue_invoices %}
           <div class="border-bottom p-3">
-            <div class="row align-items-center">
-              <div class="col-8">
-                <div><strong>Invoice #{{ inv.invoice_number }}</strong></div>
-                <div class="text-muted small">{{ inv.client.name }}</div>
-                <div class="text-success">${{ inv.amount }}</div>
-              </div>
-              <div class="col-4">
-                <div class="d-flex flex-column gap-2">
-                  <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100">View</a>
-                  <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100">Edit</a>
-                </div>
-              </div>
+            <div class="mb-2">
+              <div><strong>Invoice #{{ inv.invoice_number }}</strong></div>
+              <div class="text-muted small">{{ inv.client.name }}</div>
+              <div class="text-success fw-bold">${{ inv.amount }}</div>
+            </div>
+            <div class="d-flex flex-column gap-2">
+              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
             </div>
           </div>
           {% endfor %}
