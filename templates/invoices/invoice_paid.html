@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}In QuickBooks{% endblock %}
+{% block title %}Paid Invoices{% endblock %}
 
 {% block content %}
 <div class="container">
-  <h2 class="mb-4">In QuickBooks</h2>
+  <h2 class="mb-4">Paid</h2>
 
   <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
@@ -23,7 +23,7 @@
   </form>
 
   <div class="card shadow-sm">
-    <div class="card-header bg-warning text-white">In QuickBooks</div>
+    <div class="card-header bg-success text-white">Paid</div>
     <div class="card-body p-0">
       {% if invoices %}
       <div class="table-responsive">
@@ -41,9 +41,6 @@
                 <div class="d-flex flex-column flex-sm-row gap-2">
                   <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
                   <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                  <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="w-100 w-sm-auto">{% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-success w-100">Mark as Paid</button>
-                  </form>
                 </div>
               </td>
             </tr>
@@ -51,13 +48,13 @@
           </tbody>
         </table>
       </div>
-      {% else %>
-      <p class="p-3 mb-0">No invoices in QuickBooks found.</p>
+      {% else %}
+      <p class="p-3 mb-0">No paid invoices found.</p>
       {% endif %}
     </div>
   </div>
 
-  <!-- Navigation Buttons -->
+  <!-- Navigation -->
   <div class="text-center mt-4">
     <a href="{% url 'invoice_list' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Invoice Overview</a>
     <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
