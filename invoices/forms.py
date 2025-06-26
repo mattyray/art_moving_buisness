@@ -3,18 +3,10 @@ from .models import Invoice
 from workorders.models import WorkOrder
 
 class InvoiceForm(forms.ModelForm):
-    due_date = forms.DateField(
-        widget=forms.DateInput(attrs={
-            'class': 'form-control datepicker',
-            'placeholder': 'YYYY-MM-DD'
-        })
-    )
-
     class Meta:
         model = Invoice
         fields = [
             'work_order',
-            'due_date',
             'amount',
             'status',
             'notes',
