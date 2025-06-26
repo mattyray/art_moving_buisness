@@ -8,9 +8,9 @@
   <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
     <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
-      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-success w-100 w-sm-auto">In QuickBooks</a>
       <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger w-100 w-sm-auto">Not in QuickBooks</a>
-      <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-warning w-100 w-sm-auto">Overdue</a>
+      <a href="{% url 'invoice_in_quickbooks' %}" class="btn btn-outline-warning w-100 w-sm-auto">In QuickBooks</a>
+      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-success w-100 w-sm-auto">Paid</a>
     </div>
   </div>
 
@@ -24,40 +24,86 @@
       </div>
     </div>
     <div class="card-body">
+      
+      <!-- Complete Client Information -->
+      <h4>Client Information</h4>
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <p><strong>Name:</strong> {{ invoice.client.name }}</p>
+          <p><strong>Email:</strong> {{ invoice.client.email|default:"Not provided" }}</p>
+          <p><strong>Phone:</strong> {{ invoice.client.phone|default:"Not provided" }}</p>
+        </div>
+        <div class="col-md-6">
+          <p><strong>Address:</strong> {{ invoice.client.address|default:"Not provided" }}</p>
+          <p><strong>Billing Address:</strong> {{ invoice.client.billing_address|default:"Same as above" }}</p>
+        </div>
+      </div>
+
+      <!-- Invoice Information -->
       <h4>Invoice Information</h4>
-      <p><strong>Client:</strong> {{ invoice.client.name }}</p>
-      <p><strong>Date Created:</strong> {{ invoice.date_created|date:"Y-m-d" }}</p>
-      <p><strong>Due Date:</strong> {{ invoice.due_date|date:"Y-m-d" }}</p>
-      <p><strong>Amount:</strong> ${{ invoice.amount }}</p>
-      <p><strong>Status:</strong> {{ invoice.get_status_display }}</p>
-      {% if invoice.notes %}
-        <p><strong>Notes:</strong> {{ invoice.notes }}</p>
-      {% endif %}
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <p><strong>Amount:</strong> ${{ invoice.amount }}</p>
+          <p><strong>Status:</strong> {{ invoice.get_status_display }}</p>
+        </div>
+        <div class="col-md-6">
+          <p><strong>Date Created:</strong> {{ invoice.date_created|date:"M d, Y" }}</p>
+          {% if invoice.notes %}
+            <p><strong>Notes:</strong> {{ invoice.notes }}</p>
+          {% endif %}
+        </div>
+      </div>
 
       {% if invoice.work_order %}
       <hr>
-      <h4>Associated Work Order Details</h4>
-      <p><strong>ID:</strong> {{ invoice.work_order.id }}</p>
-      <p><strong>Description:</strong> {{ invoice.work_order.job_description }}</p>
-      <p><strong>Estimated Cost:</strong> ${{ invoice.work_order.estimated_cost }}</p>
-      <p><strong>Status:</strong> {{ invoice.work_order.get_status_display }}</p>
-
-      {% if events %}
-      <hr>
-      <h4>Scheduled Events</h4>
-      <ul>
-        {% for event in events %}
-        <li>
-          <strong>{{ event.get_event_type_display }}:</strong>
-          {{ event.address }} — {{ event.date|date:"Y-m-d" }}
-        </li>
-        {% endfor %}
-      </ul>
+      <!-- Work Order Details -->
+      <h4>Work Order Details</h4>
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <p><strong>Work Order ID:</strong> {{ invoice.work_order.id }}</p>
+          <p><strong>Status:</strong> {{ invoice.work_order.get_status_display }}</p>
+        </div>
+        <div class="col-md-6">
+          <p><strong>Estimated Cost:</strong> ${{ invoice.work_order.estimated_cost }}</p>
+        </div>
+      </div>
+      
+      <!-- Job Description -->
+      {% if invoice.work_order.job_description %}
+      <div class="mb-4">
+        <p><strong>Job Description:</strong></p>
+        <div class="bg-light p-3 rounded">
+          {{ invoice.work_order.job_description }}
+        </div>
+      </div>
       {% endif %}
+
+      <!-- Scheduled Events -->
+      {% if events %}
+      <h4>Scheduled Events</h4>
+      <div class="row">
+        {% for event in events %}
+        <div class="col-md-6 mb-3">
+          <div class="card border-left-primary">
+            <div class="card-body">
+              <h6 class="card-title text-primary">{{ event.get_event_type_display }}</h6>
+              <p class="card-text mb-1"><strong>Date:</strong> {{ event.date|date:"M d, Y" }}</p>
+              <p class="card-text mb-0"><strong>Address:</strong> {{ event.address }}</p>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
       {% else %}
-        <p><strong>Work Order:</strong> Not linked</p>
+        <p><strong>Scheduled Events:</strong> No events scheduled</p>
+      {% endif %}
+      
+      {% else %}
+        <hr>
+        <p><strong>Work Order:</strong> Not linked to a work order</p>
       {% endif %}
     </div>
+    
     <div class="card-footer">
       <button class="btn btn-primary" onclick="window.print();">Print Invoice</button>
     </div>
