@@ -3,14 +3,14 @@
 
 {% block content %}
 <div class="container">
-  <h2 class="mb-4">In QuickBooks - Paid</h2>
+  <h2 class="mb-4">In QuickBooks</h2>
 
   <!-- Navigation Buttons -->
   <div class="mb-4 text-center">
     <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
-      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-success w-100 w-sm-auto">In QuickBooks - Paid</a>
-      <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger w-100 w-sm-auto">Not in QuickBooks - Unpaid</a>
-      <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-warning w-100 w-sm-auto">Overdue - Ignore</a>
+      <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger w-100 w-sm-auto">Not in QuickBooks</a>
+      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-warning w-100 w-sm-auto">In QuickBooks</a>
+      <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-success w-100 w-sm-auto">Paid</a>
     </div>
   </div>
 
@@ -23,7 +23,7 @@
   </form>
 
   <div class="card shadow-sm">
-    <div class="card-header bg-success text-white">In QuickBooks - Paid</div>
+    <div class="card-header bg-warning text-white">In QuickBooks</div>
     <div class="card-body p-0">
       {% if invoices %}
       <div class="table-responsive">
@@ -41,6 +41,9 @@
                 <div class="d-flex flex-column flex-sm-row gap-2">
                   <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
                   <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                  <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="w-100 w-sm-auto">{% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success w-100">Mark as Paid</button>
+                  </form>
                 </div>
               </td>
             </tr>
@@ -48,8 +51,8 @@
           </tbody>
         </table>
       </div>
-      {% else %}
-      <p class="p-3 mb-0">No paid invoices found.</p>
+      {% else %>
+      <p class="p-3 mb-0">No invoices in QuickBooks found.</p>
       {% endif %}
     </div>
   </div>
