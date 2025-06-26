@@ -48,10 +48,15 @@
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+  function toMMDDYY(iso) {
+    let [Y, M, D] = iso.split('-');
+    return `${M}-${D}-${Y.slice(-2)}`;
+  }
+
   async function fetchSources(info, success, fail) {
     try {
       const wo = await fetch("/workorders/calendar-data/workorders/").then(r => r.json());
-      success(wo);  // 🔥 Removed invoice events
+      success(wo);
     } catch (e) {
       console.error("Calendar fetch error:", e);
       fail(e);
@@ -73,7 +78,18 @@ document.addEventListener("DOMContentLoaded", function () {
     height: "auto",
     initialDate: "{{ day|date:'Y-m-d' }}",
     events: fetchSources,
-    eventClick: goToEventUrl
+    eventClick: goToEventUrl,
+    // ✅ Add navigation handler to redirect to new date
+    datesSet: function(info) {
+      const currentDate = "{{ day|date:'Y-m-d' }}";
+      const newDate = info.start.toISOString().split('T')[0];
+      
+      // Only redirect if the date actually changed (not on initial load)
+      if (newDate !== currentDate) {
+        const mmddyy = toMMDDYY(newDate);
+        window.location.href = `/calendar/day/${mmddyy}/`;
+      }
+    }
   });
 
   calendar.render();
