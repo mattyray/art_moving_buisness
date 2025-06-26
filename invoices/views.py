@@ -179,7 +179,12 @@ def invoice_create(request):
             messages.success(request, "Invoice created successfully.")
             return redirect('invoice_detail', invoice_id=invoice.id)
     else:
-        form = InvoiceForm(initial={'work_order': work_order})
+        # ✅ Pre-populate form with work order data
+        initial_data = {'work_order': work_order}
+        if work_order and work_order.estimated_cost:
+            initial_data['amount'] = work_order.estimated_cost
+        
+        form = InvoiceForm(initial=initial_data)
 
     form.fields['work_order'].queryset = WorkOrder.objects.filter(status='completed')
 
@@ -187,6 +192,8 @@ def invoice_create(request):
         'form': form,
         'client_id': work_order.client.id if work_order else None,
         'events': events,
+        'work_order': work_order,  # ✅ Pass work order for template context
+        'creating': True,  # ✅ Flag to show this is creation, not editing
     })
 
 # ---------- AJAX VIEWS ----------
