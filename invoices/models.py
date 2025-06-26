@@ -5,8 +5,8 @@ from django.utils import timezone
 class Invoice(models.Model):
     STATUS_CHOICES = [
         ('unpaid', 'Not in QuickBooks'),
-        ('paid', 'In QuickBooks'),
-        ('overdue', 'Overdue'),  # This one stays the same unless you want a new label
+        ('in_quickbooks', 'In QuickBooks'),
+        ('paid', 'Paid'),
     ]
 
     
@@ -21,16 +21,17 @@ class Invoice(models.Model):
         related_name='invoices'
     )
     date_created = models.DateField(default=timezone.now)
-    due_date = models.DateField()
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='unpaid')
     notes = models.TextField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
         if not self.invoice_number:
-            # Auto-generate a unique invoice number, for example using date and a random number
-            self.invoice_number = f"INV-{timezone.now().strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
+            self.invoice_number = ""  # Set empty first
         super().save(*args, **kwargs)
+        if not self.invoice_number:  # After save, we have an ID
+            self.invoice_number = str(self.id)
+            super().save(update_fields=['invoice_number'])
 
     def __str__(self):
         return f"Invoice {self.invoice_number} - {self.client.name}"
