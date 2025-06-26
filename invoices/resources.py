@@ -21,11 +21,6 @@ class InvoiceResource(resources.ModelResource):
         attribute='date_created',
         widget=DateWidget(format='%Y-%m-%d')
     )
-    due_date = fields.Field(
-        column_name='due_date',
-        attribute='due_date',
-        widget=DateWidget(format='%Y-%m-%d')
-    )
 
     class Meta:
         model = Invoice
@@ -36,7 +31,6 @@ class InvoiceResource(resources.ModelResource):
             'work_order',
             'invoice_number',
             'date_created',
-            'due_date',
             'amount',
             'status',
             'notes',
