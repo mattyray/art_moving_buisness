@@ -9,8 +9,8 @@
   <div class="mb-4 text-center">
     <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
       <a href="{% url 'invoice_unpaid' %}" class="btn btn-outline-danger w-100 w-sm-auto">Not in QuickBooks</a>
-      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-warning w-100 w-sm-auto">In QuickBooks</a>
-      <a href="{% url 'invoice_overdue' %}" class="btn btn-outline-success w-100 w-sm-auto">Paid</a>
+      <a href="{% url 'invoice_in_quickbooks' %}" class="btn btn-outline-warning w-100 w-sm-auto">In QuickBooks</a>
+      <a href="{% url 'invoice_paid' %}" class="btn btn-outline-success w-100 w-sm-auto">Paid</a>
     </div>
   </div>
 
@@ -51,7 +51,7 @@
           </tbody>
         </table>
       </div>
-      {% else %>
+      {% else %}
       <p class="p-3 mb-0">No invoices in QuickBooks found.</p>
       {% endif %}
     </div>
