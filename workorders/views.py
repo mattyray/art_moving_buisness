@@ -110,14 +110,19 @@ def workorder_create(request):
             workorder.save()
 
             if attachment_form.is_valid():
-                attachment = attachment_form.save(commit=False)
-                attachment.work_order = workorder
-                attachment.save()
+                uploaded = request.FILES.get('file')
+                if uploaded:
+                    attachment = attachment_form.save(commit=False)
+                    attachment.work_order = workorder
+                    attachment.save()
 
             if note_form.is_valid():
-                note = note_form.save(commit=False)
-                note.work_order = workorder
-                note.save()
+                text = note_form.cleaned_data.get('note', '').strip()
+                # Only save non‑empty notes
+                if text:
+                    note = note_form.save(commit=False)
+                    note.work_order = workorder
+                    note.save()
 
             return redirect('workorder_list')
     else:
@@ -151,14 +156,19 @@ def workorder_edit(request, job_id):
             workorder.save()
 
             if attachment_form.is_valid():
-                attachment = attachment_form.save(commit=False)
-                attachment.work_order = workorder
-                attachment.save()
+                uploaded = request.FILES.get('file')
+                if uploaded:
+                    attachment = attachment_form.save(commit=False)
+                    attachment.work_order = workorder
+                    attachment.save()
 
             if note_form.is_valid():
-                note = note_form.save(commit=False)
-                note.work_order = workorder
-                note.save()
+                text = note_form.cleaned_data.get('note', '').strip()
+                # Only save non‑empty notes
+                if text:
+                    note = note_form.save(commit=False)
+                    note.work_order = workorder
+                    note.save()
 
             if 'create_invoice' in request.POST:
                 return redirect(f'/invoices/create/?work_order={workorder.id}')
