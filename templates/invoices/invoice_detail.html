@@ -14,28 +14,57 @@
     </div>
   </div>
 
-  <!-- Invoice Details Card -->
-  <div class="card shadow-sm mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
-      <h2>Invoice {{ invoice.invoice_number }} Details</h2>
+  <!-- Invoice Summary Card -->
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+      <h4 class="mb-0">Invoice #{{ invoice.invoice_number }}</h4>
       <div>
         <a href="{% url 'invoice_update' invoice.id %}" class="btn btn-warning btn-sm me-2">Edit Invoice</a>
-        <a href="{% url 'invoice_list' %}" class="btn btn-secondary btn-sm">Back to Invoice Overview</a>
+        <a href="{% url 'invoice_list' %}" class="btn btn-light btn-sm">Back to Overview</a>
       </div>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Amount:</strong> ${{ invoice.amount }}</p>
+          <p class="mb-1"><strong>Status:</strong> 
+            <span class="badge 
+              {% if invoice.status == 'unpaid' %}bg-danger
+              {% elif invoice.status == 'in_quickbooks' %}bg-warning text-dark
+              {% else %}bg-success{% endif %}">
+              {{ invoice.get_status_display }}
+            </span>
+          </p>
+        </div>
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Date Created:</strong> {{ invoice.date_created|date:"M d, Y" }}</p>
+          {% if invoice.notes %}
+            <p class="mb-1"><strong>Notes:</strong> {{ invoice.notes }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Work Order Information (If Available) -->
+  {% if invoice.work_order %}
+  <div class="card mb-4 bg-light">
+    <div class="card-header bg-info text-white">
+      <h5 class="mb-0">Work Order Information</h5>
     </div>
     <div class="card-body">
       
       <!-- Complete Client Information -->
-      <h4>Client Information</h4>
-      <div class="row mb-4">
+      <h6>Client Information</h6>
+      <div class="row mb-3">
         <div class="col-md-6">
-          <p><strong>Name:</strong> {{ invoice.client.name }}</p>
-          <p><strong>Email:</strong> {{ invoice.client.email|default:"Not provided" }}</p>
-          <p><strong>Phone:</strong> {{ invoice.client.phone|default:"Not provided" }}</p>
+          <p class="mb-1"><strong>Name:</strong> {{ invoice.client.name }}</p>
+          <p class="mb-1"><strong>Email:</strong> {{ invoice.client.email|default:"Not provided" }}</p>
+          <p class="mb-1"><strong>Phone:</strong> {{ invoice.client.phone|default:"Not provided" }}</p>
         </div>
         <div class="col-md-6">
-          <p><strong>Address:</strong> {{ invoice.client.address|default:"Not provided" }}</p>
-          <p><strong>Billing Address:</strong> 
+          <p class="mb-1"><strong>Address:</strong> {{ invoice.client.address|default:"Not provided" }}</p>
+          <p class="mb-1"><strong>Billing Address:</strong> 
             {% if invoice.client.billing_address %}
               {{ invoice.client.billing_address }}
             {% else %}
@@ -45,83 +74,102 @@
         </div>
       </div>
 
-      <!-- Invoice Information -->
-      <h4>Invoice Information</h4>
-      <div class="row mb-4">
-        <div class="col-md-6">
-          <p><strong>Amount:</strong> ${{ invoice.amount }}</p>
-          <p><strong>Status:</strong> {{ invoice.get_status_display }}</p>
-        </div>
-        <div class="col-md-6">
-          <p><strong>Date Created:</strong> {{ invoice.date_created|date:"M d, Y" }}</p>
-          {% if invoice.notes %}
-            <p><strong>Notes:</strong> {{ invoice.notes }}</p>
-          {% endif %}
-        </div>
-      </div>
-
-      {% if invoice.work_order %}
-      <hr>
       <!-- Work Order Details -->
-      <h4>Work Order Details</h4>
-      <div class="row mb-4">
+      <h6>Work Order Details</h6>
+      <div class="row mb-3">
         <div class="col-md-6">
-          <p><strong>Work Order ID:</strong> {{ invoice.work_order.id }}</p>
-          <p><strong>Status:</strong> {{ invoice.work_order.get_status_display }}</p>
+          <p class="mb-1"><strong>Work Order ID:</strong> {{ invoice.work_order.id }}</p>
+          <p class="mb-1"><strong>Status:</strong> {{ invoice.work_order.get_status_display }}</p>
         </div>
         <div class="col-md-6">
-          <p><strong>Estimated Cost:</strong> ${{ invoice.work_order.estimated_cost }}</p>
+          <p class="mb-1"><strong>Estimated Cost:</strong> ${{ invoice.work_order.estimated_cost }}</p>
         </div>
       </div>
       
       <!-- Job Description -->
       {% if invoice.work_order.job_description %}
-      <div class="mb-4">
-        <p><strong>Job Description:</strong></p>
-        <div class="bg-light p-3 rounded">
-          {{ invoice.work_order.job_description }}
-        </div>
+      <h6>Job Description</h6>
+      <div class="bg-white p-3 rounded border mb-3">
+        {{ invoice.work_order.job_description }}
       </div>
       {% endif %}
 
       <!-- Scheduled Events -->
       {% if events %}
-      <h4>Scheduled Events</h4>
+      <h6>Scheduled Events</h6>
       <div class="row">
         {% for event in events %}
-        <div class="col-md-6 mb-3">
-          <div class="card border-left-primary">
-            <div class="card-body">
-              <h6 class="card-title text-primary">{{ event.get_event_type_display }}</h6>
-              <p class="card-text mb-1"><strong>Date:</strong> {{ event.date|date:"M d, Y" }}</p>
-              <p class="card-text mb-0"><strong>Address:</strong> {{ event.address }}</p>
+        <div class="col-md-6 mb-2">
+          <div class="card border">
+            <div class="card-body py-2">
+              <h6 class="card-title text-primary mb-1">{{ event.get_event_type_display }}</h6>
+              <p class="card-text mb-1 small"><strong>Date:</strong> {{ event.date|date:"M d, Y" }}</p>
+              <p class="card-text mb-0 small"><strong>Address:</strong> {{ event.address }}</p>
             </div>
           </div>
         </div>
         {% endfor %}
       </div>
       {% else %}
-        <p><strong>Scheduled Events:</strong> No events scheduled</p>
-      {% endif %}
-      
-      {% else %}
-        <hr>
-        <p><strong>Work Order:</strong> Not linked to a work order</p>
+        <p class="mb-0"><strong>Scheduled Events:</strong> No events scheduled</p>
       {% endif %}
     </div>
-    
-    <div class="card-footer">
-      <button class="btn btn-primary" onclick="window.print();">Print Invoice</button>
+  </div>
+  {% else %}
+  <!-- No Work Order -->
+  <div class="card mb-4">
+    <div class="card-header bg-secondary text-white">
+      <h5 class="mb-0">Client Information</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Name:</strong> {{ invoice.client.name }}</p>
+          <p class="mb-1"><strong>Email:</strong> {{ invoice.client.email|default:"Not provided" }}</p>
+          <p class="mb-1"><strong>Phone:</strong> {{ invoice.client.phone|default:"Not provided" }}</p>
+        </div>
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Address:</strong> {{ invoice.client.address|default:"Not provided" }}</p>
+          <p class="mb-1"><strong>Billing Address:</strong> 
+            {% if invoice.client.billing_address %}
+              {{ invoice.client.billing_address }}
+            {% else %}
+              <em>Not specified</em>
+            {% endif %}
+          </p>
+        </div>
+      </div>
+      <div class="alert alert-info mt-3 mb-0">
+        <i class="bi bi-info-circle me-2"></i>This invoice is not linked to a work order.
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Action Buttons -->
+  <div class="card">
+    <div class="card-header bg-success text-white">
+      <h5 class="mb-0">Actions</h5>
+    </div>
+    <div class="card-body">
+      <div class="d-flex flex-column flex-sm-row gap-2">
+        <button class="btn btn-primary" onclick="window.print();">
+          <i class="bi bi-printer me-1"></i>Print Invoice
+        </button>
+        <a href="{% url 'invoice_update' invoice.id %}" class="btn btn-warning">
+          <i class="bi bi-pencil me-1"></i>Edit Invoice
+        </a>
+        <a href="{% url 'invoice_delete' invoice.id %}" class="btn btn-danger">
+          <i class="bi bi-trash me-1"></i>Delete Invoice
+        </a>
+      </div>
     </div>
   </div>
 
-  <!-- Navigation Row -->
-  <div class="mt-4 d-flex justify-content-between flex-column flex-sm-row gap-2">
-    <div class="d-flex flex-column flex-sm-row gap-2">
-      <a href="{% url 'invoice_list' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Invoice Overview</a>
-      <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
-    </div>
-    <a href="{% url 'invoice_delete' invoice.id %}" class="btn btn-danger w-100 w-sm-auto">Delete Invoice</a>
+  <!-- Navigation Links -->
+  <div class="mt-4 text-center">
+    <a href="{% url 'invoice_list' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Invoice Overview</a>
+    <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
   </div>
 </div>
 {% endblock %}
