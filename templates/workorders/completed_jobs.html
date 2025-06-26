@@ -41,9 +41,9 @@
                 <div class="d-flex flex-column flex-sm-row gap-2">
                   <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
                   <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                  <button type="button" class="btn btn-sm btn-primary w-100 w-sm-auto" onclick="createInvoice({{ job.id }})">Create Invoice</button>
+                  <a href="/invoices/create/?work_order={{ job.id }}" class="btn btn-sm btn-success w-100 w-sm-auto">📄 Create Invoice</a>
                   <form method="post" action="{% url 'mark_paid' job.id %}" class="w-100">{% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-success w-100 w-sm-auto">Mark as Paid</button>
+                    <button type="submit" class="btn btn-sm btn-primary w-100 w-sm-auto">Mark as Paid</button>
                   </form>
                 </div>
               </td>
@@ -103,15 +103,4 @@
     <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
   </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-function createInvoice(jobId) {
-  const review = confirm("Would you like to review/edit this job before creating an invoice?");
-  window.location.href = review
-    ? `/workorders/edit/${jobId}/`
-    : `/invoices/create/?work_order=${jobId}`;
-}
-</script>
 {% endblock %}
