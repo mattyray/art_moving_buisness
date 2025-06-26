@@ -17,6 +17,13 @@
         </div>
         <div class="col-md-6">
           <p><strong>Address:</strong> {{ client.address }}</p>
+          <p><strong>Billing Address:</strong> 
+            {% if client.billing_address %}
+              {{ client.billing_address }}
+            {% else %}
+              <em>Not specified</em>
+            {% endif %}
+          </p>
         </div>
       </div>
     </div>
