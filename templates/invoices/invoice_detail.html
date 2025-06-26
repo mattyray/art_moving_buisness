@@ -35,7 +35,13 @@
         </div>
         <div class="col-md-6">
           <p><strong>Address:</strong> {{ invoice.client.address|default:"Not provided" }}</p>
-          <p><strong>Billing Address:</strong> {{ invoice.client.billing_address|default:"Same as above" }}</p>
+          <p><strong>Billing Address:</strong> 
+            {% if invoice.client.billing_address %}
+              {{ invoice.client.billing_address }}
+            {% else %}
+              <em>Not specified</em>
+            {% endif %}
+          </p>
         </div>
       </div>
 

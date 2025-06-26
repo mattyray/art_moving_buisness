@@ -19,40 +19,104 @@
     </div>
   </div>
 
-  <!-- Events List -->
-  {% if events %}
-    <div class="mb-4">
-      <h4>Scheduled Events</h4>
-      <ul>
-        {% for event in events %}
-          <li>
-            <strong>{{ event.get_event_type_display }}:</strong> {{ event.address }} — {{ event.date|date:"Y-m-d" }}
-          </li>
-        {% endfor %}
-      </ul>
+  <!-- Work Order Information Reference (If Available) -->
+  {% if invoice.work_order %}
+  <div class="card mb-4 bg-light">
+    <div class="card-header bg-info text-white">
+      <h5 class="mb-0">Work Order Reference Information</h5>
     </div>
+    <div class="card-body">
+      
+      <!-- Complete Client Information -->
+      <h6>Client Information</h6>
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Name:</strong> {{ invoice.client.name }}</p>
+          <p class="mb-1"><strong>Email:</strong> {{ invoice.client.email|default:"Not provided" }}</p>
+          <p class="mb-1"><strong>Phone:</strong> {{ invoice.client.phone|default:"Not provided" }}</p>
+        </div>
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Address:</strong> {{ invoice.client.address|default:"Not provided" }}</p>
+          <p class="mb-1"><strong>Billing Address:</strong> 
+            {% if invoice.client.billing_address %}
+              {{ invoice.client.billing_address }}
+            {% else %}
+              <em>Not specified</em>
+            {% endif %}
+          </p>
+        </div>
+      </div>
+
+      <!-- Work Order Details -->
+      <h6>Work Order Details</h6>
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Work Order ID:</strong> {{ invoice.work_order.id }}</p>
+          <p class="mb-1"><strong>Status:</strong> {{ invoice.work_order.get_status_display }}</p>
+        </div>
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Estimated Cost:</strong> ${{ invoice.work_order.estimated_cost }}</p>
+        </div>
+      </div>
+      
+      <!-- Job Description -->
+      {% if invoice.work_order.job_description %}
+      <h6>Job Description</h6>
+      <div class="bg-white p-3 rounded border mb-3">
+        {{ invoice.work_order.job_description }}
+      </div>
+      {% endif %}
+
+      <!-- Scheduled Events -->
+      {% if events %}
+      <h6>Scheduled Events</h6>
+      <div class="row">
+        {% for event in events %}
+        <div class="col-md-6 mb-2">
+          <div class="card border">
+            <div class="card-body py-2">
+              <h6 class="card-title text-primary mb-1">{{ event.get_event_type_display }}</h6>
+              <p class="card-text mb-1 small"><strong>Date:</strong> {{ event.date|date:"M d, Y" }}</p>
+              <p class="card-text mb-0 small"><strong>Address:</strong> {{ event.address }}</p>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+        <p class="mb-0"><strong>Scheduled Events:</strong> No events scheduled</p>
+      {% endif %}
+    </div>
+  </div>
   {% endif %}
 
   <!-- Invoice Form -->
-  <form method="post" id="invoice-form">
-    {% csrf_token %}
-    <input type="hidden" name="client" value="{{ client_id }}">
-    <input type="hidden" name="status" value="unpaid">
-
-    {{ form.work_order|as_crispy_field }}
-
-    <div class="mb-3">
-      <label for="id_amount" class="form-label">Amount</label>
-      <div class="input-group">
-        <span class="input-group-text">$</span>
-        {{ form.amount }}
-      </div>
+  <div class="card">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">Edit Invoice Details</h5>
     </div>
+    <div class="card-body">
+      <form method="post" id="invoice-form">
+        {% csrf_token %}
+        <input type="hidden" name="client" value="{{ client_id }}">
+        <input type="hidden" name="status" value="unpaid">
 
-    {{ form.notes|as_crispy_field }}
+        {{ form.work_order|as_crispy_field }}
 
-    <button type="submit" class="btn btn-success">Update Invoice</button>
-  </form>
+        <div class="mb-3">
+          <label for="id_amount" class="form-label">Amount</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            {{ form.amount }}
+          </div>
+        </div>
+
+        {{ form.notes|as_crispy_field }}
+
+        <button type="submit" class="btn btn-success">Update Invoice</button>
+      </form>
+    </div>
+  </div>
 
   <!-- Navigation Links -->
   <div class="mt-4 text-center">
