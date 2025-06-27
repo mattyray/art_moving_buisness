@@ -1,9 +1,7 @@
 from django.shortcuts import render
 from datetime import datetime, timedelta, date
 from workorders.models import Event
-from invoices.models import Invoice
 from django.db.models import Q
-from datetime import date
 
 
 def parse_mmddyy(date_str):
@@ -18,28 +16,22 @@ def week_detail(request, date):
     # build a simple list of each date in that week
     week_days = [start + timedelta(days=i) for i in range(7)]
 
-    # fetch events/invoices in the range
-    events   = Event.objects.filter(date__range=(start, end))
-    invoices = Invoice.objects.filter(due_date__range=(start, end))
+    # fetch events in the range
+    events = Event.objects.filter(date__range=(start, end))
 
     # optional filtering
     q = request.GET.get('q', '')
     if q:
-        events   = events.filter(
+        events = events.filter(
             Q(work_order__client__name__icontains=q) |
             Q(event_type__icontains=q)
-        )
-        invoices = invoices.filter(
-            Q(client__name__icontains=q) |
-            Q(invoice_number__icontains=q)
         )
 
     context = {
         'start': start,
         'end': end,
-        'week_days': week_days,    # <-- pass this in
+        'week_days': week_days,
         'events': events,
-        'invoices': invoices,
         'query': q,
     }
     return render(request, 'calendar/week_detail.html', context)
@@ -50,23 +42,17 @@ def day_detail(request, date):
     day = parse_mmddyy(date)
 
     events = Event.objects.filter(date=day)
-    invoices = Invoice.objects.filter(due_date=day)
 
     q = request.GET.get('q', '')
     if q:
-        events   = events.filter(
+        events = events.filter(
             Q(work_order__client__name__icontains=q) |
             Q(event_type__icontains=q)
-        )
-        invoices = invoices.filter(
-            Q(client__name__icontains=q) |
-            Q(invoice_number__icontains=q)
         )
 
     context = {
         'day': day,
         'events': events,
-        'invoices': invoices,
         'query': q,
     }
     return render(request, 'calendar/day_detail.html', context)

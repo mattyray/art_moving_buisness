@@ -500,14 +500,19 @@ def workorder_create(request):
             workorder.save()
 
             if attachment_form.is_valid():
-                attachment = attachment_form.save(commit=False)
-                attachment.work_order = workorder
-                attachment.save()
+                uploaded = request.FILES.get('file')
+                if uploaded:
+                    attachment = attachment_form.save(commit=False)
+                    attachment.work_order = workorder
+                    attachment.save()
 
             if note_form.is_valid():
-                note = note_form.save(commit=False)
-                note.work_order = workorder
-                note.save()
+                text = note_form.cleaned_data.get('note', '').strip()
+                # Only save non‑empty notes
+                if text:
+                    note = note_form.save(commit=False)
+                    note.work_order = workorder
+                    note.save()
 
             return redirect('workorder_list')
     else:
@@ -541,14 +546,19 @@ def workorder_edit(request, job_id):
             workorder.save()
 
             if attachment_form.is_valid():
-                attachment = attachment_form.save(commit=False)
-                attachment.work_order = workorder
-                attachment.save()
+                uploaded = request.FILES.get('file')
+                if uploaded:
+                    attachment = attachment_form.save(commit=False)
+                    attachment.work_order = workorder
+                    attachment.save()
 
             if note_form.is_valid():
-                note = note_form.save(commit=False)
-                note.work_order = workorder
-                note.save()
+                text = note_form.cleaned_data.get('note', '').strip()
+                # Only save non‑empty notes
+                if text:
+                    note = note_form.save(commit=False)
+                    note.work_order = workorder
+                    note.save()
 
             if 'create_invoice' in request.POST:
                 return redirect(f'/invoices/create/?work_order={workorder.id}')
@@ -692,7 +702,6 @@ def completed_jobs_view(request):
         'invoiced_jobs': invoiced_jobs,
     }
     return render(request, 'workorders/completed_jobs.html', context)
-
 
 ===== workorders/forms.py =====
 from django import forms
@@ -1858,10 +1867,15 @@ document.addEventListener("DOMContentLoaded", function () {
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+  function toMMDDYY(iso) {
+    let [Y, M, D] = iso.split('-');
+    return `${M}-${D}-${Y.slice(-2)}`;
+  }
+
   async function fetchSources(info, success, fail) {
     try {
       const wo = await fetch("/workorders/calendar-data/workorders/").then(r => r.json());
-      success(wo);  // 🔥 Removed invoice events
+      success(wo);
     } catch (e) {
       console.error("Calendar fetch error:", e);
       fail(e);
@@ -1883,14 +1897,24 @@ document.addEventListener("DOMContentLoaded", function () {
     height: "auto",
     initialDate: "{{ day|date:'Y-m-d' }}",
     events: fetchSources,
-    eventClick: goToEventUrl
+    eventClick: goToEventUrl,
+    // ✅ Add navigation handler to redirect to new date
+    datesSet: function(info) {
+      const currentDate = "{{ day|date:'Y-m-d' }}";
+      const newDate = info.start.toISOString().split('T')[0];
+      
+      // Only redirect if the date actually changed (not on initial load)
+      if (newDate !== currentDate) {
+        const mmddyy = toMMDDYY(newDate);
+        window.location.href = `/calendar/day/${mmddyy}/`;
+      }
+    }
   });
 
   calendar.render();
 });
 </script>
 {% endblock %}
-
 
 ===== templates/calendar/week_detail.html =====
 {% extends "base.html" %}
@@ -2014,28 +2038,48 @@ document.addEventListener("DOMContentLoaded", function () {
     <div class="card-header bg-success text-white">Paid</div>
     <div class="card-body p-0">
       {% if invoices %}
-      <div class="table-responsive">
-        <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="small">
-            <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
-          </thead>
-          <tbody>
-            {% for inv in invoices %}
-            <tr>
-              <td>{{ inv.invoice_number }}</td>
-              <td>{{ inv.client.name }}</td>
-              <td>${{ inv.amount }}</td>
-              <td>
-                <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+        <!-- Desktop Table View -->
+        <div class="d-none d-md-block">
+          <div class="table-responsive">
+            <table class="table table-sm table-striped align-middle mb-0">
+              <thead class="small">
+                <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                {% for inv in invoices %}
+                <tr>
+                  <td>{{ inv.invoice_number }}</td>
+                  <td>{{ inv.client.name }}</td>
+                  <td>${{ inv.amount }}</td>
+                  <td>
+                    <div class="d-flex flex-row gap-1">
+                      <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+                      <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Mobile Card View -->
+        <div class="d-md-none">
+          {% for inv in invoices %}
+          <div class="border-bottom p-3">
+            <div class="mb-2">
+              <div><strong>Invoice #{{ inv.invoice_number }}</strong></div>
+              <div class="text-muted small">{{ inv.client.name }}</div>
+              <div class="text-success fw-bold">${{ inv.amount }}</div>
+            </div>
+            <div class="d-flex flex-column gap-2">
+              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
       {% else %}
       <p class="p-3 mb-0">No paid invoices found.</p>
       {% endif %}
@@ -2079,31 +2123,54 @@ document.addEventListener("DOMContentLoaded", function () {
     <div class="card-header bg-danger text-white">Not in QuickBooks</div>
     <div class="card-body p-0">
       {% if invoices %}
-      <div class="table-responsive">
-        <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="small">
-            <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
-          </thead>
-          <tbody>
-            {% for inv in invoices %}
-            <tr>
-              <td>{{ inv.invoice_number }}</td>
-              <td>{{ inv.client.name }}</td>
-              <td>${{ inv.amount }}</td>
-              <td>
-                <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                  <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="w-100 w-sm-auto">{% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-success w-100">Mark as In QuickBooks</button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+        <!-- Desktop Table View -->
+        <div class="d-none d-md-block">
+          <div class="table-responsive">
+            <table class="table table-sm table-striped align-middle mb-0">
+              <thead class="small">
+                <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                {% for inv in invoices %}
+                <tr>
+                  <td>{{ inv.invoice_number }}</td>
+                  <td>{{ inv.client.name }}</td>
+                  <td>${{ inv.amount }}</td>
+                  <td>
+                    <div class="d-flex flex-row gap-1">
+                      <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+                      <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+                      <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="d-inline">{% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-success">Mark as In QB</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Mobile Card View -->
+        <div class="d-md-none">
+          {% for inv in invoices %}
+          <div class="border-bottom p-3">
+            <div class="mb-2">
+              <div><strong>Invoice #{{ inv.invoice_number }}</strong></div>
+              <div class="text-muted small">{{ inv.client.name }}</div>
+              <div class="text-success fw-bold">${{ inv.amount }}</div>
+            </div>
+            <div class="d-flex flex-column gap-2">
+              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+              <form method="post" action="{% url 'mark_invoice_paid' inv.id %}">{% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-success w-100">Mark as In QuickBooks</button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
       {% else %}
       <p class="p-3 mb-0">No invoices found.</p>
       {% endif %}
@@ -2187,31 +2254,54 @@ document.addEventListener("DOMContentLoaded", function () {
     <div class="card-header bg-warning text-white">In QuickBooks</div>
     <div class="card-body p-0">
       {% if invoices %}
-      <div class="table-responsive">
-        <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="small">
-            <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
-          </thead>
-          <tbody>
-            {% for inv in invoices %}
-            <tr>
-              <td>{{ inv.invoice_number }}</td>
-              <td>{{ inv.client.name }}</td>
-              <td>${{ inv.amount }}</td>
-              <td>
-                <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                  <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="w-100 w-sm-auto">{% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-success w-100">Mark as Paid</button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+        <!-- Desktop Table View -->
+        <div class="d-none d-md-block">
+          <div class="table-responsive">
+            <table class="table table-sm table-striped align-middle mb-0">
+              <thead class="small">
+                <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                {% for inv in invoices %}
+                <tr>
+                  <td>{{ inv.invoice_number }}</td>
+                  <td>{{ inv.client.name }}</td>
+                  <td>${{ inv.amount }}</td>
+                  <td>
+                    <div class="d-flex flex-row gap-1">
+                      <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+                      <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+                      <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="d-inline">{% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-success">Mark as Paid</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Mobile Card View -->
+        <div class="d-md-none">
+          {% for inv in invoices %}
+          <div class="border-bottom p-3">
+            <div class="mb-2">
+              <div><strong>Invoice #{{ inv.invoice_number }}</strong></div>
+              <div class="text-muted small">{{ inv.client.name }}</div>
+              <div class="text-success fw-bold">${{ inv.amount }}</div>
+            </div>
+            <div class="d-flex flex-column gap-2">
+              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+              <form method="post" action="{% url 'mark_invoice_paid' inv.id %}">{% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-success w-100">Mark as Paid</button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
       {% else %}
       <p class="p-3 mb-0">No invoices in QuickBooks found.</p>
       {% endif %}
@@ -2259,31 +2349,54 @@ document.addEventListener("DOMContentLoaded", function () {
     </div>
     <div class="card-body p-0">
       {% if unpaid_invoices %}
-      <div class="table-responsive">
-        <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="small">
-            <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
-          </thead>
-          <tbody>
-            {% for inv in unpaid_invoices %}
-            <tr>
-              <td>{{ inv.invoice_number }}</td>
-              <td>{{ inv.client.name }}</td>
-              <td>${{ inv.amount }}</td>
-              <td>
-                <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                  <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="w-100 w-sm-auto">{% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-success w-100">Mark as In QuickBooks</button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+        <!-- Desktop Table View -->
+        <div class="d-none d-md-block">
+          <div class="table-responsive">
+            <table class="table table-sm table-striped align-middle mb-0">
+              <thead class="small">
+                <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                {% for inv in unpaid_invoices %}
+                <tr>
+                  <td>{{ inv.invoice_number }}</td>
+                  <td>{{ inv.client.name }}</td>
+                  <td>${{ inv.amount }}</td>
+                  <td>
+                    <div class="d-flex flex-row gap-1">
+                      <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+                      <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+                      <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="d-inline">{% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-success">Mark as In QB</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Mobile Card View -->
+        <div class="d-md-none">
+          {% for inv in unpaid_invoices %}
+          <div class="border-bottom p-3">
+            <div class="mb-2">
+              <div><strong>Invoice #{{ inv.invoice_number }}</strong></div>
+              <div class="text-muted small">{{ inv.client.name }}</div>
+              <div class="text-success fw-bold">${{ inv.amount }}</div>
+            </div>
+            <div class="d-flex flex-column gap-2">
+              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+              <form method="post" action="{% url 'mark_invoice_paid' inv.id %}">{% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-success w-100">Mark as In QuickBooks</button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
       {% else %}<p class="p-3 mb-0">No unpaid invoices found.</p>{% endif %}
     </div>
   </div>
@@ -2297,31 +2410,54 @@ document.addEventListener("DOMContentLoaded", function () {
     </div>
     <div class="card-body p-0">
       {% if paid_invoices %}
-      <div class="table-responsive">
-        <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="small">
-            <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
-          </thead>
-          <tbody>
-            {% for inv in paid_invoices %}
-            <tr>
-              <td>{{ inv.invoice_number }}</td>
-              <td>{{ inv.client.name }}</td>
-              <td>${{ inv.amount }}</td>
-              <td>
-                <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                  <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="w-100 w-sm-auto">{% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-success w-100">Mark as Paid</button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+        <!-- Desktop Table View -->
+        <div class="d-none d-md-block">
+          <div class="table-responsive">
+            <table class="table table-sm table-striped align-middle mb-0">
+              <thead class="small">
+                <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                {% for inv in paid_invoices %}
+                <tr>
+                  <td>{{ inv.invoice_number }}</td>
+                  <td>{{ inv.client.name }}</td>
+                  <td>${{ inv.amount }}</td>
+                  <td>
+                    <div class="d-flex flex-row gap-1">
+                      <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+                      <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+                      <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="d-inline">{% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-success">Mark as Paid</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Mobile Card View -->
+        <div class="d-md-none">
+          {% for inv in paid_invoices %}
+          <div class="border-bottom p-3">
+            <div class="mb-2">
+              <div><strong>Invoice #{{ inv.invoice_number }}</strong></div>
+              <div class="text-muted small">{{ inv.client.name }}</div>
+              <div class="text-success fw-bold">${{ inv.amount }}</div>
+            </div>
+            <div class="d-flex flex-column gap-2">
+              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+              <form method="post" action="{% url 'mark_invoice_paid' inv.id %}">{% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-success w-100">Mark as Paid</button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
       {% else %}<p class="p-3 mb-0">No invoices in QuickBooks found.</p>{% endif %}
     </div>
   </div>
@@ -2335,28 +2471,48 @@ document.addEventListener("DOMContentLoaded", function () {
     </div>
     <div class="card-body p-0">
       {% if overdue_invoices %}
-      <div class="table-responsive">
-        <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="small">
-            <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
-          </thead>
-          <tbody>
-            {% for inv in overdue_invoices %}
-            <tr>
-              <td>{{ inv.invoice_number }}</td>
-              <td>{{ inv.client.name }}</td>
-              <td>${{ inv.amount }}</td>
-              <td>
-                <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+        <!-- Desktop Table View -->
+        <div class="d-none d-md-block">
+          <div class="table-responsive">
+            <table class="table table-sm table-striped align-middle mb-0">
+              <thead class="small">
+                <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                {% for inv in overdue_invoices %}
+                <tr>
+                  <td>{{ inv.invoice_number }}</td>
+                  <td>{{ inv.client.name }}</td>
+                  <td>${{ inv.amount }}</td>
+                  <td>
+                    <div class="d-flex flex-row gap-1">
+                      <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+                      <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Mobile Card View -->
+        <div class="d-md-none">
+          {% for inv in overdue_invoices %}
+          <div class="border-bottom p-3">
+            <div class="mb-2">
+              <div><strong>Invoice #{{ inv.invoice_number }}</strong></div>
+              <div class="text-muted small">{{ inv.client.name }}</div>
+              <div class="text-success fw-bold">${{ inv.amount }}</div>
+            </div>
+            <div class="d-flex flex-column gap-2">
+              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
       {% else %}<p class="p-3 mb-0">No paid invoices found.</p>{% endif %}
     </div>
   </div>
@@ -3171,6 +3327,40 @@ document.addEventListener("DOMContentLoaded", function () {
     </div>
   </div>
 
+  <!-- Client Information -->
+  <div class="card mb-4">
+    <div class="card-header bg-info text-white">
+      <h5 class="mb-0">Client Information</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Name:</strong> {{ job.client.name }}</p>
+          <p class="mb-1"><strong>Email:</strong> {{ job.client.email|default:"Not provided" }}</p>
+          <p class="mb-1"><strong>Phone:</strong> {{ job.client.phone|default:"Not provided" }}</p>
+        </div>
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Service Address:</strong> {{ job.client.address|default:"Not provided" }}</p>
+          <p class="mb-1"><strong>Billing Address:</strong> 
+            {% if job.client.billing_address %}
+              {{ job.client.billing_address }}
+            {% else %}
+              <em>Same as service address</em>
+            {% endif %}
+          </p>
+        </div>
+      </div>
+      <div class="mt-3">
+        <a href="{% url 'client_detail' job.client.id %}" class="btn btn-sm btn-outline-info">
+          <i class="bi bi-person-circle me-1"></i>View Full Client Profile
+        </a>
+        <a href="{% url 'client_edit' job.client.id %}" class="btn btn-sm btn-outline-warning">
+          <i class="bi bi-pencil me-1"></i>Edit Client Info
+        </a>
+      </div>
+    </div>
+  </div>
+
   <!-- Scheduled Events -->
   <div class="card mb-4">
     <div class="card-header bg-primary text-white">
@@ -3260,7 +3450,6 @@ document.addEventListener("DOMContentLoaded", function () {
 {% block extra_js %}
 <!-- Optional JS for future interactivity -->
 {% endblock %}
-
 
 ===== templates/workorders/workorder_form.html =====
 {% extends "base.html" %}
