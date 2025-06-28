@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Invoice #{{ invoice.invoice_number }}</title>
+  <style>
+    body { 
+      font-family: 'Arial', sans-serif; 
+      color: #333; 
+      margin: 1rem;
+      line-height: 1.4;
+    }
+    
+    .header { 
+      text-align: center; 
+      margin-bottom: 2rem; 
+      border-bottom: 2px solid #28a745;
+      padding-bottom: 1rem;
+    }
+    
+    .logo { 
+      font-size: 1.5rem; 
+      font-weight: bold; 
+      margin-bottom: 0.5rem;
+    }
+    
+    .invoice-title {
+      font-size: 1.8rem;
+      margin: 0;
+      color: #28a745;
+    }
+    
+    .invoice-info {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+      background-color: #f8f9fa;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      border-left: 4px solid #28a745;
+    }
+    
+    .invoice-details {
+      text-align: right;
+    }
+    
+    .section { 
+      margin-bottom: 1.5rem; 
+      break-inside: avoid;
+    }
+    
+    .section-title { 
+      background-color: #f8f9fa;
+      border-left: 4px solid #28a745;
+      padding: 0.5rem 1rem;
+      margin-bottom: 1rem; 
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #495057;
+    }
+    
+    .info-row {
+      display: flex;
+      margin-bottom: 0.5rem;
+    }
+    
+    .info-label { 
+      font-weight: bold; 
+      width: 150px; 
+      display: inline-block;
+      color: #495057;
+    }
+    
+    .info-value {
+      flex: 1;
+    }
+    
+    .status-badge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.875rem;
+      display: inline-block;
+      font-weight: bold;
+    }
+    
+    .status-unpaid {
+      background-color: #dc3545;
+      color: white;
+    }
+    
+    .status-in-quickbooks {
+      background-color: #ffc107;
+      color: #212529;
+    }
+    
+    .status-paid {
+      background-color: #28a745;
+      color: white;
+    }
+    
+    .amount-section {
+      background-color: #e9ecef;
+      border: 2px solid #28a745;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      text-align: center;
+      margin: 1.5rem 0;
+    }
+    
+    .amount-label {
+      font-size: 1.1rem;
+      color: #495057;
+      margin-bottom: 0.5rem;
+    }
+    
+    .amount-value {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #28a745;
+    }
+    
+    .event-item {
+      background-color: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 0.25rem;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .event-type {
+      font-weight: bold;
+      color: #28a745;
+      margin-bottom: 0.25rem;
+    }
+    
+    .event-details {
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+    
+    .two-column {
+      display: flex;
+      gap: 2rem;
+    }
+    
+    .column {
+      flex: 1;
+    }
+    
+    .notes-section {
+      background-color: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 0.25rem;
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+    
+    .work-order-link {
+      background-color: #d1ecf1;
+      border: 1px solid #bee5eb;
+      border-radius: 0.25rem;
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+    
+    .footer {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid #dee2e6;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+    
+    @media print {
+      body { margin: 0; }
+      .section { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">EJ Art Moving</div>
+    <h1 class="invoice-title">Invoice #{{ invoice.invoice_number }}</h1>
+  </div>
+
+  <!-- Invoice Summary -->
+  <div class="invoice-info">
+    <div>
+      <h3 style="margin: 0 0 0.5rem 0; color: #28a745;">Invoice Information</h3>
+      <div><strong>Invoice Number:</strong> {{ invoice.invoice_number }}</div>
+      <div><strong>Date Created:</strong> {{ invoice.date_created|date:"F j, Y" }}</div>
+    </div>
+    <div class="invoice-details">
+      <div><strong>Status:</strong> 
+        <span class="status-badge 
+          {% if invoice.status == 'unpaid' %}status-unpaid
+          {% elif invoice.status == 'in_quickbooks' %}status-in-quickbooks  
+          {% else %}status-paid{% endif %}">
+          {{ invoice.get_status_display }}
+        </span>
+      </div>
+      {% if invoice.work_order %}
+        <div style="margin-top: 0.5rem;"><strong>Work Order:</strong> #{{ invoice.work_order.id }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Client Information -->
+  <div class="section">
+    <div class="section-title">Bill To</div>
+    <div class="two-column">
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Name:</span>
+          <span class="info-value">{{ invoice.client.name }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Email:</span>
+          <span class="info-value">{{ invoice.client.email|default:"Not provided" }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Phone:</span>
+          <span class="info-value">{{ invoice.client.phone|default:"Not provided" }}</span>
+        </div>
+      </div>
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Service Address:</span>
+          <span class="info-value">{{ invoice.client.address|default:"Not provided" }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Billing Address:</span>
+          <span class="info-value">{{ invoice.client.billing_address|default:"Not provided" }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Work Order Information (if linked) -->
+  {% if invoice.work_order %}
+  <div class="section">
+    <div class="section-title">Work Order Details</div>
+    <div class="work-order-link">
+      <div class="two-column">
+        <div class="column">
+          <div class="info-row">
+            <span class="info-label">Work Order ID:</span>
+            <span class="info-value">#{{ invoice.work_order.id }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Description:</span>
+            <span class="info-value">{{ invoice.work_order.job_description|default:"No description provided" }}</span>
+          </div>
+        </div>
+        <div class="column">
+          <div class="info-row">
+            <span class="info-label">Status:</span>
+            <span class="info-value">{{ invoice.work_order.get_status_display }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Completed:</span>
+            <span class="info-value">
+              {% if invoice.work_order.completed_at %}
+                {{ invoice.work_order.completed_at|date:"F j, Y" }}
+              {% else %}
+                Not completed
+              {% endif %}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scheduled Events (if work order has events) -->
+  {% if events %}
+  <div class="section">
+    <div class="section-title">Services Provided</div>
+    {% for event in events %}
+      <div class="event-item">
+        <div class="event-type">{{ event.get_event_type_display }}</div>
+        <div class="event-details">
+          {% if event.address %}
+            <strong>Location:</strong> {{ event.address }}<br>
+          {% endif %}
+          {% if event.date %}
+            <strong>Date:</strong> {{ event.date|date:"F j, Y" }}
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endif %}
+
+  <!-- Invoice Amount -->
+  <div class="amount-section">
+    <div class="amount-label">Total Amount Due</div>
+    <div class="amount-value">${{ invoice.amount }}</div>
+  </div>
+
+  <!-- Notes -->
+  {% if invoice.notes %}
+  <div class="section">
+    <div class="section-title">Notes</div>
+    <div class="notes-section">
+      {{ invoice.notes|linebreaks }}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Payment Information -->
+  <div class="section">
+    <div class="section-title">Payment Information</div>
+    <div style="background-color: #f8f9fa; padding: 1rem; border-radius: 0.25rem;">
+      <p><strong>Please make checks payable to:</strong> EJ Art Moving</p>
+      <p><strong>Questions about this invoice?</strong> Contact us for assistance.</p>
+      {% if invoice.status == 'unpaid' %}
+        <p style="color: #dc3545; font-weight: bold;">Payment is due upon receipt.</p>
+      {% elif invoice.status == 'paid' %}
+        <p style="color: #28a745; font-weight: bold;">✓ This invoice has been paid. Thank you!</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Generated on {{ "now"|date:"F j, Y g:i A" }} | EJ Art Moving Business Management System</p>
+    <p>Thank you for your business!</p>
+  </div>
+
+</body>
+</html>

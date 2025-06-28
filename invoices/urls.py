@@ -8,12 +8,15 @@ urlpatterns = [
     path('<int:invoice_id>/edit/', views.invoice_update, name='invoice_update'),
     path('<int:invoice_id>/delete/', views.invoice_delete, name='invoice_delete'),
     
-    # ✅ Updated URLs with honest names
+    # Status views
     path('unpaid/', views.invoice_unpaid, name='invoice_unpaid'),
     path('in-quickbooks/', views.invoice_in_quickbooks, name='invoice_in_quickbooks'),
     path('paid/', views.invoice_paid, name='invoice_paid'),
     
     path('<int:invoice_id>/mark_paid/', views.mark_invoice_paid, name='mark_invoice_paid'),
+
+    # PDF generation
+    path('<int:invoice_id>/pdf/', views.invoice_pdf, name='invoice_pdf'),
 
     # AJAX endpoints
     path('ajax/get_clients/', views.ajax_get_clients, name='ajax_get_clients'),

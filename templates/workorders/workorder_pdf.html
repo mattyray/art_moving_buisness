@@ -163,13 +163,7 @@
         </div>
         <div class="info-row">
           <span class="info-label">Billing Address:</span>
-          <span class="info-value">
-            {% if job.client.billing_address %}
-              {{ job.client.billing_address }}
-            {% else %}
-              Same as service address
-            {% endif %}
-          </span>
+          <span class="info-value">{{ job.client.billing_address|default:"Not provided" }}</span>
         </div>
       </div>
     </div>

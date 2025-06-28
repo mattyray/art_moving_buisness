@@ -12,18 +12,12 @@
     <div class="card-body">
       <div class="row">
         <div class="col-md-6">
-          <p><strong>Email:</strong> {{ client.email }}</p>
-          <p><strong>Phone:</strong> {{ client.phone }}</p>
+          <p><strong>Email:</strong> {{ client.email|default:"Not provided" }}</p>
+          <p><strong>Phone:</strong> {{ client.phone|default:"Not provided" }}</p>
         </div>
         <div class="col-md-6">
-          <p><strong>Address:</strong> {{ client.address }}</p>
-          <p><strong>Billing Address:</strong> 
-            {% if client.billing_address %}
-              {{ client.billing_address }}
-            {% else %}
-              <em>Not specified</em>
-            {% endif %}
-          </p>
+          <p><strong>Service Address:</strong> {{ client.address|default:"Not provided" }}</p>
+          <p><strong>Billing Address:</strong> {{ client.billing_address|default:"Not provided" }}</p>
         </div>
       </div>
     </div>

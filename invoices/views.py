@@ -8,6 +8,31 @@ from .forms import InvoiceForm
 from clients.models import Client
 from workorders.models import WorkOrder
 from django.utils import timezone
+# Add these imports at the top of invoices/views.py
+from django.template.loader import render_to_string
+from weasyprint import HTML
+
+# Add this function to invoices/views.py
+@login_required 
+def invoice_pdf(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    
+    # Get events if linked to work order
+    events = []
+    if invoice.work_order:
+        events = invoice.work_order.events.all().order_by('date')
+    
+    html_string = render_to_string("invoices/invoice_pdf.html", {
+        "invoice": invoice,
+        "events": events,
+    })
+    html = HTML(string=html_string, base_url=request.build_absolute_uri())
+    pdf = html.write_pdf()
+
+    response = HttpResponse(pdf, content_type="application/pdf")
+    # Open in browser for printing
+    response["Content-Disposition"] = f"inline; filename=Invoice_{invoice.invoice_number}.pdf"
+    return response
 
 @login_required
 def invoice_delete(request, invoice_id):
