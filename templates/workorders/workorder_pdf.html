@@ -4,60 +4,274 @@
   <meta charset="UTF-8">
   <title>Work Order #{{ job.id }}</title>
   <style>
-    body { font-family: 'Arial', sans-serif; color: #333; margin: 2rem; }
-    header { text-align: center; margin-bottom: 2rem; }
-    header img { height: 80px; }
-    h1 { font-size: 1.5rem; margin: 0; }
-    .info-section, .event-section, .note-section { margin-bottom: 2rem; }
-    .info-label { font-weight: bold; width: 150px; display: inline-block; }
-    .section-title { border-bottom: 1px solid #ccc; margin-bottom: 1rem; font-size: 1.2rem; }
+    body { 
+      font-family: 'Arial', sans-serif; 
+      color: #333; 
+      margin: 1rem;
+      line-height: 1.4;
+    }
+    
+    .header { 
+      text-align: center; 
+      margin-bottom: 2rem; 
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 1rem;
+    }
+    
+    .logo { 
+      font-size: 1.5rem; 
+      font-weight: bold; 
+      margin-bottom: 0.5rem;
+    }
+    
+    .work-order-title {
+      font-size: 1.8rem;
+      margin: 0;
+      color: #007bff;
+    }
+    
+    .section { 
+      margin-bottom: 1.5rem; 
+      break-inside: avoid;
+    }
+    
+    .section-title { 
+      background-color: #f8f9fa;
+      border-left: 4px solid #007bff;
+      padding: 0.5rem 1rem;
+      margin-bottom: 1rem; 
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #495057;
+    }
+    
+    .info-row {
+      display: flex;
+      margin-bottom: 0.5rem;
+    }
+    
+    .info-label { 
+      font-weight: bold; 
+      width: 150px; 
+      display: inline-block;
+      color: #495057;
+    }
+    
+    .info-value {
+      flex: 1;
+    }
+    
+    .status-badge {
+      background-color: #28a745;
+      color: white;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.875rem;
+      display: inline-block;
+    }
+    
+    .event-item {
+      background-color: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 0.25rem;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .event-type {
+      font-weight: bold;
+      color: #007bff;
+      margin-bottom: 0.25rem;
+    }
+    
+    .event-details {
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+    
+    .note-item {
+      background-color: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 0.25rem;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .note-text {
+      margin-bottom: 0.25rem;
+    }
+    
+    .note-date {
+      font-size: 0.8rem;
+      color: #6c757d;
+      font-style: italic;
+    }
+    
+    .two-column {
+      display: flex;
+      gap: 2rem;
+    }
+    
+    .column {
+      flex: 1;
+    }
+    
+    .footer {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid #dee2e6;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+    
+    @media print {
+      body { margin: 0; }
+      .section { break-inside: avoid; }
+    }
   </style>
 </head>
 <body>
 
-  <header>
-    <img src="{{ STATIC_URL }}images/nav-icon-128x128.png" alt="Logo">
-    <h1>EJ Art Moving – Work Order #{{ job.id }}</h1>
-  </header>
-
-  <div class="info-section">
-    <div class="section-title">Client Info</div>
-    <p><span class="info-label">Name:</span> {{ job.client.name }}</p>
-    <p><span class="info-label">Email:</span> {{ job.client.email }}</p>
-    <p><span class="info-label">Phone:</span> {{ job.client.phone }}</p>
-    <p><span class="info-label">Address:</span> {{ job.client.address }}</p>
+  <div class="header">
+    <div class="logo">EJ Art Moving</div>
+    <h1 class="work-order-title">Work Order #{{ job.id }}</h1>
   </div>
 
-  <div class="info-section">
-    <div class="section-title">Job Info</div>
-    <p><span class="info-label">Description:</span> {{ job.job_description }}</p>
-    <p><span class="info-label">Estimated Cost:</span> ${{ job.estimated_cost }}</p>
-    <p><span class="info-label">Created:</span> {{ job.created_at|date:"F j, Y" }}</p>
-    {% if job.completed_at %}
-    <p><span class="info-label">Completed:</span> {{ job.completed_at|date:"F j, Y" }}</p>
+  <!-- Client Information -->
+  <div class="section">
+    <div class="section-title">Client Information</div>
+    <div class="two-column">
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Name:</span>
+          <span class="info-value">{{ job.client.name }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Email:</span>
+          <span class="info-value">{{ job.client.email|default:"Not provided" }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Phone:</span>
+          <span class="info-value">{{ job.client.phone|default:"Not provided" }}</span>
+        </div>
+      </div>
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Service Address:</span>
+          <span class="info-value">{{ job.client.address|default:"Not provided" }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Billing Address:</span>
+          <span class="info-value">
+            {% if job.client.billing_address %}
+              {{ job.client.billing_address }}
+            {% else %}
+              Same as service address
+            {% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Work Order Details -->
+  <div class="section">
+    <div class="section-title">Work Order Details</div>
+    <div class="two-column">
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Job Description:</span>
+          <span class="info-value">{{ job.job_description|default:"No description provided" }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Estimated Cost:</span>
+          <span class="info-value">${{ job.estimated_cost|default:"0.00" }}</span>
+        </div>
+      </div>
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Status:</span>
+          <span class="info-value">
+            <span class="status-badge">{{ job.get_status_display }}</span>
+          </span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Created:</span>
+          <span class="info-value">{{ job.created_at|date:"F j, Y g:i A" }}</span>
+        </div>
+        {% if job.completed_at %}
+        <div class="info-row">
+          <span class="info-label">Completed:</span>
+          <span class="info-value">{{ job.completed_at|date:"F j, Y g:i A" }}</span>
+        </div>
+        {% endif %}
+        {% if job.invoiced %}
+        <div class="info-row">
+          <span class="info-label">Invoiced:</span>
+          <span class="info-value">Yes</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Scheduled Events -->
+  <div class="section">
+    <div class="section-title">Scheduled Events</div>
+    {% if job.events.all %}
+      {% for event in job.events.all %}
+        <div class="event-item">
+          <div class="event-type">{{ event.get_event_type_display }}</div>
+          <div class="event-details">
+            {% if event.address %}
+              <strong>Address:</strong> {{ event.address }}<br>
+            {% endif %}
+            {% if event.date %}
+              <strong>Date:</strong> {{ event.date|date:"F j, Y" }}
+            {% else %}
+              <strong>Date:</strong> To be scheduled
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p style="font-style: italic; color: #6c757d;">No scheduled events.</p>
     {% endif %}
   </div>
 
-  <div class="event-section">
-    <div class="section-title">Scheduled Events</div>
-    <ul>
-      {% for event in job.addresses.all %}
-        <li><strong>{{ event.get_event_type_display }}:</strong> {{ event.address }} – {{ event.date|date:"F j, Y" }}</li>
-      {% empty %}
-        <p>No scheduled events.</p>
+  <!-- Notes -->
+  <div class="section">
+    <div class="section-title">Notes</div>
+    {% if job.notes.all %}
+      {% for note in job.notes.all %}
+        <div class="note-item">
+          <div class="note-text">{{ note.note }}</div>
+          <div class="note-date">Added: {{ note.created_at|date:"F j, Y g:i A" }}</div>
+        </div>
       {% endfor %}
-    </ul>
+    {% else %}
+      <p style="font-style: italic; color: #6c757d;">No notes available.</p>
+    {% endif %}
   </div>
 
-  <div class="note-section">
-    <div class="section-title">Notes</div>
-    <ul>
-      {% for note in job.notes.all %}
-        <li>{{ note.note }} <small>({{ note.created_at|date:"F j, Y" }})</small></li>
-      {% empty %}
-        <p>No notes available.</p>
-      {% endfor %}
-    </ul>
+  <!-- Attachments -->
+  {% if job.attachments.all %}
+  <div class="section">
+    <div class="section-title">Attachments</div>
+    {% for attachment in job.attachments.all %}
+      {% if attachment.file %}
+        <div class="info-row">
+          <span class="info-label">File:</span>
+          <span class="info-value">{{ attachment.file.name }} ({{ attachment.uploaded_at|date:"F j, Y" }})</span>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="footer">
+    <p>Generated on {{ "now"|date:"F j, Y g:i A" }} | EJ Art Moving Business Management System</p>
   </div>
 
 </body>
