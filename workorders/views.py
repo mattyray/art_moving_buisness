@@ -26,7 +26,7 @@ def workorder_pdf(request, pk):
 
 @login_required
 def workorder_calendar_data(request):
-    """Returns scheduled and completed events for calendar display, excluding pending jobs."""
+    """Returns only pending and scheduled events for calendar display, excluding completed jobs."""
     events = []
 
     # A simple palette to pick a distinct color per work order:
@@ -37,7 +37,7 @@ def workorder_calendar_data(request):
     def get_color(wo_id):
         return palette[wo_id % len(palette)]
 
-    # Scheduled Event objects (only non-completed jobs)
+    # Only scheduled Event objects for pending and in-progress jobs (no completed jobs)
     scheduled_events = Event.objects.filter(
         date__isnull=False,
         work_order__status__in=["pending", "in_progress"]
@@ -50,15 +50,8 @@ def workorder_calendar_data(request):
             "url": f"/workorders/detail/{evt.work_order.id}/",
         })
 
-    # Completed jobs
-    completed = WorkOrder.objects.filter(status='completed', completed_at__isnull=False)
-    for wo in completed:
-        events.append({
-            "title": f"Completed: {wo.client.name}",
-            "start": wo.completed_at.date().isoformat(),
-            "color": "green",
-            "url": f"/workorders/detail/{wo.id}/",
-        })
+    # Show pending jobs as unscheduled tasks (removed as per user request)
+    # Completed jobs completely removed from calendar
 
     return JsonResponse(events, safe=False)
 
@@ -214,6 +207,19 @@ def mark_completed(request, job_id):
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('workorder_list')))
 
 @login_required
+def complete_and_invoice(request, job_id):
+    """Mark work order as completed and redirect to invoice creation"""
+    workorder = get_object_or_404(WorkOrder, id=job_id)
+    if workorder.status in ['pending', 'in_progress']:
+        workorder.status = 'completed'
+        workorder.completed_at = timezone.now()
+        workorder.save()
+        messages.success(request, f"Work order #{job_id} marked as completed.")
+    
+    # Redirect to invoice creation with work order pre-filled
+    return redirect(f'/invoices/create/?work_order={workorder.id}')
+
+@login_required
 def mark_paid(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
 
@@ -224,6 +230,21 @@ def mark_paid(request, job_id):
 
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('completed_jobs')))
 
+
+@login_required
+def mark_completed_and_paid(request, job_id):
+    """Mark work order as completed and paid in one action"""
+    workorder = get_object_or_404(WorkOrder, id=job_id)
+    
+    if workorder.status in ['pending', 'in_progress']:
+        workorder.status = 'completed'
+        workorder.completed_at = timezone.now()
+    
+    workorder.invoiced = True
+    workorder.save()
+    messages.success(request, f"Work order #{job_id} marked as completed and paid.")
+    
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('workorder_list')))
 
 
 @login_required
