@@ -48,10 +48,20 @@
               </td>
               <td>
                 <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}"
-                     class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}"
-                     class="btn btn-sm btn-warning w-100 w-sm-auto">Edit / Schedule</a>
+                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Schedule</a>
+                  <form method="post" action="{% url 'mark_completed' job.id %}" class="w-100 w-sm-auto">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success w-100">Complete</button>
+                  </form>
+                  <form method="post" action="{% url 'complete_and_invoice' job.id %}" class="w-100 w-sm-auto">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-primary w-100">Complete & Invoice</button>
+                  </form>
+                  <form method="post" action="{% url 'mark_completed_and_paid' job.id %}" class="w-100 w-sm-auto">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-dark w-100">Complete & Paid</button>
+                  </form>
                 </div>
               </td>
             </tr>
