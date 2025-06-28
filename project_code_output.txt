@@ -405,18 +405,24 @@ from weasyprint import HTML
 
 def workorder_pdf(request, pk):
     workorder = get_object_or_404(WorkOrder, pk=pk)
-    html_string = render_to_string("workorders/workorder_pdf.html", {"job": workorder})
+    html_string = render_to_string("workorders/workorder_pdf.html", {
+        "job": workorder,
+        "events": workorder.events.all().order_by('date'),
+        "notes": workorder.notes.all().order_by('-created_at'),
+        "attachments": workorder.attachments.exclude(file__exact=''),
+    })
     html = HTML(string=html_string, base_url=request.build_absolute_uri())
     pdf = html.write_pdf()
 
     response = HttpResponse(pdf, content_type="application/pdf")
-    response["Content-Disposition"] = f"filename=WorkOrder_{workorder.id}.pdf"
+    # Changed from attachment to inline so it opens in browser for printing
+    response["Content-Disposition"] = f"inline; filename=WorkOrder_{workorder.id}.pdf"
     return response
 
 
 @login_required
 def workorder_calendar_data(request):
-    """Returns scheduled and completed events for calendar display, excluding pending jobs."""
+    """Returns only pending and scheduled events for calendar display, excluding completed jobs."""
     events = []
 
     # A simple palette to pick a distinct color per work order:
@@ -427,7 +433,7 @@ def workorder_calendar_data(request):
     def get_color(wo_id):
         return palette[wo_id % len(palette)]
 
-    # Scheduled Event objects (only non-completed jobs)
+    # Only scheduled Event objects for pending and in-progress jobs (no completed jobs)
     scheduled_events = Event.objects.filter(
         date__isnull=False,
         work_order__status__in=["pending", "in_progress"]
@@ -438,16 +444,6 @@ def workorder_calendar_data(request):
             "start": evt.date.isoformat(),
             "color": get_color(evt.work_order.id),
             "url": f"/workorders/detail/{evt.work_order.id}/",
-        })
-
-    # Completed jobs
-    completed = WorkOrder.objects.filter(status='completed', completed_at__isnull=False)
-    for wo in completed:
-        events.append({
-            "title": f"Completed: {wo.client.name}",
-            "start": wo.completed_at.date().isoformat(),
-            "color": "green",
-            "url": f"/workorders/detail/{wo.id}/",
         })
 
     return JsonResponse(events, safe=False)
@@ -508,13 +504,24 @@ def workorder_create(request):
 
             if note_form.is_valid():
                 text = note_form.cleaned_data.get('note', '').strip()
-                # Only save non‑empty notes
                 if text:
                     note = note_form.save(commit=False)
                     note.work_order = workorder
                     note.save()
 
-            return redirect('workorder_list')
+            # Handle different submit buttons
+            if 'save_and_invoice' in request.POST:
+                messages.success(request, f"Work order #{workorder.id} created successfully.")
+                return redirect(f'/invoices/create/?work_order={workorder.id}')
+            elif 'save_and_complete' in request.POST:
+                workorder.status = 'completed'
+                workorder.completed_at = timezone.now()
+                workorder.save()
+                messages.success(request, f"Work order #{workorder.id} created and marked as completed.")
+                return redirect("workorder_detail", job_id=workorder.id)
+            else:  # save_only
+                messages.success(request, f"Work order #{workorder.id} created successfully.")
+                return redirect("workorder_detail", job_id=workorder.id)
     else:
         form = WorkOrderForm()
         event_formset = EventFormSet(prefix="events")
@@ -554,15 +561,24 @@ def workorder_edit(request, job_id):
 
             if note_form.is_valid():
                 text = note_form.cleaned_data.get('note', '').strip()
-                # Only save non‑empty notes
                 if text:
                     note = note_form.save(commit=False)
                     note.work_order = workorder
                     note.save()
 
-            if 'create_invoice' in request.POST:
+            # Handle different submit buttons
+            if 'save_and_invoice' in request.POST:
+                messages.success(request, f"Work order #{workorder.id} updated successfully.")
                 return redirect(f'/invoices/create/?work_order={workorder.id}')
-            return redirect("workorder_detail", job_id=workorder.id)
+            elif 'save_and_complete' in request.POST:
+                workorder.status = 'completed'
+                workorder.completed_at = timezone.now()
+                workorder.save()
+                messages.success(request, f"Work order #{workorder.id} updated and marked as completed.")
+                return redirect("workorder_detail", job_id=workorder.id)
+            else:  # save_only
+                messages.success(request, f"Work order #{workorder.id} updated successfully.")
+                return redirect("workorder_detail", job_id=workorder.id)
     else:
         form = WorkOrderForm(instance=workorder)
         event_formset = EventFormSet(instance=workorder, prefix="events")
@@ -603,6 +619,20 @@ def mark_completed(request, job_id):
         messages.success(request, "Work order marked as completed.")
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('workorder_list')))
 
+
+@login_required
+def complete_and_invoice(request, job_id):
+    """Mark work order as completed and redirect to invoice creation"""
+    workorder = get_object_or_404(WorkOrder, id=job_id)
+    if workorder.status in ['pending', 'in_progress']:
+        workorder.status = 'completed'
+        workorder.completed_at = timezone.now()
+        workorder.save()
+        messages.success(request, f"Work order #{job_id} marked as completed.")
+    
+    return redirect(f'/invoices/create/?work_order={workorder.id}')
+
+
 @login_required
 def mark_paid(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
@@ -615,23 +645,35 @@ def mark_paid(request, job_id):
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('completed_jobs')))
 
 
+@login_required
+def mark_completed_and_paid(request, job_id):
+    """Mark work order as completed and paid in one action"""
+    workorder = get_object_or_404(WorkOrder, id=job_id)
+    
+    if workorder.status in ['pending', 'in_progress']:
+        workorder.status = 'completed'
+        workorder.completed_at = timezone.now()
+    
+    workorder.invoiced = True
+    workorder.save()
+    messages.success(request, f"Work order #{job_id} marked as completed and paid.")
+    
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('workorder_list')))
+
 
 @login_required
 def workorder_detail(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
-    events      = workorder.events.all()
-    # Exclude any attachment rows with no file path
+    events = workorder.events.all()
     attachments = workorder.attachments.exclude(file__exact='')
-    notes       = workorder.notes.all()
+    notes = workorder.notes.all()
 
     attachment_form = JobAttachmentForm()
-    note_form       = JobNoteForm()
+    note_form = JobNoteForm()
 
     if request.method == 'POST':
-        # --- New Attachment ---
         if 'attachment_submit' in request.POST:
             attachment_form = JobAttachmentForm(request.POST, request.FILES)
-            # Only save when a file was uploaded
             uploaded = request.FILES.get('file')
             if attachment_form.is_valid() and uploaded:
                 attachment = attachment_form.save(commit=False)
@@ -639,12 +681,10 @@ def workorder_detail(request, job_id):
                 attachment.save()
             return redirect('workorder_detail', job_id=workorder.id)
 
-        # --- New Note ---
         elif 'note_submit' in request.POST:
             note_form = JobNoteForm(request.POST)
             if note_form.is_valid():
                 text = note_form.cleaned_data.get('note', '').strip()
-                # Only save non‑empty notes
                 if text:
                     note = note_form.save(commit=False)
                     note.work_order = workorder
@@ -660,16 +700,16 @@ def workorder_detail(request, job_id):
         'note_form': note_form,
     })
 
+
 @login_required
 def pending_jobs_view(request):
     query = request.GET.get('q', '')
     jobs = WorkOrder.objects.exclude(events__date__isnull=False)\
                             .filter(status__in=["pending", "in_progress"])\
-                            .order_by('-updated_at')  # ⬅️ Add this
+                            .order_by('-updated_at')
     if query:
         jobs = jobs.filter(client__name__icontains=query)
     return render(request, 'workorders/pending_jobs.html', {'jobs': jobs, 'query': query})
-
 
 
 @login_required
@@ -678,11 +718,10 @@ def scheduled_jobs_view(request):
     jobs = WorkOrder.objects.filter(events__date__isnull=False,
                                     status__in=["pending", "in_progress"])\
                             .distinct()\
-                            .order_by('-updated_at')  # ⬅️ Add this
+                            .order_by('-updated_at')
     if query:
         jobs = jobs.filter(client__name__icontains=query)
     return render(request, 'workorders/scheduled_jobs.html', {'jobs': jobs, 'query': query})
-
 
 
 @login_required
@@ -719,19 +758,12 @@ class WorkOrderForm(forms.ModelForm):
         label="Client"
     )
 
-    invoiced = forms.BooleanField(
-        required=False,
-        label="Mark as Invoiced?",
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
-    )
-
     class Meta:
         model = WorkOrder
         fields = [
             'client',
             'job_description',
             'estimated_cost',
-            'invoiced',
         ]
 
     def __init__(self, *args, **kwargs):
@@ -792,7 +824,6 @@ class JobNoteForm(forms.ModelForm):
         model = JobNote
         fields = ['note']
 
-
 ===== workorders/urls.py =====
 from django.urls import path
 from . import views
@@ -808,6 +839,8 @@ urlpatterns = [
     path('completed/', views.completed_jobs_view, name='completed_jobs'),
 
     path('mark_completed/<int:job_id>/', views.mark_completed, name='mark_completed'),
+    path('complete_and_invoice/<int:job_id>/', views.complete_and_invoice, name='complete_and_invoice'),
+    path('mark_completed_and_paid/<int:job_id>/', views.mark_completed_and_paid, name='mark_completed_and_paid'),
 
     path('detail/<int:job_id>/', views.workorder_detail, name='workorder_detail'),
     path('mark_paid/<int:job_id>/', views.mark_paid, name='mark_paid'),
@@ -819,7 +852,6 @@ urlpatterns = [
     path("<int:pk>/pdf/", views.workorder_pdf, name="workorder_pdf"),
 
 ]
-
 
 ===== workorders/admin.py =====
 from django.contrib import admin
@@ -885,6 +917,8 @@ class Client(models.Model):
 ===== clients/views.py =====
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from .models import Client
 from .forms import ClientForm
 
@@ -917,6 +951,43 @@ def client_create(request):
     return render(request, 'clients/client_form.html', context)
 
 @login_required
+def client_create_ajax(request):
+    """AJAX endpoint for creating clients from work order form"""
+    if request.method == 'POST':
+        try:
+            # Create client from POST data
+            client = Client(
+                name=request.POST.get('name', '').strip(),
+                email=request.POST.get('email', '').strip() or None,
+                phone=request.POST.get('phone', '').strip() or None,
+                address=request.POST.get('address', '').strip() or None,
+                billing_address=request.POST.get('billing_address', '').strip() or None,
+            )
+            
+            # Validate required fields
+            if not client.name:
+                return JsonResponse({'success': False, 'error': 'Name is required'})
+            
+            client.save()
+            
+            return JsonResponse({
+                'success': True,
+                'client': {
+                    'id': client.id,
+                    'name': client.name,
+                    'email': client.email,
+                    'phone': client.phone,
+                    'address': client.address,
+                    'billing_address': client.billing_address,
+                }
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+@login_required
 def client_edit(request, client_id):
     client = get_object_or_404(Client, id=client_id)
     if request.method == 'POST':
@@ -929,7 +1000,6 @@ def client_edit(request, client_id):
     context = {'form': form, 'client': client}
     return render(request, 'clients/client_form.html', context)
 
-
 ===== clients/forms.py =====
 from django import forms
 from .models import Client
@@ -937,7 +1007,28 @@ from .models import Client
 class ClientForm(forms.ModelForm):
     class Meta:
         model = Client
-        fields = ['name', 'email', 'phone', 'address', 'billing_address']  # ✅ ADDED billing_address
+        fields = ['name', 'email', 'phone', 'address', 'billing_address']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'address': forms.TextInput(attrs={'class': 'form-control'}),
+            'billing_address': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'name': 'Name',
+            'email': 'Email',
+            'phone': 'Phone',
+            'address': 'Service Address',
+            'billing_address': 'Billing Address',
+        }
+        help_texts = {
+            'name': None,
+            'email': None, 
+            'phone': None,
+            'address': None,
+            'billing_address': None,  # No help text - completely independent
+        }
 
 ===== clients/urls.py =====
 from django.urls import path
@@ -946,10 +1037,10 @@ from . import views
 urlpatterns = [
     path('', views.client_list, name='client_list'),
     path('create/', views.client_create, name='client_create'),
+    path('create-ajax/', views.client_create_ajax, name='client_create_ajax'),
     path('<int:client_id>/', views.client_detail, name='client_detail'),
     path('edit/<int:client_id>/', views.client_edit, name='client_edit'),
 ]
-
 
 ===== clients/admin.py =====
 from django.contrib import admin
@@ -1017,6 +1108,31 @@ from .forms import InvoiceForm
 from clients.models import Client
 from workorders.models import WorkOrder
 from django.utils import timezone
+# Add these imports at the top of invoices/views.py
+from django.template.loader import render_to_string
+from weasyprint import HTML
+
+# Add this function to invoices/views.py
+@login_required 
+def invoice_pdf(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    
+    # Get events if linked to work order
+    events = []
+    if invoice.work_order:
+        events = invoice.work_order.events.all().order_by('date')
+    
+    html_string = render_to_string("invoices/invoice_pdf.html", {
+        "invoice": invoice,
+        "events": events,
+    })
+    html = HTML(string=html_string, base_url=request.build_absolute_uri())
+    pdf = html.write_pdf()
+
+    response = HttpResponse(pdf, content_type="application/pdf")
+    # Open in browser for printing
+    response["Content-Disposition"] = f"inline; filename=Invoice_{invoice.invoice_number}.pdf"
+    return response
 
 @login_required
 def invoice_delete(request, invoice_id):
@@ -1268,12 +1384,15 @@ urlpatterns = [
     path('<int:invoice_id>/edit/', views.invoice_update, name='invoice_update'),
     path('<int:invoice_id>/delete/', views.invoice_delete, name='invoice_delete'),
     
-    # ✅ Updated URLs with honest names
+    # Status views
     path('unpaid/', views.invoice_unpaid, name='invoice_unpaid'),
     path('in-quickbooks/', views.invoice_in_quickbooks, name='invoice_in_quickbooks'),
     path('paid/', views.invoice_paid, name='invoice_paid'),
     
     path('<int:invoice_id>/mark_paid/', views.mark_invoice_paid, name='mark_invoice_paid'),
+
+    # PDF generation
+    path('<int:invoice_id>/pdf/', views.invoice_pdf, name='invoice_pdf'),
 
     # AJAX endpoints
     path('ajax/get_clients/', views.ajax_get_clients, name='ajax_get_clients'),
@@ -1546,18 +1665,12 @@ application = get_wsgi_application()
     <div class="card-body">
       <div class="row">
         <div class="col-md-6">
-          <p><strong>Email:</strong> {{ client.email }}</p>
-          <p><strong>Phone:</strong> {{ client.phone }}</p>
+          <p><strong>Email:</strong> {{ client.email|default:"Not provided" }}</p>
+          <p><strong>Phone:</strong> {{ client.phone|default:"Not provided" }}</p>
         </div>
         <div class="col-md-6">
-          <p><strong>Address:</strong> {{ client.address }}</p>
-          <p><strong>Billing Address:</strong> 
-            {% if client.billing_address %}
-              {{ client.billing_address }}
-            {% else %}
-              <em>Not specified</em>
-            {% endif %}
-          </p>
+          <p><strong>Service Address:</strong> {{ client.address|default:"Not provided" }}</p>
+          <p><strong>Billing Address:</strong> {{ client.billing_address|default:"Not provided" }}</p>
         </div>
       </div>
     </div>
@@ -2184,6 +2297,342 @@ document.addEventListener("DOMContentLoaded", function () {
   </div>
 </div>
 {% endblock %}
+
+===== templates/invoices/invoice_pdf.html =====
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Invoice #{{ invoice.invoice_number }}</title>
+  <style>
+    body { 
+      font-family: 'Arial', sans-serif; 
+      color: #333; 
+      margin: 1rem;
+      line-height: 1.4;
+    }
+    
+    .header { 
+      text-align: center; 
+      margin-bottom: 2rem; 
+      border-bottom: 2px solid #28a745;
+      padding-bottom: 1rem;
+    }
+    
+    .logo { 
+      font-size: 1.5rem; 
+      font-weight: bold; 
+      margin-bottom: 0.5rem;
+    }
+    
+    .invoice-title {
+      font-size: 1.8rem;
+      margin: 0;
+      color: #28a745;
+    }
+    
+    .invoice-info {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+      background-color: #f8f9fa;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      border-left: 4px solid #28a745;
+    }
+    
+    .invoice-details {
+      text-align: right;
+    }
+    
+    .section { 
+      margin-bottom: 1.5rem; 
+      break-inside: avoid;
+    }
+    
+    .section-title { 
+      background-color: #f8f9fa;
+      border-left: 4px solid #28a745;
+      padding: 0.5rem 1rem;
+      margin-bottom: 1rem; 
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #495057;
+    }
+    
+    .info-row {
+      display: flex;
+      margin-bottom: 0.5rem;
+    }
+    
+    .info-label { 
+      font-weight: bold; 
+      width: 150px; 
+      display: inline-block;
+      color: #495057;
+    }
+    
+    .info-value {
+      flex: 1;
+    }
+    
+    .status-badge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.875rem;
+      display: inline-block;
+      font-weight: bold;
+    }
+    
+    .status-unpaid {
+      background-color: #dc3545;
+      color: white;
+    }
+    
+    .status-in-quickbooks {
+      background-color: #ffc107;
+      color: #212529;
+    }
+    
+    .status-paid {
+      background-color: #28a745;
+      color: white;
+    }
+    
+    .amount-section {
+      background-color: #e9ecef;
+      border: 2px solid #28a745;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      text-align: center;
+      margin: 1.5rem 0;
+    }
+    
+    .amount-label {
+      font-size: 1.1rem;
+      color: #495057;
+      margin-bottom: 0.5rem;
+    }
+    
+    .amount-value {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #28a745;
+    }
+    
+    .event-item {
+      background-color: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 0.25rem;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .event-type {
+      font-weight: bold;
+      color: #28a745;
+      margin-bottom: 0.25rem;
+    }
+    
+    .event-details {
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+    
+    .two-column {
+      display: flex;
+      gap: 2rem;
+    }
+    
+    .column {
+      flex: 1;
+    }
+    
+    .notes-section {
+      background-color: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 0.25rem;
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+    
+    .work-order-link {
+      background-color: #d1ecf1;
+      border: 1px solid #bee5eb;
+      border-radius: 0.25rem;
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+    
+    .footer {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid #dee2e6;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+    
+    @media print {
+      body { margin: 0; }
+      .section { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">EJ Art Moving</div>
+    <h1 class="invoice-title">Invoice #{{ invoice.invoice_number }}</h1>
+  </div>
+
+  <!-- Invoice Summary -->
+  <div class="invoice-info">
+    <div>
+      <h3 style="margin: 0 0 0.5rem 0; color: #28a745;">Invoice Information</h3>
+      <div><strong>Invoice Number:</strong> {{ invoice.invoice_number }}</div>
+      <div><strong>Date Created:</strong> {{ invoice.date_created|date:"F j, Y" }}</div>
+    </div>
+    <div class="invoice-details">
+      <div><strong>Status:</strong> 
+        <span class="status-badge 
+          {% if invoice.status == 'unpaid' %}status-unpaid
+          {% elif invoice.status == 'in_quickbooks' %}status-in-quickbooks  
+          {% else %}status-paid{% endif %}">
+          {{ invoice.get_status_display }}
+        </span>
+      </div>
+      {% if invoice.work_order %}
+        <div style="margin-top: 0.5rem;"><strong>Work Order:</strong> #{{ invoice.work_order.id }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Client Information -->
+  <div class="section">
+    <div class="section-title">Bill To</div>
+    <div class="two-column">
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Name:</span>
+          <span class="info-value">{{ invoice.client.name }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Email:</span>
+          <span class="info-value">{{ invoice.client.email|default:"Not provided" }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Phone:</span>
+          <span class="info-value">{{ invoice.client.phone|default:"Not provided" }}</span>
+        </div>
+      </div>
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Service Address:</span>
+          <span class="info-value">{{ invoice.client.address|default:"Not provided" }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Billing Address:</span>
+          <span class="info-value">{{ invoice.client.billing_address|default:"Not provided" }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Work Order Information (if linked) -->
+  {% if invoice.work_order %}
+  <div class="section">
+    <div class="section-title">Work Order Details</div>
+    <div class="work-order-link">
+      <div class="two-column">
+        <div class="column">
+          <div class="info-row">
+            <span class="info-label">Work Order ID:</span>
+            <span class="info-value">#{{ invoice.work_order.id }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Description:</span>
+            <span class="info-value">{{ invoice.work_order.job_description|default:"No description provided" }}</span>
+          </div>
+        </div>
+        <div class="column">
+          <div class="info-row">
+            <span class="info-label">Status:</span>
+            <span class="info-value">{{ invoice.work_order.get_status_display }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Completed:</span>
+            <span class="info-value">
+              {% if invoice.work_order.completed_at %}
+                {{ invoice.work_order.completed_at|date:"F j, Y" }}
+              {% else %}
+                Not completed
+              {% endif %}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scheduled Events (if work order has events) -->
+  {% if events %}
+  <div class="section">
+    <div class="section-title">Services Provided</div>
+    {% for event in events %}
+      <div class="event-item">
+        <div class="event-type">{{ event.get_event_type_display }}</div>
+        <div class="event-details">
+          {% if event.address %}
+            <strong>Location:</strong> {{ event.address }}<br>
+          {% endif %}
+          {% if event.date %}
+            <strong>Date:</strong> {{ event.date|date:"F j, Y" }}
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endif %}
+
+  <!-- Invoice Amount -->
+  <div class="amount-section">
+    <div class="amount-label">Total Amount Due</div>
+    <div class="amount-value">${{ invoice.amount }}</div>
+  </div>
+
+  <!-- Notes -->
+  {% if invoice.notes %}
+  <div class="section">
+    <div class="section-title">Notes</div>
+    <div class="notes-section">
+      {{ invoice.notes|linebreaks }}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Payment Information -->
+  <div class="section">
+    <div class="section-title">Payment Information</div>
+    <div style="background-color: #f8f9fa; padding: 1rem; border-radius: 0.25rem;">
+      <p><strong>Please make checks payable to:</strong> EJ Art Moving</p>
+      <p><strong>Questions about this invoice?</strong> Contact us for assistance.</p>
+      {% if invoice.status == 'unpaid' %}
+        <p style="color: #dc3545; font-weight: bold;">Payment is due upon receipt.</p>
+      {% elif invoice.status == 'paid' %}
+        <p style="color: #28a745; font-weight: bold;">✓ This invoice has been paid. Thank you!</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Generated on {{ "now"|date:"F j, Y g:i A" }} | EJ Art Moving Business Management System</p>
+    <p>Thank you for your business!</p>
+  </div>
+
+</body>
+</html>
 
 ===== templates/invoices/invoice_confirm_delete.html =====
 {% extends "base.html" %}
@@ -3235,65 +3684,272 @@ document.addEventListener("DOMContentLoaded", function () {
   <meta charset="UTF-8">
   <title>Work Order #{{ job.id }}</title>
   <style>
-    body { font-family: 'Arial', sans-serif; color: #333; margin: 2rem; }
-    header { text-align: center; margin-bottom: 2rem; }
-    header img { height: 80px; }
-    h1 { font-size: 1.5rem; margin: 0; }
-    .info-section, .event-section, .note-section { margin-bottom: 2rem; }
-    .info-label { font-weight: bold; width: 150px; display: inline-block; }
-    .section-title { border-bottom: 1px solid #ccc; margin-bottom: 1rem; font-size: 1.2rem; }
+    body { 
+      font-family: 'Arial', sans-serif; 
+      color: #333; 
+      margin: 1rem;
+      line-height: 1.4;
+    }
+    
+    .header { 
+      text-align: center; 
+      margin-bottom: 2rem; 
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 1rem;
+    }
+    
+    .logo { 
+      font-size: 1.5rem; 
+      font-weight: bold; 
+      margin-bottom: 0.5rem;
+    }
+    
+    .work-order-title {
+      font-size: 1.8rem;
+      margin: 0;
+      color: #007bff;
+    }
+    
+    .section { 
+      margin-bottom: 1.5rem; 
+      break-inside: avoid;
+    }
+    
+    .section-title { 
+      background-color: #f8f9fa;
+      border-left: 4px solid #007bff;
+      padding: 0.5rem 1rem;
+      margin-bottom: 1rem; 
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #495057;
+    }
+    
+    .info-row {
+      display: flex;
+      margin-bottom: 0.5rem;
+    }
+    
+    .info-label { 
+      font-weight: bold; 
+      width: 150px; 
+      display: inline-block;
+      color: #495057;
+    }
+    
+    .info-value {
+      flex: 1;
+    }
+    
+    .status-badge {
+      background-color: #28a745;
+      color: white;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.875rem;
+      display: inline-block;
+    }
+    
+    .event-item {
+      background-color: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 0.25rem;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .event-type {
+      font-weight: bold;
+      color: #007bff;
+      margin-bottom: 0.25rem;
+    }
+    
+    .event-details {
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+    
+    .note-item {
+      background-color: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 0.25rem;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .note-text {
+      margin-bottom: 0.25rem;
+    }
+    
+    .note-date {
+      font-size: 0.8rem;
+      color: #6c757d;
+      font-style: italic;
+    }
+    
+    .two-column {
+      display: flex;
+      gap: 2rem;
+    }
+    
+    .column {
+      flex: 1;
+    }
+    
+    .footer {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid #dee2e6;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+    
+    @media print {
+      body { margin: 0; }
+      .section { break-inside: avoid; }
+    }
   </style>
 </head>
 <body>
 
-  <header>
-    <img src="{{ STATIC_URL }}images/nav-icon-128x128.png" alt="Logo">
-    <h1>EJ Art Moving – Work Order #{{ job.id }}</h1>
-  </header>
-
-  <div class="info-section">
-    <div class="section-title">Client Info</div>
-    <p><span class="info-label">Name:</span> {{ job.client.name }}</p>
-    <p><span class="info-label">Email:</span> {{ job.client.email }}</p>
-    <p><span class="info-label">Phone:</span> {{ job.client.phone }}</p>
-    <p><span class="info-label">Address:</span> {{ job.client.address }}</p>
+  <div class="header">
+    <div class="logo">EJ Art Moving</div>
+    <h1 class="work-order-title">Work Order #{{ job.id }}</h1>
   </div>
 
-  <div class="info-section">
-    <div class="section-title">Job Info</div>
-    <p><span class="info-label">Description:</span> {{ job.job_description }}</p>
-    <p><span class="info-label">Estimated Cost:</span> ${{ job.estimated_cost }}</p>
-    <p><span class="info-label">Created:</span> {{ job.created_at|date:"F j, Y" }}</p>
-    {% if job.completed_at %}
-    <p><span class="info-label">Completed:</span> {{ job.completed_at|date:"F j, Y" }}</p>
+  <!-- Client Information -->
+  <div class="section">
+    <div class="section-title">Client Information</div>
+    <div class="two-column">
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Name:</span>
+          <span class="info-value">{{ job.client.name }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Email:</span>
+          <span class="info-value">{{ job.client.email|default:"Not provided" }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Phone:</span>
+          <span class="info-value">{{ job.client.phone|default:"Not provided" }}</span>
+        </div>
+      </div>
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Service Address:</span>
+          <span class="info-value">{{ job.client.address|default:"Not provided" }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Billing Address:</span>
+          <span class="info-value">{{ job.client.billing_address|default:"Not provided" }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Work Order Details -->
+  <div class="section">
+    <div class="section-title">Work Order Details</div>
+    <div class="two-column">
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Job Description:</span>
+          <span class="info-value">{{ job.job_description|default:"No description provided" }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Estimated Cost:</span>
+          <span class="info-value">${{ job.estimated_cost|default:"0.00" }}</span>
+        </div>
+      </div>
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Status:</span>
+          <span class="info-value">
+            <span class="status-badge">{{ job.get_status_display }}</span>
+          </span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Created:</span>
+          <span class="info-value">{{ job.created_at|date:"F j, Y g:i A" }}</span>
+        </div>
+        {% if job.completed_at %}
+        <div class="info-row">
+          <span class="info-label">Completed:</span>
+          <span class="info-value">{{ job.completed_at|date:"F j, Y g:i A" }}</span>
+        </div>
+        {% endif %}
+        {% if job.invoiced %}
+        <div class="info-row">
+          <span class="info-label">Invoiced:</span>
+          <span class="info-value">Yes</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Scheduled Events -->
+  <div class="section">
+    <div class="section-title">Scheduled Events</div>
+    {% if job.events.all %}
+      {% for event in job.events.all %}
+        <div class="event-item">
+          <div class="event-type">{{ event.get_event_type_display }}</div>
+          <div class="event-details">
+            {% if event.address %}
+              <strong>Address:</strong> {{ event.address }}<br>
+            {% endif %}
+            {% if event.date %}
+              <strong>Date:</strong> {{ event.date|date:"F j, Y" }}
+            {% else %}
+              <strong>Date:</strong> To be scheduled
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p style="font-style: italic; color: #6c757d;">No scheduled events.</p>
     {% endif %}
   </div>
 
-  <div class="event-section">
-    <div class="section-title">Scheduled Events</div>
-    <ul>
-      {% for event in job.addresses.all %}
-        <li><strong>{{ event.get_event_type_display }}:</strong> {{ event.address }} – {{ event.date|date:"F j, Y" }}</li>
-      {% empty %}
-        <p>No scheduled events.</p>
+  <!-- Notes -->
+  <div class="section">
+    <div class="section-title">Notes</div>
+    {% if job.notes.all %}
+      {% for note in job.notes.all %}
+        <div class="note-item">
+          <div class="note-text">{{ note.note }}</div>
+          <div class="note-date">Added: {{ note.created_at|date:"F j, Y g:i A" }}</div>
+        </div>
       {% endfor %}
-    </ul>
+    {% else %}
+      <p style="font-style: italic; color: #6c757d;">No notes available.</p>
+    {% endif %}
   </div>
 
-  <div class="note-section">
-    <div class="section-title">Notes</div>
-    <ul>
-      {% for note in job.notes.all %}
-        <li>{{ note.note }} <small>({{ note.created_at|date:"F j, Y" }})</small></li>
-      {% empty %}
-        <p>No notes available.</p>
-      {% endfor %}
-    </ul>
+  <!-- Attachments -->
+  {% if job.attachments.all %}
+  <div class="section">
+    <div class="section-title">Attachments</div>
+    {% for attachment in job.attachments.all %}
+      {% if attachment.file %}
+        <div class="info-row">
+          <span class="info-label">File:</span>
+          <span class="info-value">{{ attachment.file.name }} ({{ attachment.uploaded_at|date:"F j, Y" }})</span>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="footer">
+    <p>Generated on {{ "now"|date:"F j, Y g:i A" }} | EJ Art Moving Business Management System</p>
   </div>
 
 </body>
 </html>
-
 
 ===== templates/workorders/workorder_detail.html =====
 {% extends "base.html" %}
@@ -3304,30 +3960,7 @@ document.addEventListener("DOMContentLoaded", function () {
 {% block content %}
 <div class="container py-4">
 
-  <!-- Work Order Summary -->
-  <div class="card mb-4">
-    <div class="card-header bg-secondary text-white">
-      <h5 class="mb-0">Work Order #{{ job.id }}</h5>
-    </div>
-    <div class="card-body">
-      <div class="row">
-        <div class="col-md-6">
-          <p><strong>Client:</strong> {{ job.client.name }}</p>
-          <p><strong>Job Description:</strong> {{ job.job_description }}</p>
-        </div>
-        <div class="col-md-6">
-          <p><strong>Estimated Cost:</strong> ${{ job.estimated_cost }}</p>
-          <p><strong>Status:</strong> {{ job.get_status_display }}</p>
-          <p><strong>Created At:</strong> {{ job.created_at|date:"M d, Y g:i A" }}</p>
-          {% if job.completed_at %}
-            <p><strong>Completed At:</strong> {{ job.completed_at|date:"M d, Y g:i A" }}</p>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Client Information -->
+  <!-- Client Information - MOVED TO TOP -->
   <div class="card mb-4">
     <div class="card-header bg-info text-white">
       <h5 class="mb-0">Client Information</h5>
@@ -3345,7 +3978,7 @@ document.addEventListener("DOMContentLoaded", function () {
             {% if job.client.billing_address %}
               {{ job.client.billing_address }}
             {% else %}
-              <em>Same as service address</em>
+              <em>Not provided</em>
             {% endif %}
           </p>
         </div>
@@ -3361,6 +3994,116 @@ document.addEventListener("DOMContentLoaded", function () {
     </div>
   </div>
 
+  <!-- Work Order Summary -->
+  <div class="card mb-4">
+    <div class="card-header bg-secondary text-white">
+      <h5 class="mb-0">Work Order #{{ job.id }}</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <p><strong>Job Description:</strong> {{ job.job_description }}</p>
+          <p><strong>Estimated Cost:</strong> ${{ job.estimated_cost }}</p>
+        </div>
+        <div class="col-md-6">
+          <p><strong>Status:</strong> 
+            <span class="badge 
+              {% if job.status == 'pending' %}bg-secondary
+              {% elif job.status == 'in_progress' %}bg-info
+              {% elif job.status == 'completed' %}bg-success
+              {% endif %}">
+              {{ job.get_status_display }}
+            </span>
+          </p>
+          <p><strong>Created At:</strong> {{ job.created_at|date:"M d, Y g:i A" }}</p>
+          {% if job.completed_at %}
+            <p><strong>Completed At:</strong> {{ job.completed_at|date:"M d, Y g:i A" }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Progression Action Bar -->
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">Actions - Next Steps</h5>
+    </div>
+    <div class="card-body">
+      {% if job.status == 'pending' or job.status == 'in_progress' %}
+        {% if job.status == 'pending' %}
+          <div class="alert alert-info mb-3">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Status: Pending</strong> - This job needs to be scheduled or marked as completed.
+          </div>
+        {% else %}
+          <div class="alert alert-info mb-3">
+            <i class="bi bi-calendar-event me-2"></i>
+            <strong>Status: Scheduled</strong> - This job has scheduled events and is ready to be completed.
+          </div>
+        {% endif %}
+        
+        <div class="d-flex flex-column flex-lg-row gap-2">
+          <a href="{% url 'workorder_edit' job.id %}" class="btn btn-warning">
+            <i class="bi bi-pencil me-1"></i>
+            {% if job.status == 'pending' %}Schedule Events{% else %}Edit Schedule{% endif %}
+          </a>
+          <form method="post" action="{% url 'mark_completed' job.id %}" class="flex-fill">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success w-100">
+              <i class="bi bi-check-circle me-1"></i>Mark Completed
+            </button>
+          </form>
+          <form method="post" action="{% url 'complete_and_invoice' job.id %}" class="flex-fill">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="bi bi-receipt me-1"></i>Complete & Create Invoice
+            </button>
+          </form>
+          <form method="post" action="{% url 'mark_completed_and_paid' job.id %}" class="flex-fill">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-dark w-100">
+              <i class="bi bi-cash me-1"></i>Complete & Mark Paid
+            </button>
+          </form>
+        </div>
+      
+      {% elif job.status == 'completed' %}
+        {% if not job.invoiced %}
+          <div class="alert alert-warning mb-3">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Status: Completed - Not Yet Paid</strong> - Ready to create invoice or mark as paid.
+          </div>
+          
+          <div class="d-flex flex-column flex-lg-row gap-2">
+            <a href="/invoices/create/?work_order={{ job.id }}" class="btn btn-success">
+              <i class="bi bi-receipt me-1"></i>Create Invoice
+            </a>
+            <form method="post" action="{% url 'mark_paid' job.id %}" class="flex-fill">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-primary w-100">
+                <i class="bi bi-cash me-1"></i>Mark as Paid (No Invoice)
+              </button>
+            </form>
+          </div>
+        {% else %}
+          <div class="alert alert-success mb-3">
+            <i class="bi bi-check-circle me-2"></i>
+            <strong>Status: Completed & Paid</strong> - This job is finished and has been invoiced/paid.
+          </div>
+          
+          <div class="d-flex flex-column flex-lg-row gap-2">
+            {% if job.invoices.exists %}
+              <a href="{% url 'invoice_detail' job.invoices.first.id %}" class="btn btn-outline-success">
+                <i class="bi bi-receipt me-1"></i>View Invoice
+              </a>
+            {% endif %}
+          </div>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
   <!-- Scheduled Events -->
   <div class="card mb-4">
     <div class="card-header bg-primary text-white">
@@ -3369,9 +4112,12 @@ document.addEventListener("DOMContentLoaded", function () {
     <div class="card-body">
       <ul class="list-group">
         {% for event in events %}
-          <li class="list-group-item">
-            <strong>{{ event.get_event_type_display }}:</strong> 
-            {{ event.address }} on {{ event.date|date:"M d, Y" }}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <strong>{{ event.get_event_type_display }}:</strong> 
+              {{ event.address }}
+            </div>
+            <span class="badge bg-primary">{{ event.date|date:"M d, Y" }}</span>
           </li>
         {% empty %}
           <li class="list-group-item">No scheduled events.</li>
@@ -3425,16 +4171,17 @@ document.addEventListener("DOMContentLoaded", function () {
     </div>
   </div>
 
-  <!-- Action Buttons -->
+  <!-- Management Action Buttons -->
   <div class="mt-4 d-flex flex-column flex-sm-row justify-content-between gap-2">
-    <a href="{% url 'workorder_edit' job.id %}" class="btn btn-primary w-100 w-sm-auto">Edit Work Order</a>
-    <a href="{% url 'workorder_pdf' job.id %}" class="btn btn-light border d-flex align-items-center gap-2 shadow-sm px-4 py-2" target="_blank" style="border-color: #999;">
-      <i class="bi bi-file-earmark-pdf-fill text-danger fs-5"></i>
-      <span class="fw-semibold text-dark">Download PDF</span>
+    <a href="{% url 'workorder_edit' job.id %}" class="btn btn-outline-primary w-100 w-sm-auto">
+      <i class="bi bi-pencil me-1"></i>Edit Work Order
     </a>
-    
-    <a href="{% url 'workorder_delete' job.id %}" class="btn btn-danger">
-      Delete Work Order
+    <a href="{% url 'workorder_pdf' job.id %}" class="btn btn-light border d-flex align-items-center gap-2 shadow-sm px-4 py-2 w-100 w-sm-auto" target="_blank" style="border-color: #999;">
+      <i class="bi bi-printer-fill text-primary fs-5"></i>
+      <span class="fw-semibold text-dark">Print Work Order</span>
+    </a>
+    <a href="{% url 'workorder_delete' job.id %}" class="btn btn-outline-danger w-100 w-sm-auto">
+      <i class="bi bi-trash me-1"></i>Delete Work Order
     </a>
   </div>
 
@@ -3458,6 +4205,31 @@ document.addEventListener("DOMContentLoaded", function () {
 
 {% block extra_css %}
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+  <style>
+    @media (max-width: 768px) {
+      .d-flex.flex-column.flex-lg-row .btn {
+        margin-bottom: 0.5rem;
+        min-height: 48px;
+      }
+      .modal-dialog {
+        margin: 0.5rem;
+      }
+      .form-control, .form-select {
+        min-height: 44px;
+        font-size: 16px;
+      }
+    }
+    /* Hide the formset - we'll use modal instead */
+    #event-forms-container {
+      display: none;
+    }
+    #add-event {
+      display: none;
+    }
+    #empty-form-template {
+      display: none;
+    }
+  </style>
 {% endblock %}
 
 {% block content %}
@@ -3485,8 +4257,9 @@ document.addEventListener("DOMContentLoaded", function () {
           <!-- Client picker -->
           <div class="col-md-6">
             {{ form.client|as_crispy_field }}
-            <a href="{% url 'client_create' %}" target="_blank"
-               class="btn btn-sm btn-outline-primary mt-2">+ Add New Client</a>
+            <button type="button" class="btn btn-sm btn-outline-primary mt-2" data-bs-toggle="modal" data-bs-target="#newClientModal">
+              + Add New Client
+            </button>
           </div>
 
           <!-- Job description -->
@@ -3503,7 +4276,8 @@ document.addEventListener("DOMContentLoaded", function () {
             </div>
           </div>
 
-          <!-- Invoiced checkbox -->
+          <!-- Invoiced checkbox - properly displayed -->
+          {% if job %}
           <div class="col-md-6 d-flex align-items-center">
             <div class="form-check">
               {{ form.invoiced }}
@@ -3512,40 +4286,52 @@ document.addEventListener("DOMContentLoaded", function () {
               </label>
             </div>
           </div>
+          {% endif %}
         </div>
       </div>
     </div>
 
     <!-- Scheduled Events -->
     <div class="card mb-4">
-      <div class="card-header bg-primary text-white">
+      <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Scheduled Events</h5>
+        <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#eventModal">
+          <i class="bi bi-plus me-1"></i>Add Event
+        </button>
       </div>
-      <div class="card-body" id="event-formset">
-        {{ event_formset.management_form }}
-        <div id="event-forms-container">
-          {% for subform in event_formset %}
-            <div class="card mb-3 event-form">
-              <div class="card-body">
-                {{ subform|crispy }}
-                <button type="button" class="btn btn-sm btn-outline-danger remove-event mt-2">
-                  Remove
+      <div class="card-body">
+        <!-- Display existing events nicely -->
+        <div id="events-display">
+          {% if job.events.all %}
+            {% for event in job.events.all %}
+              <div class="alert alert-info d-flex justify-content-between align-items-center">
+                <div>
+                  <strong>{{ event.get_event_type_display }}</strong><br>
+                  <small>{{ event.address }} • {{ event.date|date:"M d, Y" }}</small>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="editEvent({{ event.id }})">
+                  <i class="bi bi-pencil"></i>
                 </button>
               </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-center text-muted py-4">
+              <i class="bi bi-calendar-x fs-1 mb-2 d-block"></i>
+              No events scheduled yet. Click "Add Event" to get started.
             </div>
-          {% endfor %}
+          {% endif %}
         </div>
-
-        <div class="text-center">
-          <button type="button" id="add-event" class="btn btn-outline-primary">+ Add Event</button>
-        </div>
-
-        <div id="empty-form-template" class="d-none">
-          <div class="card mb-3 event-form">
-            <div class="card-body">
-              {{ event_formset.empty_form|crispy }}
-              <button type="button" class="btn btn-sm btn-outline-danger remove-event mt-2">Remove</button>
-            </div>
+        
+        <!-- Hidden formset (for backend compatibility) -->
+        <div style="display: none;">
+          {{ event_formset.management_form }}
+          <div id="event-forms-container">
+            {% for subform in event_formset %}
+              <div class="event-form">{{ subform|crispy }}</div>
+            {% endfor %}
+          </div>
+          <div id="empty-form-template">
+            {{ event_formset.empty_form|crispy }}
           </div>
         </div>
       </div>
@@ -3572,9 +4358,25 @@ document.addEventListener("DOMContentLoaded", function () {
     </div>
 
     <!-- Submit Buttons -->
-    <div class="d-flex justify-content-end gap-2 mb-4">
-      <button type="submit" name="update_only" class="btn btn-success">Create</button>
-      <button type="submit" name="create_invoice" class="btn btn-danger">Update &amp; Create Invoice</button>
+    <div class="d-flex flex-column flex-lg-row justify-content-end gap-2 mb-4">
+      <button type="submit" name="save_only" class="btn btn-success">
+        <i class="bi bi-check me-1"></i>
+        {% if job %}Update Work Order{% else %}Save Work Order{% endif %}
+      </button>
+      <button type="submit" name="save_and_invoice" class="btn btn-primary">
+        <i class="bi bi-receipt me-1"></i>
+        {% if job %}Update & Create Invoice{% else %}Save & Create Invoice{% endif %}
+      </button>
+      <button type="submit" name="save_and_complete" class="btn btn-warning">
+        <i class="bi bi-check-square me-1"></i>
+        {% if job %}Update & Mark Complete{% else %}Save & Mark Complete{% endif %}
+      </button>
+    </div>
+    <div class="text-center mb-4">
+      <small class="text-muted">
+        <i class="bi bi-info-circle me-1"></i>
+        Choose: Save to continue later, Create Invoice to bill, or Mark Complete if finished
+      </small>
     </div>
   </form>
 
@@ -3584,52 +4386,216 @@ document.addEventListener("DOMContentLoaded", function () {
     <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
   </div>
 </div>
+
+<!-- New Client Modal -->
+<div class="modal fade" id="newClientModal" tabindex="-1" aria-labelledby="newClientModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="newClientModalLabel">Add New Client</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="newClientForm">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="newClientName" class="form-label">Name *</label>
+            <input type="text" class="form-control" id="newClientName" name="name" required>
+          </div>
+          <div class="mb-3">
+            <label for="newClientEmail" class="form-label">Email</label>
+            <input type="email" class="form-control" id="newClientEmail" name="email">
+          </div>
+          <div class="mb-3">
+            <label for="newClientPhone" class="form-label">Phone</label>
+            <input type="text" class="form-control" id="newClientPhone" name="phone">
+          </div>
+          <div class="mb-3">
+            <label for="newClientAddress" class="form-label">Address</label>
+            <input type="text" class="form-control" id="newClientAddress" name="address">
+          </div>
+          <div class="mb-3">
+            <label for="newClientBillingAddress" class="form-label">Billing Address</label>
+            <input type="text" class="form-control" id="newClientBillingAddress" name="billing_address">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveNewClient">Save Client</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Event Modal -->
+<div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="eventModalLabel">
+          <i class="bi bi-calendar-plus me-2"></i>Add Event
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="eventForm">
+          <div class="mb-3">
+            <label for="eventType" class="form-label">Event Type *</label>
+            <select class="form-select" id="eventType" required>
+              <option value="">Select event type...</option>
+              <option value="pickup">Pickup</option>
+              <option value="pickup_wrap">Pickup and Wrap</option>
+              <option value="wrap">Wrap</option>
+              <option value="install">Install</option>
+              <option value="deliver_install">Deliver and Install</option>
+              <option value="dropoff">Drop Off</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="eventAddress" class="form-label">Address</label>
+            <input type="text" class="form-control" id="eventAddress">
+          </div>
+          <div class="mb-3">
+            <label for="eventDate" class="form-label">Date</label>
+            <input type="date" class="form-control" id="eventDate">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveEvent">Add Event</button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <script>
+let eventCounter = 0;
+
 $(document).ready(function() {
   $('.select2').select2({ width: '100%' });
-  flatpickr('.datepicker', { dateFormat: 'Y-m-d' });
 
-  const formsetContainer = $('#event-forms-container');
-  const totalForms = $('#id_events-TOTAL_FORMS');
-  const emptyForm = $('#empty-form-template').html();
+  // New Client Modal
+  $('#saveNewClient').click(function() {
+    const formData = {
+      'name': $('#newClientName').val(),
+      'email': $('#newClientEmail').val(),
+      'phone': $('#newClientPhone').val(),
+      'address': $('#newClientAddress').val(),
+      'billing_address': $('#newClientBillingAddress').val(),
+      'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+    };
 
-  function attachRemoveEvent(btn) {
-    btn.click(function() {
-      $(this).closest('.event-form').remove();
-      updateTotalForms();
+    if (!formData.name.trim()) {
+      alert('Client name is required');
+      return;
+    }
+
+    $.ajax({
+      url: '{% url "client_create_ajax" %}',
+      type: 'POST',
+      data: formData,
+      success: function(response) {
+        if (response.success) {
+          const clientSelect = $('#id_client');
+          const newOption = new Option(response.client.name, response.client.id, false, true);
+          clientSelect.append(newOption).trigger('change');
+          
+          $('#newClientModal').modal('hide');
+          $('#newClientForm')[0].reset();
+          alert('Client created successfully!');
+        } else {
+          alert('Error creating client: ' + (response.error || 'Unknown error'));
+        }
+      },
+      error: function() {
+        alert('Error creating client. Please try again.');
+      }
     });
-  }
-
-  function updateTotalForms() {
-    const formCount = formsetContainer.children('.event-form').length;
-    totalForms.val(formCount);
-  }
-
-  $('#add-event').click(function() {
-    const formCount = formsetContainer.children('.event-form').length;
-    const formRegex = new RegExp('__prefix__', 'g');
-    const newForm = $(emptyForm.replace(formRegex, formCount));
-
-    formsetContainer.append(newForm);
-    attachRemoveEvent(newForm.find('.remove-event'));
-    flatpickr(newForm.find('.datepicker'), { dateFormat: 'Y-m-d' });
-    updateTotalForms();
   });
 
-  formsetContainer.find('.remove-event').each(function() {
-    attachRemoveEvent($(this));
+  // Event Modal
+  $('#saveEvent').click(function() {
+    const eventType = $('#eventType').val();
+    const address = $('#eventAddress').val();
+    const date = $('#eventDate').val();
+
+    if (!eventType) {
+      alert('Event type is required');
+      return;
+    }
+
+    // Add to visual display
+    const eventTypeText = $('#eventType option:selected').text();
+    const eventHtml = `
+      <div class="alert alert-info d-flex justify-content-between align-items-center" data-temp-id="${eventCounter}">
+        <div>
+          <strong>${eventTypeText}</strong><br>
+          <small>${address} ${date ? '• ' + new Date(date).toLocaleDateString() : ''}</small>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="removeEvent(${eventCounter})">
+          <i class="bi bi-trash"></i>
+        </button>
+      </div>
+    `;
+
+    $('#events-display .text-center').hide();
+    $('#events-display').append(eventHtml);
+
+    // Add hidden form fields for submission
+    const formContainer = $('#event-forms-container');
+    const formCount = formContainer.children('.event-form').length;
+    
+    const hiddenForm = `
+      <div class="event-form" data-temp-id="${eventCounter}">
+        <input type="hidden" name="events-${formCount}-event_type" value="${eventType}">
+        <input type="hidden" name="events-${formCount}-address" value="${address}">
+        <input type="hidden" name="events-${formCount}-date" value="${date}">
+      </div>
+    `;
+    
+    formContainer.append(hiddenForm);
+    
+    // Update form count
+    $('#id_events-TOTAL_FORMS').val(formCount + 1);
+
+    // Clear and close modal
+    $('#eventForm')[0].reset();
+    $('#eventModal').modal('hide');
+    eventCounter++;
+  });
+
+  // Reset modals
+  $('#newClientModal, #eventModal').on('hidden.bs.modal', function() {
+    $(this).find('form')[0].reset();
   });
 });
+
+function removeEvent(tempId) {
+  $(`[data-temp-id="${tempId}"]`).remove();
+  
+  // Update form count
+  const formCount = $('#event-forms-container .event-form').length;
+  $('#id_events-TOTAL_FORMS').val(formCount);
+  
+  // Show empty message if no events
+  if (formCount === 0) {
+    $('#events-display').html(`
+      <div class="text-center text-muted py-4">
+        <i class="bi bi-calendar-x fs-1 mb-2 d-block"></i>
+        No events scheduled yet. Click "Add Event" to get started.
+      </div>
+    `);
+  }
+}
 </script>
 {% endblock %}
-
 
 ===== templates/workorders/scheduled_jobs.html =====
 {% extends "base.html" %}
@@ -3669,7 +4635,7 @@ $(document).ready(function() {
               <th>ID</th>
               <th>Client</th>
               <th class="d-none d-md-table-cell">Description</th>
-              <th class="d-none d-md-table-cell">Scheduled Date</th>
+              <th class="d-none d-md-table-cell">Next Event</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -3682,17 +4648,25 @@ $(document).ready(function() {
                 {{ job.job_description|truncatewords:10 }}
               </td>
               <td class="d-none d-md-table-cell">
-                {{ job.scheduled_date|date:"m/d/y" }}
+                {% with job.events.all|first as next_event %}
+                  {% if next_event.date %}{{ next_event.date|date:"m/d/y" }}{% else %}-{% endif %}
+                {% endwith %}
               </td>
               <td>
                 <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}"
-                     class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}"
-                     class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                  <form method="post" action="{% url 'mark_completed' job.id %}" class="w-100 w-sm-auto mb-0">
+                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                  <form method="post" action="{% url 'mark_completed' job.id %}" class="w-100 w-sm-auto">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-success w-100">Mark Completed</button>
+                    <button type="submit" class="btn btn-sm btn-success w-100">Complete</button>
+                  </form>
+                  <form method="post" action="{% url 'complete_and_invoice' job.id %}" class="w-100 w-sm-auto">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-primary w-100">Complete & Invoice</button>
+                  </form>
+                  <form method="post" action="{% url 'mark_completed_and_paid' job.id %}" class="w-100 w-sm-auto">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-dark w-100">Complete & Paid</button>
                   </form>
                 </div>
               </td>
@@ -3714,7 +4688,6 @@ $(document).ready(function() {
   </div>
 </div>
 {% endblock %}
-
 
 ===== templates/workorders/pending_jobs.html =====
 {% extends "base.html" %}
@@ -3767,10 +4740,20 @@ $(document).ready(function() {
               </td>
               <td>
                 <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}"
-                     class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}"
-                     class="btn btn-sm btn-warning w-100 w-sm-auto">Edit / Schedule</a>
+                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Schedule</a>
+                  <form method="post" action="{% url 'mark_completed' job.id %}" class="w-100 w-sm-auto">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success w-100">Complete</button>
+                  </form>
+                  <form method="post" action="{% url 'complete_and_invoice' job.id %}" class="w-100 w-sm-auto">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-primary w-100">Complete & Invoice</button>
+                  </form>
+                  <form method="post" action="{% url 'mark_completed_and_paid' job.id %}" class="w-100 w-sm-auto">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-dark w-100">Complete & Paid</button>
+                  </form>
                 </div>
               </td>
             </tr>
@@ -3791,7 +4774,6 @@ $(document).ready(function() {
   </div>
 </div>
 {% endblock %}
-
 
 ===== templates/workorders/workorder_list.html =====
 {% extends "base.html" %}
@@ -3831,8 +4813,20 @@ $(document).ready(function() {
               <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
               <td>
                 <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100">Edit / Schedule</a>
+                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Schedule</a>
+                  <form method="post" action="{% url 'mark_completed' job.id %}" class="w-100 w-sm-auto">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success w-100">Complete</button>
+                  </form>
+                  <form method="post" action="{% url 'complete_and_invoice' job.id %}" class="w-100 w-sm-auto">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-primary w-100">Complete & Invoice</button>
+                  </form>
+                  <form method="post" action="{% url 'mark_completed_and_paid' job.id %}" class="w-100 w-sm-auto">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-dark w-100">Complete & Paid</button>
+                  </form>
                 </div>
               </td>
             </tr>
@@ -3864,10 +4858,19 @@ $(document).ready(function() {
               <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
               <td>
                 <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100">Edit</a>
-                  <form method="post" action="{% url 'mark_completed' job.id %}" class="w-100">{% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-success w-100">Mark Completed</button>
+                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                  <form method="post" action="{% url 'mark_completed' job.id %}" class="w-100 w-sm-auto">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success w-100">Complete</button>
+                  </form>
+                  <form method="post" action="{% url 'complete_and_invoice' job.id %}" class="w-100 w-sm-auto">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-primary w-100">Complete & Invoice</button>
+                  </form>
+                  <form method="post" action="{% url 'mark_completed_and_paid' job.id %}" class="w-100 w-sm-auto">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-dark w-100">Complete & Paid</button>
                   </form>
                 </div>
               </td>
@@ -3900,10 +4903,11 @@ $(document).ready(function() {
               <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
               <td>
                 <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100">Edit</a>
-                  <a href="/invoices/create/?work_order={{ job.id }}" class="btn btn-sm btn-success w-100">📄 Create Invoice</a>
-                  <form method="post" action="{% url 'mark_paid' job.id %}" class="w-100">{% csrf_token %}
+                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                  <a href="/invoices/create/?work_order={{ job.id }}" class="btn btn-sm btn-success w-100 w-sm-auto">📄 Create Invoice</a>
+                  <form method="post" action="{% url 'mark_paid' job.id %}" class="w-100 w-sm-auto">
+                    {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-primary w-100">Mark as Paid</button>
                   </form>
                 </div>
@@ -3937,8 +4941,11 @@ $(document).ready(function() {
               <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
               <td>
                 <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100">Edit</a>
+                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
+                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                  {% if job.invoices.exists %}
+                    <a href="{% url 'invoice_detail' job.invoices.first.id %}" class="btn btn-sm btn-outline-success w-100 w-sm-auto">View Invoice</a>
+                  {% endif %}
                 </div>
               </td>
             </tr>
