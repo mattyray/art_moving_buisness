@@ -13,19 +13,12 @@ class WorkOrderForm(forms.ModelForm):
         label="Client"
     )
 
-    invoiced = forms.BooleanField(
-        required=False,
-        label="Mark as Invoiced?",
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
-    )
-
     class Meta:
         model = WorkOrder
         fields = [
             'client',
             'job_description',
             'estimated_cost',
-            'invoiced',
         ]
 
     def __init__(self, *args, **kwargs):

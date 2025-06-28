@@ -4,6 +4,31 @@
 
 {% block extra_css %}
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+  <style>
+    @media (max-width: 768px) {
+      .d-flex.flex-column.flex-lg-row .btn {
+        margin-bottom: 0.5rem;
+        min-height: 48px;
+      }
+      .modal-dialog {
+        margin: 0.5rem;
+      }
+      .form-control, .form-select {
+        min-height: 44px;
+        font-size: 16px;
+      }
+    }
+    /* Hide the formset - we'll use modal instead */
+    #event-forms-container {
+      display: none;
+    }
+    #add-event {
+      display: none;
+    }
+    #empty-form-template {
+      display: none;
+    }
+  </style>
 {% endblock %}
 
 {% block content %}
@@ -50,7 +75,8 @@
             </div>
           </div>
 
-          <!-- Invoiced checkbox -->
+          <!-- Invoiced checkbox - properly displayed -->
+          {% if job %}
           <div class="col-md-6 d-flex align-items-center">
             <div class="form-check">
               {{ form.invoiced }}
@@ -59,40 +85,52 @@
               </label>
             </div>
           </div>
+          {% endif %}
         </div>
       </div>
     </div>
 
     <!-- Scheduled Events -->
     <div class="card mb-4">
-      <div class="card-header bg-primary text-white">
+      <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Scheduled Events</h5>
+        <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#eventModal">
+          <i class="bi bi-plus me-1"></i>Add Event
+        </button>
       </div>
-      <div class="card-body" id="event-formset">
-        {{ event_formset.management_form }}
-        <div id="event-forms-container">
-          {% for subform in event_formset %}
-            <div class="card mb-3 event-form">
-              <div class="card-body">
-                {{ subform|crispy }}
-                <button type="button" class="btn btn-sm btn-outline-danger remove-event mt-2">
-                  Remove
+      <div class="card-body">
+        <!-- Display existing events nicely -->
+        <div id="events-display">
+          {% if job.events.all %}
+            {% for event in job.events.all %}
+              <div class="alert alert-info d-flex justify-content-between align-items-center">
+                <div>
+                  <strong>{{ event.get_event_type_display }}</strong><br>
+                  <small>{{ event.address }} • {{ event.date|date:"M d, Y" }}</small>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="editEvent({{ event.id }})">
+                  <i class="bi bi-pencil"></i>
                 </button>
               </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-center text-muted py-4">
+              <i class="bi bi-calendar-x fs-1 mb-2 d-block"></i>
+              No events scheduled yet. Click "Add Event" to get started.
             </div>
-          {% endfor %}
+          {% endif %}
         </div>
-
-        <div class="text-center">
-          <button type="button" id="add-event" class="btn btn-outline-primary">+ Add Event</button>
-        </div>
-
-        <div id="empty-form-template" class="d-none">
-          <div class="card mb-3 event-form">
-            <div class="card-body">
-              {{ event_formset.empty_form|crispy }}
-              <button type="button" class="btn btn-sm btn-outline-danger remove-event mt-2">Remove</button>
-            </div>
+        
+        <!-- Hidden formset (for backend compatibility) -->
+        <div style="display: none;">
+          {{ event_formset.management_form }}
+          <div id="event-forms-container">
+            {% for subform in event_formset %}
+              <div class="event-form">{{ subform|crispy }}</div>
+            {% endfor %}
+          </div>
+          <div id="empty-form-template">
+            {{ event_formset.empty_form|crispy }}
           </div>
         </div>
       </div>
@@ -119,13 +157,25 @@
     </div>
 
     <!-- Submit Buttons -->
-    <div class="d-flex justify-content-end gap-2 mb-4">
-      <button type="submit" name="update_only" class="btn btn-success">{% if job %}Update{% else %}Create{% endif %}</button>
-      {% if not job %}
-      <button type="submit" name="create_invoice" class="btn btn-danger">Create &amp; Invoice</button>
-      {% else %}
-      <button type="submit" name="create_invoice" class="btn btn-danger">Update &amp; Create Invoice</button>
-      {% endif %}
+    <div class="d-flex flex-column flex-lg-row justify-content-end gap-2 mb-4">
+      <button type="submit" name="save_only" class="btn btn-success">
+        <i class="bi bi-check me-1"></i>
+        {% if job %}Update Work Order{% else %}Save Work Order{% endif %}
+      </button>
+      <button type="submit" name="save_and_invoice" class="btn btn-primary">
+        <i class="bi bi-receipt me-1"></i>
+        {% if job %}Update & Create Invoice{% else %}Save & Create Invoice{% endif %}
+      </button>
+      <button type="submit" name="save_and_complete" class="btn btn-warning">
+        <i class="bi bi-check-square me-1"></i>
+        {% if job %}Update & Mark Complete{% else %}Save & Mark Complete{% endif %}
+      </button>
+    </div>
+    <div class="text-center mb-4">
+      <small class="text-muted">
+        <i class="bi bi-info-circle me-1"></i>
+        Choose: Save to continue later, Create Invoice to bill, or Mark Complete if finished
+      </small>
     </div>
   </form>
 
@@ -177,50 +227,61 @@
     </div>
   </div>
 </div>
+
+<!-- Event Modal -->
+<div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="eventModalLabel">
+          <i class="bi bi-calendar-plus me-2"></i>Add Event
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="eventForm">
+          <div class="mb-3">
+            <label for="eventType" class="form-label">Event Type *</label>
+            <select class="form-select" id="eventType" required>
+              <option value="">Select event type...</option>
+              <option value="pickup">Pickup</option>
+              <option value="pickup_wrap">Pickup and Wrap</option>
+              <option value="wrap">Wrap</option>
+              <option value="install">Install</option>
+              <option value="deliver_install">Deliver and Install</option>
+              <option value="dropoff">Drop Off</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="eventAddress" class="form-label">Address</label>
+            <input type="text" class="form-control" id="eventAddress">
+          </div>
+          <div class="mb-3">
+            <label for="eventDate" class="form-label">Date</label>
+            <input type="date" class="form-control" id="eventDate">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveEvent">Add Event</button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <script>
+let eventCounter = 0;
+
 $(document).ready(function() {
   $('.select2').select2({ width: '100%' });
-  flatpickr('.datepicker', { dateFormat: 'Y-m-d' });
 
-  const formsetContainer = $('#event-forms-container');
-  const totalForms = $('#id_events-TOTAL_FORMS');
-  const emptyForm = $('#empty-form-template').html();
-
-  function attachRemoveEvent(btn) {
-    btn.click(function() {
-      $(this).closest('.event-form').remove();
-      updateTotalForms();
-    });
-  }
-
-  function updateTotalForms() {
-    const formCount = formsetContainer.children('.event-form').length;
-    totalForms.val(formCount);
-  }
-
-  $('#add-event').click(function() {
-    const formCount = formsetContainer.children('.event-form').length;
-    const formRegex = new RegExp('__prefix__', 'g');
-    const newForm = $(emptyForm.replace(formRegex, formCount));
-
-    formsetContainer.append(newForm);
-    attachRemoveEvent(newForm.find('.remove-event'));
-    flatpickr(newForm.find('.datepicker'), { dateFormat: 'Y-m-d' });
-    updateTotalForms();
-  });
-
-  formsetContainer.find('.remove-event').each(function() {
-    attachRemoveEvent($(this));
-  });
-
-  // New Client Modal Functionality
+  // New Client Modal
   $('#saveNewClient').click(function() {
     const formData = {
       'name': $('#newClientName').val(),
@@ -242,15 +303,12 @@ $(document).ready(function() {
       data: formData,
       success: function(response) {
         if (response.success) {
-          // Add new option to select dropdown
           const clientSelect = $('#id_client');
           const newOption = new Option(response.client.name, response.client.id, false, true);
           clientSelect.append(newOption).trigger('change');
           
-          // Close modal and reset form
           $('#newClientModal').modal('hide');
           $('#newClientForm')[0].reset();
-          
           alert('Client created successfully!');
         } else {
           alert('Error creating client: ' + (response.error || 'Unknown error'));
@@ -262,10 +320,79 @@ $(document).ready(function() {
     });
   });
 
-  // Reset modal form when modal is closed
-  $('#newClientModal').on('hidden.bs.modal', function() {
-    $('#newClientForm')[0].reset();
+  // Event Modal
+  $('#saveEvent').click(function() {
+    const eventType = $('#eventType').val();
+    const address = $('#eventAddress').val();
+    const date = $('#eventDate').val();
+
+    if (!eventType) {
+      alert('Event type is required');
+      return;
+    }
+
+    // Add to visual display
+    const eventTypeText = $('#eventType option:selected').text();
+    const eventHtml = `
+      <div class="alert alert-info d-flex justify-content-between align-items-center" data-temp-id="${eventCounter}">
+        <div>
+          <strong>${eventTypeText}</strong><br>
+          <small>${address} ${date ? '• ' + new Date(date).toLocaleDateString() : ''}</small>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="removeEvent(${eventCounter})">
+          <i class="bi bi-trash"></i>
+        </button>
+      </div>
+    `;
+
+    $('#events-display .text-center').hide();
+    $('#events-display').append(eventHtml);
+
+    // Add hidden form fields for submission
+    const formContainer = $('#event-forms-container');
+    const formCount = formContainer.children('.event-form').length;
+    
+    const hiddenForm = `
+      <div class="event-form" data-temp-id="${eventCounter}">
+        <input type="hidden" name="events-${formCount}-event_type" value="${eventType}">
+        <input type="hidden" name="events-${formCount}-address" value="${address}">
+        <input type="hidden" name="events-${formCount}-date" value="${date}">
+      </div>
+    `;
+    
+    formContainer.append(hiddenForm);
+    
+    // Update form count
+    $('#id_events-TOTAL_FORMS').val(formCount + 1);
+
+    // Clear and close modal
+    $('#eventForm')[0].reset();
+    $('#eventModal').modal('hide');
+    eventCounter++;
+  });
+
+  // Reset modals
+  $('#newClientModal, #eventModal').on('hidden.bs.modal', function() {
+    $(this).find('form')[0].reset();
   });
 });
+
+function removeEvent(tempId) {
+  $(`[data-temp-id="${tempId}"]`).remove();
+  
+  // Update form count
+  const formCount = $('#event-forms-container .event-form').length;
+  $('#id_events-TOTAL_FORMS').val(formCount);
+  
+  // Show empty message if no events
+  if (formCount === 0) {
+    $('#events-display').html(`
+      <div class="text-center text-muted py-4">
+        <i class="bi bi-calendar-x fs-1 mb-2 d-block"></i>
+        No events scheduled yet. Click "Add Event" to get started.
+      </div>
+    `);
+  }
+}
 </script>
 {% endblock %}

@@ -15,12 +15,18 @@ from weasyprint import HTML
 
 def workorder_pdf(request, pk):
     workorder = get_object_or_404(WorkOrder, pk=pk)
-    html_string = render_to_string("workorders/workorder_pdf.html", {"job": workorder})
+    html_string = render_to_string("workorders/workorder_pdf.html", {
+        "job": workorder,
+        "events": workorder.events.all().order_by('date'),
+        "notes": workorder.notes.all().order_by('-created_at'),
+        "attachments": workorder.attachments.exclude(file__exact=''),
+    })
     html = HTML(string=html_string, base_url=request.build_absolute_uri())
     pdf = html.write_pdf()
 
     response = HttpResponse(pdf, content_type="application/pdf")
-    response["Content-Disposition"] = f"filename=WorkOrder_{workorder.id}.pdf"
+    # Changed from attachment to inline so it opens in browser for printing
+    response["Content-Disposition"] = f"inline; filename=WorkOrder_{workorder.id}.pdf"
     return response
 
 
@@ -49,9 +55,6 @@ def workorder_calendar_data(request):
             "color": get_color(evt.work_order.id),
             "url": f"/workorders/detail/{evt.work_order.id}/",
         })
-
-    # Show pending jobs as unscheduled tasks (removed as per user request)
-    # Completed jobs completely removed from calendar
 
     return JsonResponse(events, safe=False)
 
@@ -111,13 +114,24 @@ def workorder_create(request):
 
             if note_form.is_valid():
                 text = note_form.cleaned_data.get('note', '').strip()
-                # Only save non‑empty notes
                 if text:
                     note = note_form.save(commit=False)
                     note.work_order = workorder
                     note.save()
 
-            return redirect('workorder_list')
+            # Handle different submit buttons
+            if 'save_and_invoice' in request.POST:
+                messages.success(request, f"Work order #{workorder.id} created successfully.")
+                return redirect(f'/invoices/create/?work_order={workorder.id}')
+            elif 'save_and_complete' in request.POST:
+                workorder.status = 'completed'
+                workorder.completed_at = timezone.now()
+                workorder.save()
+                messages.success(request, f"Work order #{workorder.id} created and marked as completed.")
+                return redirect("workorder_detail", job_id=workorder.id)
+            else:  # save_only
+                messages.success(request, f"Work order #{workorder.id} created successfully.")
+                return redirect("workorder_detail", job_id=workorder.id)
     else:
         form = WorkOrderForm()
         event_formset = EventFormSet(prefix="events")
@@ -157,15 +171,24 @@ def workorder_edit(request, job_id):
 
             if note_form.is_valid():
                 text = note_form.cleaned_data.get('note', '').strip()
-                # Only save non‑empty notes
                 if text:
                     note = note_form.save(commit=False)
                     note.work_order = workorder
                     note.save()
 
-            if 'create_invoice' in request.POST:
+            # Handle different submit buttons
+            if 'save_and_invoice' in request.POST:
+                messages.success(request, f"Work order #{workorder.id} updated successfully.")
                 return redirect(f'/invoices/create/?work_order={workorder.id}')
-            return redirect("workorder_detail", job_id=workorder.id)
+            elif 'save_and_complete' in request.POST:
+                workorder.status = 'completed'
+                workorder.completed_at = timezone.now()
+                workorder.save()
+                messages.success(request, f"Work order #{workorder.id} updated and marked as completed.")
+                return redirect("workorder_detail", job_id=workorder.id)
+            else:  # save_only
+                messages.success(request, f"Work order #{workorder.id} updated successfully.")
+                return redirect("workorder_detail", job_id=workorder.id)
     else:
         form = WorkOrderForm(instance=workorder)
         event_formset = EventFormSet(instance=workorder, prefix="events")
@@ -206,6 +229,7 @@ def mark_completed(request, job_id):
         messages.success(request, "Work order marked as completed.")
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('workorder_list')))
 
+
 @login_required
 def complete_and_invoice(request, job_id):
     """Mark work order as completed and redirect to invoice creation"""
@@ -216,8 +240,8 @@ def complete_and_invoice(request, job_id):
         workorder.save()
         messages.success(request, f"Work order #{job_id} marked as completed.")
     
-    # Redirect to invoice creation with work order pre-filled
     return redirect(f'/invoices/create/?work_order={workorder.id}')
+
 
 @login_required
 def mark_paid(request, job_id):
@@ -250,19 +274,16 @@ def mark_completed_and_paid(request, job_id):
 @login_required
 def workorder_detail(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
-    events      = workorder.events.all()
-    # Exclude any attachment rows with no file path
+    events = workorder.events.all()
     attachments = workorder.attachments.exclude(file__exact='')
-    notes       = workorder.notes.all()
+    notes = workorder.notes.all()
 
     attachment_form = JobAttachmentForm()
-    note_form       = JobNoteForm()
+    note_form = JobNoteForm()
 
     if request.method == 'POST':
-        # --- New Attachment ---
         if 'attachment_submit' in request.POST:
             attachment_form = JobAttachmentForm(request.POST, request.FILES)
-            # Only save when a file was uploaded
             uploaded = request.FILES.get('file')
             if attachment_form.is_valid() and uploaded:
                 attachment = attachment_form.save(commit=False)
@@ -270,12 +291,10 @@ def workorder_detail(request, job_id):
                 attachment.save()
             return redirect('workorder_detail', job_id=workorder.id)
 
-        # --- New Note ---
         elif 'note_submit' in request.POST:
             note_form = JobNoteForm(request.POST)
             if note_form.is_valid():
                 text = note_form.cleaned_data.get('note', '').strip()
-                # Only save non‑empty notes
                 if text:
                     note = note_form.save(commit=False)
                     note.work_order = workorder
@@ -291,16 +310,16 @@ def workorder_detail(request, job_id):
         'note_form': note_form,
     })
 
+
 @login_required
 def pending_jobs_view(request):
     query = request.GET.get('q', '')
     jobs = WorkOrder.objects.exclude(events__date__isnull=False)\
                             .filter(status__in=["pending", "in_progress"])\
-                            .order_by('-updated_at')  # ⬅️ Add this
+                            .order_by('-updated_at')
     if query:
         jobs = jobs.filter(client__name__icontains=query)
     return render(request, 'workorders/pending_jobs.html', {'jobs': jobs, 'query': query})
-
 
 
 @login_required
@@ -309,11 +328,10 @@ def scheduled_jobs_view(request):
     jobs = WorkOrder.objects.filter(events__date__isnull=False,
                                     status__in=["pending", "in_progress"])\
                             .distinct()\
-                            .order_by('-updated_at')  # ⬅️ Add this
+                            .order_by('-updated_at')
     if query:
         jobs = jobs.filter(client__name__icontains=query)
     return render(request, 'workorders/scheduled_jobs.html', {'jobs': jobs, 'query': query})
-
 
 
 @login_required
