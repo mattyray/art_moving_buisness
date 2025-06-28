@@ -12,6 +12,8 @@ urlpatterns = [
     path('completed/', views.completed_jobs_view, name='completed_jobs'),
 
     path('mark_completed/<int:job_id>/', views.mark_completed, name='mark_completed'),
+    path('complete_and_invoice/<int:job_id>/', views.complete_and_invoice, name='complete_and_invoice'),
+    path('mark_completed_and_paid/<int:job_id>/', views.mark_completed_and_paid, name='mark_completed_and_paid'),
 
     path('detail/<int:job_id>/', views.workorder_detail, name='workorder_detail'),
     path('mark_paid/<int:job_id>/', views.mark_paid, name='mark_paid'),
