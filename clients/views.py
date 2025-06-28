@@ -1,5 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from .models import Client
 from .forms import ClientForm
 
@@ -30,6 +32,43 @@ def client_create(request):
         form = ClientForm()
     context = {'form': form}
     return render(request, 'clients/client_form.html', context)
+
+@login_required
+def client_create_ajax(request):
+    """AJAX endpoint for creating clients from work order form"""
+    if request.method == 'POST':
+        try:
+            # Create client from POST data
+            client = Client(
+                name=request.POST.get('name', '').strip(),
+                email=request.POST.get('email', '').strip() or None,
+                phone=request.POST.get('phone', '').strip() or None,
+                address=request.POST.get('address', '').strip() or None,
+                billing_address=request.POST.get('billing_address', '').strip() or None,
+            )
+            
+            # Validate required fields
+            if not client.name:
+                return JsonResponse({'success': False, 'error': 'Name is required'})
+            
+            client.save()
+            
+            return JsonResponse({
+                'success': True,
+                'client': {
+                    'id': client.id,
+                    'name': client.name,
+                    'email': client.email,
+                    'phone': client.phone,
+                    'address': client.address,
+                    'billing_address': client.billing_address,
+                }
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
 @login_required
 def client_edit(request, client_id):

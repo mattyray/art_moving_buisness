@@ -31,8 +31,9 @@
           <!-- Client picker -->
           <div class="col-md-6">
             {{ form.client|as_crispy_field }}
-            <a href="{% url 'client_create' %}" target="_blank"
-               class="btn btn-sm btn-outline-primary mt-2">+ Add New Client</a>
+            <button type="button" class="btn btn-sm btn-outline-primary mt-2" data-bs-toggle="modal" data-bs-target="#newClientModal">
+              + Add New Client
+            </button>
           </div>
 
           <!-- Job description -->
@@ -119,8 +120,12 @@
 
     <!-- Submit Buttons -->
     <div class="d-flex justify-content-end gap-2 mb-4">
-      <button type="submit" name="update_only" class="btn btn-success">Create</button>
+      <button type="submit" name="update_only" class="btn btn-success">{% if job %}Update{% else %}Create{% endif %}</button>
+      {% if not job %}
+      <button type="submit" name="create_invoice" class="btn btn-danger">Create &amp; Invoice</button>
+      {% else %}
       <button type="submit" name="create_invoice" class="btn btn-danger">Update &amp; Create Invoice</button>
+      {% endif %}
     </div>
   </form>
 
@@ -128,6 +133,48 @@
   <div class="text-center">
     <a href="{% url 'workorder_list' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Work Orders</a>
     <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+  </div>
+</div>
+
+<!-- New Client Modal -->
+<div class="modal fade" id="newClientModal" tabindex="-1" aria-labelledby="newClientModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="newClientModalLabel">Add New Client</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="newClientForm">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="newClientName" class="form-label">Name *</label>
+            <input type="text" class="form-control" id="newClientName" name="name" required>
+          </div>
+          <div class="mb-3">
+            <label for="newClientEmail" class="form-label">Email</label>
+            <input type="email" class="form-control" id="newClientEmail" name="email">
+          </div>
+          <div class="mb-3">
+            <label for="newClientPhone" class="form-label">Phone</label>
+            <input type="text" class="form-control" id="newClientPhone" name="phone">
+          </div>
+          <div class="mb-3">
+            <label for="newClientAddress" class="form-label">Address</label>
+            <input type="text" class="form-control" id="newClientAddress" name="address">
+          </div>
+          <div class="mb-3">
+            <label for="newClientBillingAddress" class="form-label">Billing Address</label>
+            <input type="text" class="form-control" id="newClientBillingAddress" name="billing_address">
+            <small class="form-text text-muted">Leave blank to use same as address</small>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveNewClient">Save Client</button>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
@@ -171,6 +218,53 @@ $(document).ready(function() {
 
   formsetContainer.find('.remove-event').each(function() {
     attachRemoveEvent($(this));
+  });
+
+  // New Client Modal Functionality
+  $('#saveNewClient').click(function() {
+    const formData = {
+      'name': $('#newClientName').val(),
+      'email': $('#newClientEmail').val(),
+      'phone': $('#newClientPhone').val(),
+      'address': $('#newClientAddress').val(),
+      'billing_address': $('#newClientBillingAddress').val(),
+      'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+    };
+
+    if (!formData.name.trim()) {
+      alert('Client name is required');
+      return;
+    }
+
+    $.ajax({
+      url: '{% url "client_create_ajax" %}',
+      type: 'POST',
+      data: formData,
+      success: function(response) {
+        if (response.success) {
+          // Add new option to select dropdown
+          const clientSelect = $('#id_client');
+          const newOption = new Option(response.client.name, response.client.id, false, true);
+          clientSelect.append(newOption).trigger('change');
+          
+          // Close modal and reset form
+          $('#newClientModal').modal('hide');
+          $('#newClientForm')[0].reset();
+          
+          alert('Client created successfully!');
+        } else {
+          alert('Error creating client: ' + (response.error || 'Unknown error'));
+        }
+      },
+      error: function() {
+        alert('Error creating client. Please try again.');
+      }
+    });
+  });
+
+  // Reset modal form when modal is closed
+  $('#newClientModal').on('hidden.bs.modal', function() {
+    $('#newClientForm')[0].reset();
   });
 });
 </script>

@@ -6,30 +6,7 @@
 {% block content %}
 <div class="container py-4">
 
-  <!-- Work Order Summary -->
-  <div class="card mb-4">
-    <div class="card-header bg-secondary text-white">
-      <h5 class="mb-0">Work Order #{{ job.id }}</h5>
-    </div>
-    <div class="card-body">
-      <div class="row">
-        <div class="col-md-6">
-          <p><strong>Client:</strong> {{ job.client.name }}</p>
-          <p><strong>Job Description:</strong> {{ job.job_description }}</p>
-        </div>
-        <div class="col-md-6">
-          <p><strong>Estimated Cost:</strong> ${{ job.estimated_cost }}</p>
-          <p><strong>Status:</strong> {{ job.get_status_display }}</p>
-          <p><strong>Created At:</strong> {{ job.created_at|date:"M d, Y g:i A" }}</p>
-          {% if job.completed_at %}
-            <p><strong>Completed At:</strong> {{ job.completed_at|date:"M d, Y g:i A" }}</p>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Client Information -->
+  <!-- Client Information - MOVED TO TOP -->
   <div class="card mb-4">
     <div class="card-header bg-info text-white">
       <h5 class="mb-0">Client Information</h5>
@@ -63,6 +40,116 @@
     </div>
   </div>
 
+  <!-- Work Order Summary -->
+  <div class="card mb-4">
+    <div class="card-header bg-secondary text-white">
+      <h5 class="mb-0">Work Order #{{ job.id }}</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <p><strong>Job Description:</strong> {{ job.job_description }}</p>
+          <p><strong>Estimated Cost:</strong> ${{ job.estimated_cost }}</p>
+        </div>
+        <div class="col-md-6">
+          <p><strong>Status:</strong> 
+            <span class="badge 
+              {% if job.status == 'pending' %}bg-secondary
+              {% elif job.status == 'in_progress' %}bg-info
+              {% elif job.status == 'completed' %}bg-success
+              {% endif %}">
+              {{ job.get_status_display }}
+            </span>
+          </p>
+          <p><strong>Created At:</strong> {{ job.created_at|date:"M d, Y g:i A" }}</p>
+          {% if job.completed_at %}
+            <p><strong>Completed At:</strong> {{ job.completed_at|date:"M d, Y g:i A" }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Progression Action Bar -->
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">Actions - Next Steps</h5>
+    </div>
+    <div class="card-body">
+      {% if job.status == 'pending' or job.status == 'in_progress' %}
+        {% if job.status == 'pending' %}
+          <div class="alert alert-info mb-3">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Status: Pending</strong> - This job needs to be scheduled or marked as completed.
+          </div>
+        {% else %}
+          <div class="alert alert-info mb-3">
+            <i class="bi bi-calendar-event me-2"></i>
+            <strong>Status: Scheduled</strong> - This job has scheduled events and is ready to be completed.
+          </div>
+        {% endif %}
+        
+        <div class="d-flex flex-column flex-lg-row gap-2">
+          <a href="{% url 'workorder_edit' job.id %}" class="btn btn-warning">
+            <i class="bi bi-pencil me-1"></i>
+            {% if job.status == 'pending' %}Schedule Events{% else %}Edit Schedule{% endif %}
+          </a>
+          <form method="post" action="{% url 'mark_completed' job.id %}" class="flex-fill">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success w-100">
+              <i class="bi bi-check-circle me-1"></i>Mark Completed
+            </button>
+          </form>
+          <form method="post" action="{% url 'complete_and_invoice' job.id %}" class="flex-fill">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="bi bi-receipt me-1"></i>Complete & Create Invoice
+            </button>
+          </form>
+          <form method="post" action="{% url 'mark_completed_and_paid' job.id %}" class="flex-fill">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-dark w-100">
+              <i class="bi bi-cash me-1"></i>Complete & Mark Paid
+            </button>
+          </form>
+        </div>
+      
+      {% elif job.status == 'completed' %}
+        {% if not job.invoiced %}
+          <div class="alert alert-warning mb-3">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Status: Completed - Not Yet Paid</strong> - Ready to create invoice or mark as paid.
+          </div>
+          
+          <div class="d-flex flex-column flex-lg-row gap-2">
+            <a href="/invoices/create/?work_order={{ job.id }}" class="btn btn-success">
+              <i class="bi bi-receipt me-1"></i>Create Invoice
+            </a>
+            <form method="post" action="{% url 'mark_paid' job.id %}" class="flex-fill">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-primary w-100">
+                <i class="bi bi-cash me-1"></i>Mark as Paid (No Invoice)
+              </button>
+            </form>
+          </div>
+        {% else %}
+          <div class="alert alert-success mb-3">
+            <i class="bi bi-check-circle me-2"></i>
+            <strong>Status: Completed & Paid</strong> - This job is finished and has been invoiced/paid.
+          </div>
+          
+          <div class="d-flex flex-column flex-lg-row gap-2">
+            {% if job.invoices.exists %}
+              <a href="{% url 'invoice_detail' job.invoices.first.id %}" class="btn btn-outline-success">
+                <i class="bi bi-receipt me-1"></i>View Invoice
+              </a>
+            {% endif %}
+          </div>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
   <!-- Scheduled Events -->
   <div class="card mb-4">
     <div class="card-header bg-primary text-white">
@@ -71,9 +158,12 @@
     <div class="card-body">
       <ul class="list-group">
         {% for event in events %}
-          <li class="list-group-item">
-            <strong>{{ event.get_event_type_display }}:</strong> 
-            {{ event.address }} on {{ event.date|date:"M d, Y" }}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <strong>{{ event.get_event_type_display }}:</strong> 
+              {{ event.address }}
+            </div>
+            <span class="badge bg-primary">{{ event.date|date:"M d, Y" }}</span>
           </li>
         {% empty %}
           <li class="list-group-item">No scheduled events.</li>
@@ -127,16 +217,17 @@
     </div>
   </div>
 
-  <!-- Action Buttons -->
+  <!-- Management Action Buttons -->
   <div class="mt-4 d-flex flex-column flex-sm-row justify-content-between gap-2">
-    <a href="{% url 'workorder_edit' job.id %}" class="btn btn-primary w-100 w-sm-auto">Edit Work Order</a>
-    <a href="{% url 'workorder_pdf' job.id %}" class="btn btn-light border d-flex align-items-center gap-2 shadow-sm px-4 py-2" target="_blank" style="border-color: #999;">
+    <a href="{% url 'workorder_edit' job.id %}" class="btn btn-outline-primary w-100 w-sm-auto">
+      <i class="bi bi-pencil me-1"></i>Edit Work Order
+    </a>
+    <a href="{% url 'workorder_pdf' job.id %}" class="btn btn-light border d-flex align-items-center gap-2 shadow-sm px-4 py-2 w-100 w-sm-auto" target="_blank" style="border-color: #999;">
       <i class="bi bi-file-earmark-pdf-fill text-danger fs-5"></i>
       <span class="fw-semibold text-dark">Download PDF</span>
     </a>
-    
-    <a href="{% url 'workorder_delete' job.id %}" class="btn btn-danger">
-      Delete Work Order
+    <a href="{% url 'workorder_delete' job.id %}" class="btn btn-outline-danger w-100 w-sm-auto">
+      <i class="bi bi-trash me-1"></i>Delete Work Order
     </a>
   </div>
 
