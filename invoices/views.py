@@ -1,16 +1,17 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
+from django.urls import reverse  # ← This was missing
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.utils import timezone
+from django.template.loader import render_to_string
+from weasyprint import HTML
+
 from .models import Invoice
 from .forms import InvoiceForm
 from clients.models import Client
 from workorders.models import WorkOrder
-from django.utils import timezone
-# Add these imports at the top of invoices/views.py
-from django.template.loader import render_to_string
-from weasyprint import HTML
 
 # Add this function to invoices/views.py
 @login_required 
@@ -251,3 +252,25 @@ def ajax_get_active_workorders(request):
         for wo in work_orders
     ]
     return JsonResponse(results, safe=False)
+
+@login_required
+def change_invoice_status(request, invoice_id):
+    """Change invoice status with confirmation"""
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    new_status = request.POST.get('new_status')
+    
+    if request.method == 'POST' and new_status in ['unpaid', 'in_quickbooks', 'paid']:
+        old_status = invoice.status
+        invoice.status = new_status
+        invoice.save()
+        
+        # Create a status change message
+        status_messages = {
+            'unpaid': 'moved back to Not in QuickBooks',
+            'in_quickbooks': 'marked as In QuickBooks',
+            'paid': 'marked as Paid'
+        }
+        
+        messages.success(request, f"Invoice #{invoice.invoice_number} {status_messages[new_status]}.")
+        
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('invoice_list')))

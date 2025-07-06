@@ -15,6 +15,9 @@ urlpatterns = [
     
     path('<int:invoice_id>/mark_paid/', views.mark_invoice_paid, name='mark_invoice_paid'),
 
+    # Enhanced status management
+    path('change_status/<int:invoice_id>/', views.change_invoice_status, name='change_invoice_status'),
+
     # PDF generation
     path('<int:invoice_id>/pdf/', views.invoice_pdf, name='invoice_pdf'),
 

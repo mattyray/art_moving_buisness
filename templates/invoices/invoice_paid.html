@@ -43,6 +43,22 @@
                     <div class="d-flex flex-row gap-1">
                       <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
                       <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+                      <form method="post" action="{% url 'change_invoice_status' inv.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="new_status" value="in_quickbooks">
+                        <button type="submit" class="btn btn-sm btn-outline-warning"
+                                onclick="return confirm('Move back to In QuickBooks?')">
+                          <i class="bi bi-arrow-left"></i> Back to QB
+                        </button>
+                      </form>
+                      <form method="post" action="{% url 'change_invoice_status' inv.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="new_status" value="unpaid">
+                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('Move back to Not in QuickBooks?')">
+                          <i class="bi bi-arrow-left"></i> Back to Unpaid
+                        </button>
+                      </form>
                     </div>
                   </td>
                 </tr>
@@ -64,6 +80,22 @@
             <div class="d-flex flex-column gap-2">
               <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
               <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+              <form method="post" action="{% url 'change_invoice_status' inv.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="new_status" value="in_quickbooks">
+                <button type="submit" class="btn btn-sm btn-outline-warning w-100"
+                        onclick="return confirm('Move back to In QuickBooks?')">
+                  <i class="bi bi-arrow-left"></i> Back to QuickBooks
+                </button>
+              </form>
+              <form method="post" action="{% url 'change_invoice_status' inv.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="new_status" value="unpaid">
+                <button type="submit" class="btn btn-sm btn-outline-danger w-100"
+                        onclick="return confirm('Move back to Not in QuickBooks?')">
+                  <i class="bi bi-arrow-left"></i> Back to Not in QB
+                </button>
+              </form>
             </div>
           </div>
           {% endfor %}

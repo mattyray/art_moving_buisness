@@ -187,12 +187,8 @@ class CustomUser(AbstractUser):
     pass
 
 ===== accounts/views.py =====
-from django.urls import reverse_lazy
-from django.views import generic
 from django.contrib.auth import logout
-from django.shortcuts import redirect, render
-from .forms import CustomUserCreationForm
-from django.contrib.auth import login
+from django.shortcuts import redirect
 
 def custom_logout(request):
     """Logs out the user and redirects to the homepage."""
@@ -201,12 +197,7 @@ def custom_logout(request):
     logout(request)
     return redirect("/")  # Redirect to the root URL explicitly
 
-class SignupPageView(generic.CreateView):
-    """Handles user sign-up using Django’s built-in authentication system."""
-    form_class = CustomUserCreationForm
-    success_url = reverse_lazy("login")  # Redirect to login page after sign-up
-    template_name = "registration/signup.html"
-
+# SignupPageView removed - users created through admin only
 
 ===== accounts/forms.py =====
 from django.contrib.auth import get_user_model
@@ -232,13 +223,12 @@ class CustomUserChangeForm(UserChangeForm):
 
 ===== accounts/urls.py =====
 from django.urls import path
-from .views import SignupPageView, custom_logout
+from .views import custom_logout
 
 urlpatterns = [
-    path("signup/", SignupPageView.as_view(), name="signup"),
+    # path("signup/", SignupPageView.as_view(), name="signup"),  # Removed - admin only user creation
     path("logout/", custom_logout, name="logout"),
 ]
-
 
 ===== accounts/admin.py =====
 from django.contrib import admin
@@ -1790,10 +1780,9 @@ application = get_wsgi_application()
         {{ form|crispy }}
         <button type="submit" class="btn btn-primary">Login</button>
     </form>
-    <p class="mt-3">Don't have an account? <a href="{% url 'signup' %}">Sign up here</a>.</p>
+    <!-- Signup link removed - users are created through admin interface -->
 </div>
 {% endblock %}
-
 
 ===== templates/registration/logout.html =====
 {% extends "base.html" %}
@@ -1804,25 +1793,6 @@ application = get_wsgi_application()
 <div class="container text-center mt-4">
     <h2>You have been logged out</h2>
     <a href="{% url 'login' %}" class="btn btn-primary">Login Again</a>
-</div>
-{% endblock %}
-
-
-===== templates/registration/signup.html =====
-{% extends "base.html" %}
-{% load crispy_forms_tags %}
-
-{% block title %}Sign Up{% endblock %}
-
-{% block content %}
-<div class="container mt-4">
-    <h2>Sign Up</h2>
-    <form method="post">
-        {% csrf_token %}
-        {{ form|crispy }}
-        <button type="submit" class="btn btn-primary">Sign Up</button>
-    </form>
-    <p class="mt-3">Already have an account? <a href="{% url 'login' %}">Login here</a>.</p>
 </div>
 {% endblock %}
 

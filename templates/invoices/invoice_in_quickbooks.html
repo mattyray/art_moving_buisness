@@ -43,7 +43,17 @@
                     <div class="d-flex flex-row gap-1">
                       <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
                       <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
-                      <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="d-inline">{% csrf_token %}
+                      <form method="post" action="{% url 'change_invoice_status' inv.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="new_status" value="unpaid">
+                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('Move back to Not in QuickBooks?')">
+                          <i class="bi bi-arrow-left"></i> Back to Not in QB
+                        </button>
+                      </form>
+                      <form method="post" action="{% url 'change_invoice_status' inv.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="new_status" value="paid">
                         <button type="submit" class="btn btn-sm btn-success">Mark as Paid</button>
                       </form>
                     </div>
@@ -67,7 +77,17 @@
             <div class="d-flex flex-column gap-2">
               <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
               <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
-              <form method="post" action="{% url 'mark_invoice_paid' inv.id %}">{% csrf_token %}
+              <form method="post" action="{% url 'change_invoice_status' inv.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="new_status" value="unpaid">
+                <button type="submit" class="btn btn-sm btn-outline-danger w-100"
+                        onclick="return confirm('Move back to Not in QuickBooks?')">
+                  <i class="bi bi-arrow-left"></i> Back to Not in QB
+                </button>
+              </form>
+              <form method="post" action="{% url 'change_invoice_status' inv.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="new_status" value="paid">
                 <button type="submit" class="btn btn-sm btn-success w-100">Mark as Paid</button>
               </form>
             </div>

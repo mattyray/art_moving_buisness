@@ -1612,3 +1612,951 @@ Getting backup from art-moving-buisness...
 - JSON: backups/full_backup_2025-06-30.json
 - Base64: backups/full_backup_2025-06-30.b64
 - .dump: backups/full_backup_2025-06-30.dump
+📦 Dumping Heroku production database as JSON...
+ ›   Warning: heroku update available from 10.8.0 to 10.10.0.
+Running python manage.py dumpdata on art-moving-buisness...
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ starting, run.3833
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3833
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... up, run.3833
+🔐 Encoding JSON to base64...
+📦 Capturing and downloading raw .dump of production database...
+ ›   Warning: heroku update available from 10.8.0 to 10.10.0.
+Starting backup of postgresql-shallow-34050...
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣾
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣽
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣻
+[G[1A[JStarting backup of postgresql-shallow-34050... ⢿
+[G[1A[JStarting backup of postgresql-shallow-34050... ⡿
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣟
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣯
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣷
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣾
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣽
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣻
+[G[1A[JStarting backup of postgresql-shallow-34050... done
+
+Use Ctrl-C at any time to stop monitoring progress; the backup will continue running.
+Use heroku pg:backups:info to check progress.
+Stop a running backup with heroku pg:backups:cancel.
+
+Backing up DATABASE to b064...
+[G[1A[JBacking up DATABASE to b064... ⢿
+[G[1A[JBacking up DATABASE to b064... ⡿
+[G[1A[JBacking up DATABASE to b064... ⣟
+[G[1A[JBacking up DATABASE to b064... ⣯
+[G[1A[JBacking up DATABASE to b064... ⣷
+[G[1A[JBacking up DATABASE to b064... ⣾
+[G[1A[JBacking up DATABASE to b064... ⣽
+[G[1A[JBacking up DATABASE to b064... ⣻
+[G[1A[JBacking up DATABASE to b064... ⢿
+[G[1A[JBacking up DATABASE to b064... ⡿
+[G[1A[JBacking up DATABASE to b064... ⣟
+[G[1A[JBacking up DATABASE to b064... ⣯
+[G[1A[JBacking up DATABASE to b064... ⣷
+[G[1A[JBacking up DATABASE to b064... ⣾
+[G[1A[JBacking up DATABASE to b064... ⣽
+[G[1A[JBacking up DATABASE to b064... ⣻
+[G[1A[JBacking up DATABASE to b064... ⢿
+[G[1A[JBacking up DATABASE to b064... ⡿
+[G[1A[JBacking up DATABASE to b064... ⣟
+[G[1A[JBacking up DATABASE to b064... ⣯
+[G[1A[JBacking up DATABASE to b064... ⣷
+[G[1A[JBacking up DATABASE to b064... ⣾
+[G[1A[JBacking up DATABASE to b064... ⣽
+[G[1A[JBacking up DATABASE to b064... ⣻
+[G[1A[JBacking up DATABASE to b064... ⢿
+[G[1A[JBacking up DATABASE to b064... ⡿
+[G[1A[JBacking up DATABASE to b064... ⣟
+[G[1A[JBacking up DATABASE to b064... ⣯
+[G[1A[JBacking up DATABASE to b064... ⣷
+[G[1A[JBacking up DATABASE to b064... ⣾
+[G[1A[JBacking up DATABASE to b064... ⣽
+[G[1A[JBacking up DATABASE to b064... ⣻
+[G[1A[JBacking up DATABASE to b064... ⢿
+[G[1A[JBacking up DATABASE to b064... ⡿
+[G[1A[JBacking up DATABASE to b064... ⣟
+[G[1A[JBacking up DATABASE to b064... ⣯
+[G[1A[JBacking up DATABASE to b064... ⣷
+[G[1A[JBacking up DATABASE to b064... ⣾
+[G[1A[JBacking up DATABASE to b064... ⣽
+[G[1A[JBacking up DATABASE to b064... ⣻
+[G[1A[JBacking up DATABASE to b064... ⢿
+[G[1A[JBacking up DATABASE to b064... ⡿
+[G[1A[JBacking up DATABASE to b064... ⣟
+[G[1A[JBacking up DATABASE to b064... ⣯
+[G[1A[JBacking up DATABASE to b064... ⣷
+[G[1A[JBacking up DATABASE to b064... ⣾
+[G[1A[JBacking up DATABASE to b064... ⣽
+[G[1A[JBacking up DATABASE to b064... ⣻
+[G[1A[JBacking up DATABASE to b064... ⢿
+[G[1A[JBacking up DATABASE to b064... ⡿
+[G[1A[JBacking up DATABASE to b064... ⣟
+[G[1A[JBacking up DATABASE to b064... done
+ ›   Warning: heroku update available from 10.8.0 to 10.10.0.
+Getting backup from art-moving-buisness...
+[G[1A[JGetting backup from art-moving-buisness... ⣾
+[G[1A[JGetting backup from art-moving-buisness... ⣽
+[G[1A[JGetting backup from art-moving-buisness... ⣻
+[G[1A[JGetting backup from art-moving-buisness... ⢿
+[G[1A[JGetting backup from art-moving-buisness... ⡿
+[G[1A[JGetting backup from art-moving-buisness... ⣟
+[G[1A[JGetting backup from art-moving-buisness... ⣯
+[G[1A[JGetting backup from art-moving-buisness... ⣷
+[G[1A[JGetting backup from art-moving-buisness... ⣾
+[G[1A[JGetting backup from art-moving-buisness... ⣽
+[G[1A[JGetting backup from art-moving-buisness... ⣻ fetching url of #64
+[G[1A[JGetting backup from art-moving-buisness... ⢿ fetching url of #64
+[G[1A[JGetting backup from art-moving-buisness... ⡿ fetching url of #64
+[G[1A[JGetting backup from art-moving-buisness... ⣟ fetching url of #64
+[G[1A[JGetting backup from art-moving-buisness... ⣯ fetching url of #64
+[G[1A[JGetting backup from art-moving-buisness... ⣷ fetching url of #64
+[G[1A[JGetting backup from art-moving-buisness... ⣾ fetching url of #64
+[G[1A[JGetting backup from art-moving-buisness... ⣽ fetching url of #64
+[G[1A[JGetting backup from art-moving-buisness... ⣻ fetching url of #64
+[G[1A[JGetting backup from art-moving-buisness... ⢿ fetching url of #64
+[G[1A[JGetting backup from art-moving-buisness... ⡿ fetching url of #64
+[G[1A[JGetting backup from art-moving-buisness... done, #64
+✅ Backup complete:
+- JSON: backups/full_backup_2025-07-01.json
+- Base64: backups/full_backup_2025-07-01.b64
+- .dump: backups/full_backup_2025-07-01.dump
+📦 Dumping Heroku production database as JSON...
+ ›   Warning: heroku update available from 10.8.0 to 10.10.0.
+Running python manage.py dumpdata on art-moving-buisness...
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ starting, run.2760
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.2760
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... up, run.2760
+🔐 Encoding JSON to base64...
+📦 Capturing and downloading raw .dump of production database...
+ ›   Warning: heroku update available from 10.8.0 to 10.10.0.
+Starting backup of postgresql-shallow-34050...
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣾
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣽
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣻
+[G[1A[JStarting backup of postgresql-shallow-34050... ⢿
+[G[1A[JStarting backup of postgresql-shallow-34050... ⡿
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣟
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣯
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣷
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣾
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣽
+[G[1A[JStarting backup of postgresql-shallow-34050... done
+
+Use Ctrl-C at any time to stop monitoring progress; the backup will continue running.
+Use heroku pg:backups:info to check progress.
+Stop a running backup with heroku pg:backups:cancel.
+
+Backing up DATABASE to b066...
+[G[1A[JBacking up DATABASE to b066... ⣻
+[G[1A[JBacking up DATABASE to b066... ⢿
+[G[1A[JBacking up DATABASE to b066... ⡿
+[G[1A[JBacking up DATABASE to b066... ⣟
+[G[1A[JBacking up DATABASE to b066... ⣯
+[G[1A[JBacking up DATABASE to b066... ⣷
+[G[1A[JBacking up DATABASE to b066... ⣾
+[G[1A[JBacking up DATABASE to b066... ⣽
+[G[1A[JBacking up DATABASE to b066... ⣻
+[G[1A[JBacking up DATABASE to b066... ⢿
+[G[1A[JBacking up DATABASE to b066... done
+ ›   Warning: heroku update available from 10.8.0 to 10.10.0.
+Getting backup from art-moving-buisness...
+[G[1A[JGetting backup from art-moving-buisness... ⣾
+[G[1A[JGetting backup from art-moving-buisness... ⣽
+[G[1A[JGetting backup from art-moving-buisness... ⣻
+[G[1A[JGetting backup from art-moving-buisness... ⢿
+[G[1A[JGetting backup from art-moving-buisness... ⡿
+[G[1A[JGetting backup from art-moving-buisness... ⣟
+[G[1A[JGetting backup from art-moving-buisness... ⣯
+[G[1A[JGetting backup from art-moving-buisness... ⣷
+[G[1A[JGetting backup from art-moving-buisness... ⣾
+[G[1A[JGetting backup from art-moving-buisness... ⣽
+[G[1A[JGetting backup from art-moving-buisness... ⣻
+[G[1A[JGetting backup from art-moving-buisness... ⢿
+[G[1A[JGetting backup from art-moving-buisness... ⡿ fetching url of #66
+[G[1A[JGetting backup from art-moving-buisness... ⣟ fetching url of #66
+[G[1A[JGetting backup from art-moving-buisness... ⣯ fetching url of #66
+[G[1A[JGetting backup from art-moving-buisness... ⣷ fetching url of #66
+[G[1A[JGetting backup from art-moving-buisness... ⣾ fetching url of #66
+[G[1A[JGetting backup from art-moving-buisness... ⣽ fetching url of #66
+[G[1A[JGetting backup from art-moving-buisness... ⣻ fetching url of #66
+[G[1A[JGetting backup from art-moving-buisness... ⢿ fetching url of #66
+[G[1A[JGetting backup from art-moving-buisness... ⡿ fetching url of #66
+[G[1A[JGetting backup from art-moving-buisness... ⣟ fetching url of #66
+[G[1A[JGetting backup from art-moving-buisness... ⣯ fetching url of #66
+[G[1A[JGetting backup from art-moving-buisness... done, #66
+✅ Backup complete:
+- JSON: backups/full_backup_2025-07-02.json
+- Base64: backups/full_backup_2025-07-02.b64
+- .dump: backups/full_backup_2025-07-02.dump
+📦 Dumping Heroku production database as JSON...
+ ›   Warning: heroku update available from 10.8.0 to 10.10.0.
+Running python manage.py dumpdata on art-moving-buisness...
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ starting, run.3127
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.3127
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... up, run.3127
+🔐 Encoding JSON to base64...
+📦 Capturing and downloading raw .dump of production database...
+ ›   Warning: heroku update available from 10.8.0 to 10.10.0.
+Starting backup of postgresql-shallow-34050...
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣾
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣽
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣻
+[G[1A[JStarting backup of postgresql-shallow-34050... ⢿
+[G[1A[JStarting backup of postgresql-shallow-34050... ⡿
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣟
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣯
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣷
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣾
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣽
+[G[1A[JStarting backup of postgresql-shallow-34050... done
+
+Use Ctrl-C at any time to stop monitoring progress; the backup will continue running.
+Use heroku pg:backups:info to check progress.
+Stop a running backup with heroku pg:backups:cancel.
+
+Backing up DATABASE to b068...
+[G[1A[JBacking up DATABASE to b068... ⣻
+[G[1A[JBacking up DATABASE to b068... ⢿
+[G[1A[JBacking up DATABASE to b068... ⡿
+[G[1A[JBacking up DATABASE to b068... ⣟
+[G[1A[JBacking up DATABASE to b068... ⣯
+[G[1A[JBacking up DATABASE to b068... ⣷
+[G[1A[JBacking up DATABASE to b068... ⣾
+[G[1A[JBacking up DATABASE to b068... ⣽
+[G[1A[JBacking up DATABASE to b068... ⣻
+[G[1A[JBacking up DATABASE to b068... ⢿
+[G[1A[JBacking up DATABASE to b068... ⡿
+[G[1A[JBacking up DATABASE to b068... ⣟
+[G[1A[JBacking up DATABASE to b068... ⣯
+[G[1A[JBacking up DATABASE to b068... ⣷
+[G[1A[JBacking up DATABASE to b068... ⣾
+[G[1A[JBacking up DATABASE to b068... ⣽
+[G[1A[JBacking up DATABASE to b068... ⣻
+[G[1A[JBacking up DATABASE to b068... ⢿
+[G[1A[JBacking up DATABASE to b068... ⡿
+[G[1A[JBacking up DATABASE to b068... ⣟
+[G[1A[JBacking up DATABASE to b068... ⣯
+[G[1A[JBacking up DATABASE to b068... ⣷
+[G[1A[JBacking up DATABASE to b068... ⣾
+[G[1A[JBacking up DATABASE to b068... ⣽
+[G[1A[JBacking up DATABASE to b068... ⣻
+[G[1A[JBacking up DATABASE to b068... ⢿
+[G[1A[JBacking up DATABASE to b068... ⡿
+[G[1A[JBacking up DATABASE to b068... ⣟
+[G[1A[JBacking up DATABASE to b068... ⣯
+[G[1A[JBacking up DATABASE to b068... ⣷
+[G[1A[JBacking up DATABASE to b068... ⣾
+[G[1A[JBacking up DATABASE to b068... ⣽
+[G[1A[JBacking up DATABASE to b068... ⣻
+[G[1A[JBacking up DATABASE to b068... ⢿
+[G[1A[JBacking up DATABASE to b068... ⡿
+[G[1A[JBacking up DATABASE to b068... ⣟
+[G[1A[JBacking up DATABASE to b068... ⣯
+[G[1A[JBacking up DATABASE to b068... ⣷
+[G[1A[JBacking up DATABASE to b068... ⣾
+[G[1A[JBacking up DATABASE to b068... ⣽
+[G[1A[JBacking up DATABASE to b068... ⣻
+[G[1A[JBacking up DATABASE to b068... ⢿
+[G[1A[JBacking up DATABASE to b068... ⡿
+[G[1A[JBacking up DATABASE to b068... ⣟
+[G[1A[JBacking up DATABASE to b068... ⣯
+[G[1A[JBacking up DATABASE to b068... ⣷
+[G[1A[JBacking up DATABASE to b068... ⣾
+[G[1A[JBacking up DATABASE to b068... ⣽
+[G[1A[JBacking up DATABASE to b068... ⣻
+[G[1A[JBacking up DATABASE to b068... ⢿
+[G[1A[JBacking up DATABASE to b068... done
+ ›   Warning: heroku update available from 10.8.0 to 10.10.0.
+Getting backup from art-moving-buisness...
+[G[1A[JGetting backup from art-moving-buisness... ⣾
+[G[1A[JGetting backup from art-moving-buisness... ⣽
+[G[1A[JGetting backup from art-moving-buisness... ⣻
+[G[1A[JGetting backup from art-moving-buisness... ⢿
+[G[1A[JGetting backup from art-moving-buisness... ⡿
+[G[1A[JGetting backup from art-moving-buisness... ⣟
+[G[1A[JGetting backup from art-moving-buisness... ⣯
+[G[1A[JGetting backup from art-moving-buisness... ⣷
+[G[1A[JGetting backup from art-moving-buisness... ⣾
+[G[1A[JGetting backup from art-moving-buisness... ⣽
+[G[1A[JGetting backup from art-moving-buisness... ⣻ fetching url of #68
+[G[1A[JGetting backup from art-moving-buisness... ⢿ fetching url of #68
+[G[1A[JGetting backup from art-moving-buisness... ⡿ fetching url of #68
+[G[1A[JGetting backup from art-moving-buisness... ⣟ fetching url of #68
+[G[1A[JGetting backup from art-moving-buisness... ⣯ fetching url of #68
+[G[1A[JGetting backup from art-moving-buisness... ⣷ fetching url of #68
+[G[1A[JGetting backup from art-moving-buisness... ⣾ fetching url of #68
+[G[1A[JGetting backup from art-moving-buisness... ⣽ fetching url of #68
+[G[1A[JGetting backup from art-moving-buisness... ⣻ fetching url of #68
+[G[1A[JGetting backup from art-moving-buisness... ⢿ fetching url of #68
+[G[1A[JGetting backup from art-moving-buisness... done, #68
+✅ Backup complete:
+- JSON: backups/full_backup_2025-07-03.json
+- Base64: backups/full_backup_2025-07-03.b64
+- .dump: backups/full_backup_2025-07-03.dump
+📦 Dumping Heroku production database as JSON...
+ ›   Warning: heroku update available from 10.8.0 to 10.10.0.
+Running python manage.py dumpdata on art-moving-buisness...
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ starting, run.4526
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ starting, run.4526
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.4526
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... up, run.4526
+🔐 Encoding JSON to base64...
+📦 Capturing and downloading raw .dump of production database...
+ ›   Warning: heroku update available from 10.8.0 to 10.10.0.
+Starting backup of postgresql-shallow-34050...
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣾
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣽
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣻
+[G[1A[JStarting backup of postgresql-shallow-34050... ⢿
+[G[1A[JStarting backup of postgresql-shallow-34050... ⡿
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣟
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣯
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣷
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣾
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣽
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣻
+[G[1A[JStarting backup of postgresql-shallow-34050... done
+
+Use Ctrl-C at any time to stop monitoring progress; the backup will continue running.
+Use heroku pg:backups:info to check progress.
+Stop a running backup with heroku pg:backups:cancel.
+
+Backing up DATABASE to b070...
+[G[1A[JBacking up DATABASE to b070... ⢿
+[G[1A[JBacking up DATABASE to b070... ⡿
+[G[1A[JBacking up DATABASE to b070... ⣟
+[G[1A[JBacking up DATABASE to b070... ⣯
+[G[1A[JBacking up DATABASE to b070... ⣷
+[G[1A[JBacking up DATABASE to b070... ⣾
+[G[1A[JBacking up DATABASE to b070... ⣽
+[G[1A[JBacking up DATABASE to b070... ⣻
+[G[1A[JBacking up DATABASE to b070... ⢿
+[G[1A[JBacking up DATABASE to b070... ⡿
+[G[1A[JBacking up DATABASE to b070... ⣟
+[G[1A[JBacking up DATABASE to b070... ⣯
+[G[1A[JBacking up DATABASE to b070... ⣷
+[G[1A[JBacking up DATABASE to b070... ⣾
+[G[1A[JBacking up DATABASE to b070... ⣽
+[G[1A[JBacking up DATABASE to b070... ⣻
+[G[1A[JBacking up DATABASE to b070... ⢿
+[G[1A[JBacking up DATABASE to b070... ⡿
+[G[1A[JBacking up DATABASE to b070... ⣟
+[G[1A[JBacking up DATABASE to b070... ⣯
+[G[1A[JBacking up DATABASE to b070... ⣷
+[G[1A[JBacking up DATABASE to b070... ⣾
+[G[1A[JBacking up DATABASE to b070... ⣽
+[G[1A[JBacking up DATABASE to b070... ⣻
+[G[1A[JBacking up DATABASE to b070... ⢿
+[G[1A[JBacking up DATABASE to b070... ⡿
+[G[1A[JBacking up DATABASE to b070... ⣟
+[G[1A[JBacking up DATABASE to b070... ⣯
+[G[1A[JBacking up DATABASE to b070... ⣷
+[G[1A[JBacking up DATABASE to b070... ⣾
+[G[1A[JBacking up DATABASE to b070... ⣽
+[G[1A[JBacking up DATABASE to b070... ⣻
+[G[1A[JBacking up DATABASE to b070... ⢿
+[G[1A[JBacking up DATABASE to b070... ⡿
+[G[1A[JBacking up DATABASE to b070... ⣟
+[G[1A[JBacking up DATABASE to b070... ⣯
+[G[1A[JBacking up DATABASE to b070... ⣷
+[G[1A[JBacking up DATABASE to b070... ⣾
+[G[1A[JBacking up DATABASE to b070... ⣽
+[G[1A[JBacking up DATABASE to b070... ⣻
+[G[1A[JBacking up DATABASE to b070... ⢿
+[G[1A[JBacking up DATABASE to b070... ⡿
+[G[1A[JBacking up DATABASE to b070... ⣟
+[G[1A[JBacking up DATABASE to b070... ⣯
+[G[1A[JBacking up DATABASE to b070... ⣷
+[G[1A[JBacking up DATABASE to b070... ⣾
+[G[1A[JBacking up DATABASE to b070... ⣽
+[G[1A[JBacking up DATABASE to b070... ⣻
+[G[1A[JBacking up DATABASE to b070... ⢿
+[G[1A[JBacking up DATABASE to b070... ⡿
+[G[1A[JBacking up DATABASE to b070... done
+ ›   Warning: heroku update available from 10.8.0 to 10.10.0.
+Getting backup from art-moving-buisness...
+[G[1A[JGetting backup from art-moving-buisness... ⣾
+[G[1A[JGetting backup from art-moving-buisness... ⣽
+[G[1A[JGetting backup from art-moving-buisness... ⣻
+[G[1A[JGetting backup from art-moving-buisness... ⢿
+[G[1A[JGetting backup from art-moving-buisness... ⡿
+[G[1A[JGetting backup from art-moving-buisness... ⣟
+[G[1A[JGetting backup from art-moving-buisness... ⣯
+[G[1A[JGetting backup from art-moving-buisness... ⣷
+[G[1A[JGetting backup from art-moving-buisness... ⣾
+[G[1A[JGetting backup from art-moving-buisness... ⣽
+[G[1A[JGetting backup from art-moving-buisness... ⣻
+[G[1A[JGetting backup from art-moving-buisness... ⢿ fetching url of #70
+[G[1A[JGetting backup from art-moving-buisness... ⡿ fetching url of #70
+[G[1A[JGetting backup from art-moving-buisness... ⣟ fetching url of #70
+[G[1A[JGetting backup from art-moving-buisness... ⣯ fetching url of #70
+[G[1A[JGetting backup from art-moving-buisness... ⣷ fetching url of #70
+[G[1A[JGetting backup from art-moving-buisness... ⣾ fetching url of #70
+[G[1A[JGetting backup from art-moving-buisness... ⣽ fetching url of #70
+[G[1A[JGetting backup from art-moving-buisness... ⣻ fetching url of #70
+[G[1A[JGetting backup from art-moving-buisness... ⢿ fetching url of #70
+[G[1A[JGetting backup from art-moving-buisness... ⡿ fetching url of #70
+[G[1A[JGetting backup from art-moving-buisness... done, #70
+✅ Backup complete:
+- JSON: backups/full_backup_2025-07-04.json
+- Base64: backups/full_backup_2025-07-04.b64
+- .dump: backups/full_backup_2025-07-04.dump
+📦 Dumping Heroku production database as JSON...
+ ›   Warning: heroku update available from 10.8.0 to 10.10.0.
+Running python manage.py dumpdata on art-moving-buisness...
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ starting, run.5158
+[G[1A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣾ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣽ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣻ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⢿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⡿ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣟ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣯ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... ⣷ connecting, run.5158
+[G[2A[JRunning python manage.py dumpdata on art-moving-buisness... up, run.5158
+🔐 Encoding JSON to base64...
+📦 Capturing and downloading raw .dump of production database...
+ ›   Warning: heroku update available from 10.8.0 to 10.10.0.
+Starting backup of postgresql-shallow-34050...
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣾
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣽
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣻
+[G[1A[JStarting backup of postgresql-shallow-34050... ⢿
+[G[1A[JStarting backup of postgresql-shallow-34050... ⡿
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣟
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣯
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣷
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣾
+[G[1A[JStarting backup of postgresql-shallow-34050... ⣽
+[G[1A[JStarting backup of postgresql-shallow-34050... done
+
+Use Ctrl-C at any time to stop monitoring progress; the backup will continue running.
+Use heroku pg:backups:info to check progress.
+Stop a running backup with heroku pg:backups:cancel.
+
+Backing up DATABASE to b073...
+[G[1A[JBacking up DATABASE to b073... ⣻
+[G[1A[JBacking up DATABASE to b073... ⢿
+[G[1A[JBacking up DATABASE to b073... ⡿
+[G[1A[JBacking up DATABASE to b073... ⣟
+[G[1A[JBacking up DATABASE to b073... ⣯
+[G[1A[JBacking up DATABASE to b073... ⣷
+[G[1A[JBacking up DATABASE to b073... ⣾
+[G[1A[JBacking up DATABASE to b073... ⣽
+[G[1A[JBacking up DATABASE to b073... ⣻
+[G[1A[JBacking up DATABASE to b073... ⢿
+[G[1A[JBacking up DATABASE to b073... ⡿
+[G[1A[JBacking up DATABASE to b073... ⣟
+[G[1A[JBacking up DATABASE to b073... ⣯
+[G[1A[JBacking up DATABASE to b073... ⣷
+[G[1A[JBacking up DATABASE to b073... ⣾
+[G[1A[JBacking up DATABASE to b073... ⣽
+[G[1A[JBacking up DATABASE to b073... ⣻
+[G[1A[JBacking up DATABASE to b073... ⢿
+[G[1A[JBacking up DATABASE to b073... ⡿
+[G[1A[JBacking up DATABASE to b073... ⣟
+[G[1A[JBacking up DATABASE to b073... ⣯
+[G[1A[JBacking up DATABASE to b073... ⣷
+[G[1A[JBacking up DATABASE to b073... ⣾
+[G[1A[JBacking up DATABASE to b073... ⣽
+[G[1A[JBacking up DATABASE to b073... ⣻
+[G[1A[JBacking up DATABASE to b073... ⢿
+[G[1A[JBacking up DATABASE to b073... ⡿
+[G[1A[JBacking up DATABASE to b073... ⣟
+[G[1A[JBacking up DATABASE to b073... ⣯
+[G[1A[JBacking up DATABASE to b073... ⣷
+[G[1A[JBacking up DATABASE to b073... ⣾
+[G[1A[JBacking up DATABASE to b073... ⣽
+[G[1A[JBacking up DATABASE to b073... ⣻
+[G[1A[JBacking up DATABASE to b073... ⢿
+[G[1A[JBacking up DATABASE to b073... ⡿
+[G[1A[JBacking up DATABASE to b073... ⣟
+[G[1A[JBacking up DATABASE to b073... ⣯
+[G[1A[JBacking up DATABASE to b073... ⣷
+[G[1A[JBacking up DATABASE to b073... ⣾
+[G[1A[JBacking up DATABASE to b073... ⣽
+[G[1A[JBacking up DATABASE to b073... ⣻
+[G[1A[JBacking up DATABASE to b073... ⢿
+[G[1A[JBacking up DATABASE to b073... ⡿
+[G[1A[JBacking up DATABASE to b073... ⣟
+[G[1A[JBacking up DATABASE to b073... ⣯
+[G[1A[JBacking up DATABASE to b073... ⣷
+[G[1A[JBacking up DATABASE to b073... ⣾
+[G[1A[JBacking up DATABASE to b073... ⣽
+[G[1A[JBacking up DATABASE to b073... ⣻
+[G[1A[JBacking up DATABASE to b073... done
+ ›   Warning: heroku update available from 10.8.0 to 10.10.0.
+Getting backup from art-moving-buisness...
+[G[1A[JGetting backup from art-moving-buisness... ⣾
+[G[1A[JGetting backup from art-moving-buisness... ⣽
+[G[1A[JGetting backup from art-moving-buisness... ⣻
+[G[1A[JGetting backup from art-moving-buisness... ⢿
+[G[1A[JGetting backup from art-moving-buisness... ⡿
+[G[1A[JGetting backup from art-moving-buisness... ⣟
+[G[1A[JGetting backup from art-moving-buisness... ⣯
+[G[1A[JGetting backup from art-moving-buisness... ⣷
+[G[1A[JGetting backup from art-moving-buisness... ⣾
+[G[1A[JGetting backup from art-moving-buisness... ⣽
+[G[1A[JGetting backup from art-moving-buisness... ⣻ fetching url of #73
+[G[1A[JGetting backup from art-moving-buisness... ⢿ fetching url of #73
+[G[1A[JGetting backup from art-moving-buisness... ⡿ fetching url of #73
+[G[1A[JGetting backup from art-moving-buisness... ⣟ fetching url of #73
+[G[1A[JGetting backup from art-moving-buisness... ⣯ fetching url of #73
+[G[1A[JGetting backup from art-moving-buisness... ⣷ fetching url of #73
+[G[1A[JGetting backup from art-moving-buisness... ⣾ fetching url of #73
+[G[1A[JGetting backup from art-moving-buisness... ⣽ fetching url of #73
+[G[1A[JGetting backup from art-moving-buisness... ⣻ fetching url of #73
+[G[1A[JGetting backup from art-moving-buisness... ⢿ fetching url of #73
+[G[1A[JGetting backup from art-moving-buisness... ⡿ fetching url of #73
+[G[1A[JGetting backup from art-moving-buisness... done, #73
+✅ Backup complete:
+- JSON: backups/full_backup_2025-07-06.json
+- Base64: backups/full_backup_2025-07-06.b64
+- .dump: backups/full_backup_2025-07-06.dump
