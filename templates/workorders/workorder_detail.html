@@ -6,7 +6,7 @@
 {% block content %}
 <div class="container py-4">
 
-  <!-- Client Information - MOVED TO TOP -->
+  <!-- Client Information -->
   <div class="card mb-4">
     <div class="card-header bg-info text-white">
       <h5 class="mb-0">Client Information</h5>
@@ -52,7 +52,7 @@
           <p><strong>Estimated Cost:</strong> ${{ job.estimated_cost }}</p>
         </div>
         <div class="col-md-6">
-          <p><strong>Status:</strong> 
+          <p><strong>Current Status:</strong> 
             <span class="badge 
               {% if job.status == 'pending' %}bg-secondary
               {% elif job.status == 'in_progress' %}bg-info
@@ -65,88 +65,102 @@
           {% if job.completed_at %}
             <p><strong>Completed At:</strong> {{ job.completed_at|date:"M d, Y g:i A" }}</p>
           {% endif %}
+          <p><strong>Invoiced:</strong> 
+            <span class="badge {% if job.invoiced %}bg-success{% else %}bg-secondary{% endif %}">
+              {% if job.invoiced %}Yes{% else %}No{% endif %}
+            </span>
+          </p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Status Progression Action Bar -->
+  <!-- Enhanced Status Management Panel -->
   <div class="card mb-4">
     <div class="card-header bg-primary text-white">
-      <h5 class="mb-0">Actions - Next Steps</h5>
+      <h5 class="mb-0">Status Management</h5>
     </div>
     <div class="card-body">
-      {% if job.status == 'pending' or job.status == 'in_progress' %}
-        {% if job.status == 'pending' %}
-          <div class="alert alert-info mb-3">
-            <i class="bi bi-info-circle me-2"></i>
-            <strong>Status: Pending</strong> - This job needs to be scheduled or marked as completed.
-          </div>
-        {% else %}
-          <div class="alert alert-info mb-3">
-            <i class="bi bi-calendar-event me-2"></i>
-            <strong>Status: Scheduled</strong> - This job has scheduled events and is ready to be completed.
-          </div>
-        {% endif %}
-        
-        <div class="d-flex flex-column flex-lg-row gap-2">
-          <a href="{% url 'workorder_edit' job.id %}" class="btn btn-warning">
-            <i class="bi bi-pencil me-1"></i>
-            {% if job.status == 'pending' %}Schedule Events{% else %}Edit Schedule{% endif %}
-          </a>
-          <form method="post" action="{% url 'mark_completed' job.id %}" class="flex-fill">
+      
+      <!-- Status Change Buttons -->
+      <div class="mb-4">
+        <h6 class="mb-3">Change Work Order Status:</h6>
+        <div class="d-flex flex-wrap gap-2">
+          
+          <!-- Pending Button -->
+          {% if job.status != 'pending' %}
+          <form method="post" action="{% url 'change_workorder_status' job.id %}" class="d-inline">
             {% csrf_token %}
-            <button type="submit" class="btn btn-success w-100">
+            <input type="hidden" name="new_status" value="pending">
+            <button type="submit" class="btn btn-outline-secondary" 
+                    onclick="return confirm('Move this work order back to Pending status?')">
+              <i class="bi bi-arrow-left me-1"></i>Move to Pending
+            </button>
+          </form>
+          {% endif %}
+          
+          <!-- In Progress Button -->
+          {% if job.status != 'in_progress' %}
+          <form method="post" action="{% url 'change_workorder_status' job.id %}" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="new_status" value="in_progress">
+            <button type="submit" class="btn btn-outline-info">
+              <i class="bi bi-play me-1"></i>Mark In Progress
+            </button>
+          </form>
+          {% endif %}
+          
+          <!-- Completed Button -->
+          {% if job.status != 'completed' %}
+          <form method="post" action="{% url 'change_workorder_status' job.id %}" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="new_status" value="completed">
+            <button type="submit" class="btn btn-outline-success">
               <i class="bi bi-check-circle me-1"></i>Mark Completed
             </button>
           </form>
-          <form method="post" action="{% url 'complete_and_invoice' job.id %}" class="flex-fill">
+          {% endif %}
+          
+        </div>
+      </div>
+
+      <!-- Invoiced Status Management -->
+      {% if job.invoiced %}
+      <div class="mb-4">
+        <h6 class="mb-3">Invoice Management:</h6>
+        <form method="post" action="{% url 'reset_workorder_invoiced' job.id %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-warning"
+                  onclick="return confirm('Reset invoiced status? This will allow the job to appear in uninvoiced lists again.')">
+            <i class="bi bi-arrow-counterclockwise me-1"></i>Reset Invoiced Status
+          </button>
+        </form>
+      </div>
+      {% endif %}
+
+      <!-- Quick Actions -->
+      <div>
+        <h6 class="mb-3">Quick Actions:</h6>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="{% url 'workorder_edit' job.id %}" class="btn btn-warning">
+            <i class="bi bi-pencil me-1"></i>Edit Work Order
+          </a>
+          {% if job.status == 'completed' and not job.invoiced %}
+          <a href="/invoices/create/?work_order={{ job.id }}" class="btn btn-success">
+            <i class="bi bi-receipt me-1"></i>Create Invoice
+          </a>
+          {% endif %}
+          <a href="{% url 'complete_and_invoice' job.id %}" class="btn btn-primary">
+            <i class="bi bi-receipt me-1"></i>Complete & Invoice
+          </a>
+          <form method="post" action="{% url 'mark_completed_and_paid' job.id %}" class="d-inline">
             {% csrf_token %}
-            <button type="submit" class="btn btn-primary w-100">
-              <i class="bi bi-receipt me-1"></i>Complete & Create Invoice
-            </button>
-          </form>
-          <form method="post" action="{% url 'mark_completed_and_paid' job.id %}" class="flex-fill">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-dark w-100">
+            <button type="submit" class="btn btn-dark">
               <i class="bi bi-cash me-1"></i>Complete & Mark Paid
             </button>
           </form>
         </div>
-      
-      {% elif job.status == 'completed' %}
-        {% if not job.invoiced %}
-          <div class="alert alert-warning mb-3">
-            <i class="bi bi-exclamation-triangle me-2"></i>
-            <strong>Status: Completed - Not Yet Paid</strong> - Ready to create invoice or mark as paid.
-          </div>
-          
-          <div class="d-flex flex-column flex-lg-row gap-2">
-            <a href="/invoices/create/?work_order={{ job.id }}" class="btn btn-success">
-              <i class="bi bi-receipt me-1"></i>Create Invoice
-            </a>
-            <form method="post" action="{% url 'mark_paid' job.id %}" class="flex-fill">
-              {% csrf_token %}
-              <button type="submit" class="btn btn-primary w-100">
-                <i class="bi bi-cash me-1"></i>Mark as Paid (No Invoice)
-              </button>
-            </form>
-          </div>
-        {% else %}
-          <div class="alert alert-success mb-3">
-            <i class="bi bi-check-circle me-2"></i>
-            <strong>Status: Completed & Paid</strong> - This job is finished and has been invoiced/paid.
-          </div>
-          
-          <div class="d-flex flex-column flex-lg-row gap-2">
-            {% if job.invoices.exists %}
-              <a href="{% url 'invoice_detail' job.invoices.first.id %}" class="btn btn-outline-success">
-                <i class="bi bi-receipt me-1"></i>View Invoice
-              </a>
-            {% endif %}
-          </div>
-        {% endif %}
-      {% endif %}
+      </div>
     </div>
   </div>
 
@@ -242,4 +256,4 @@
 
 {% block extra_js %}
 <!-- Optional JS for future interactivity -->
-{% endblock %}
+{% endblock %>

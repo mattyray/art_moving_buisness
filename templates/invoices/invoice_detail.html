@@ -27,7 +27,7 @@
       <div class="row">
         <div class="col-md-6">
           <p class="mb-1"><strong>Amount:</strong> ${{ invoice.amount }}</p>
-          <p class="mb-1"><strong>Status:</strong> 
+          <p class="mb-1"><strong>Current Status:</strong> 
             <span class="badge 
               {% if invoice.status == 'unpaid' %}bg-danger
               {% elif invoice.status == 'in_quickbooks' %}bg-warning text-dark
@@ -42,6 +42,53 @@
             <p class="mb-1"><strong>Notes:</strong> {{ invoice.notes }}</p>
           {% endif %}
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Management -->
+  <div class="card mb-4">
+    <div class="card-header bg-warning text-dark">
+      <h5 class="mb-0">Status Management</h5>
+    </div>
+    <div class="card-body">
+      <h6 class="mb-3">Change Invoice Status:</h6>
+      <div class="d-flex flex-wrap gap-2">
+        
+        <!-- Unpaid Button -->
+        {% if invoice.status != 'unpaid' %}
+        <form method="post" action="{% url 'change_invoice_status' invoice.id %}" class="d-inline">
+          {% csrf_token %}
+          <input type="hidden" name="new_status" value="unpaid">
+          <button type="submit" class="btn btn-outline-danger"
+                  onclick="return confirm('Move this invoice back to Not in QuickBooks?')">
+            <i class="bi bi-arrow-left me-1"></i>Move to Not in QB
+          </button>
+        </form>
+        {% endif %}
+        
+        <!-- In QuickBooks Button -->
+        {% if invoice.status != 'in_quickbooks' %}
+        <form method="post" action="{% url 'change_invoice_status' invoice.id %}" class="d-inline">
+          {% csrf_token %}
+          <input type="hidden" name="new_status" value="in_quickbooks">
+          <button type="submit" class="btn btn-outline-warning">
+            <i class="bi bi-check me-1"></i>Mark In QuickBooks
+          </button>
+        </form>
+        {% endif %}
+        
+        <!-- Paid Button -->
+        {% if invoice.status != 'paid' %}
+        <form method="post" action="{% url 'change_invoice_status' invoice.id %}" class="d-inline">
+          {% csrf_token %}
+          <input type="hidden" name="new_status" value="paid">
+          <button type="submit" class="btn btn-outline-success">
+            <i class="bi bi-cash me-1"></i>Mark Paid
+          </button>
+        </form>
+        {% endif %}
+        
       </div>
     </div>
   </div>
@@ -78,7 +125,9 @@
       <h6>Work Order Details</h6>
       <div class="row mb-3">
         <div class="col-md-6">
-          <p class="mb-1"><strong>Work Order ID:</strong> {{ invoice.work_order.id }}</p>
+          <p class="mb-1"><strong>Work Order ID:</strong> 
+            <a href="{% url 'workorder_detail' invoice.work_order.id %}">#{{ invoice.work_order.id }}</a>
+          </p>
           <p class="mb-1"><strong>Status:</strong> {{ invoice.work_order.get_status_display }}</p>
         </div>
         <div class="col-md-6">
@@ -153,9 +202,9 @@
     </div>
     <div class="card-body">
       <div class="d-flex flex-column flex-sm-row gap-2">
-        <button class="btn btn-primary" onclick="window.print();">
+        <a href="{% url 'invoice_pdf' invoice.id %}" class="btn btn-primary" target="_blank">
           <i class="bi bi-printer me-1"></i>Print Invoice
-        </button>
+        </a>
         <a href="{% url 'invoice_update' invoice.id %}" class="btn btn-warning">
           <i class="bi bi-pencil me-1"></i>Edit Invoice
         </a>

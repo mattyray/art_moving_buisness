@@ -18,10 +18,12 @@ urlpatterns = [
     path('detail/<int:job_id>/', views.workorder_detail, name='workorder_detail'),
     path('mark_paid/<int:job_id>/', views.mark_paid, name='mark_paid'),
 
+    # Enhanced status management
+    path('change_status/<int:job_id>/', views.change_workorder_status, name='change_workorder_status'),
+    path('reset_invoiced/<int:job_id>/', views.reset_workorder_invoiced, name='reset_workorder_invoiced'),
 
     # Calendar JSON API
     path("calendar-data/workorders/", views.workorder_calendar_data, name="workorder_calendar_data"),
 
     path("<int:pk>/pdf/", views.workorder_pdf, name="workorder_pdf"),
-
 ]
