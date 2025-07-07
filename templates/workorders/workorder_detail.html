@@ -206,7 +206,7 @@
     </div>
   </div>
 
-  <!-- Scheduled Events --><!-- Scheduled Events -->
+  <!-- Scheduled Events -->
   <div class="card mb-4">
       <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Scheduled Events</h5>
@@ -381,5 +381,32 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- Bootstrap JS for collapsible sections -->
+<script>
+// Function to handle event deletion confirmation
+function confirmDeleteEvent(eventId, eventType) {
+    // Set the event type in the modal
+    document.getElementById('eventTypeToDelete').textContent = eventType;
+    
+    // Set the form action URL to the delete endpoint
+    const deleteForm = document.getElementById('deleteEventForm');
+    deleteForm.action = `{% url 'workorder_detail' job.id %}`.replace('/detail/{{ job.id }}/', `/detail/{{ job.id }}/delete-event/${eventId}/`);
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('deleteEventModal'));
+    modal.show();
+}
+
+// Handle successful deletion (optional - for better UX)
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteForm = document.getElementById('deleteEventForm');
+    if (deleteForm) {
+        deleteForm.addEventListener('submit', function(e) {
+            // You could add loading state here if desired
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Deleting...';
+            submitBtn.disabled = true;
+        });
+    }
+});
+</script>
 {% endblock %}
