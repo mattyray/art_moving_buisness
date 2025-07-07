@@ -129,4 +129,39 @@ ul, ol {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* Compact button styling to match original */
+.btn-compact {
+  padding: 0.125rem 0.25rem;
+  font-size: 0.6875rem;
+  line-height: 1.1;
+  border-radius: 0.15rem;
+  margin: 0 1px;
+  white-space: nowrap;
+  display: inline-block;
+  min-width: auto;
+}
+
+/* Button group for work order actions */
+.btn-group-compact {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 1px;
+}
+
+.btn-group-compact .btn {
+  flex-shrink: 0;
+}
+
+.btn-group-compact form {
+  display: inline;
+  margin: 0;
+}
+
+/* Ensure actions column has enough width but not too much */
+td:last-child {
+  min-width: 280px;
+  max-width: 320px;
+}
+
 /*# sourceMappingURL=custom.css.map */
