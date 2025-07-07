@@ -29,4 +29,7 @@ urlpatterns = [
 
     path('load-more/', views.load_more_workorders, name='load_more_workorders'),
 
+    path('detail/<int:job_id>/delete-event/<int:event_id>/', views.delete_event, name='delete_event'),
+
+
 ]
