@@ -12,26 +12,32 @@
       
       {% if section == 'pending' %}
         <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Schedule</a>
-        <form method="post" action="{% url 'mark_completed' job.id %}" class="d-inline">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-sm btn-success">Complete</button>
-        </form>
-      
-      {% elif section == 'scheduled' %}
+      {% else %}
         <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
+      {% endif %}
+      
+      {% if job.status != 'completed' %}
         <form method="post" action="{% url 'mark_completed' job.id %}" class="d-inline">
           {% csrf_token %}
           <button type="submit" class="btn btn-sm btn-success">Complete</button>
         </form>
-      
+        <form method="post" action="{% url 'complete_and_invoice' job.id %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-primary">Complete & Invoice</button>
+        </form>
+        <form method="post" action="{% url 'mark_completed_and_paid' job.id %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-danger">Complete & Paid</button>
+        </form>
       {% elif section == 'completed' %}
-        <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
-        <a href="/invoices/create/?work_order={{ job.id }}" class="btn btn-sm btn-success">Invoice</a>
-      
+        <a href="/invoices/create/?work_order={{ job.id }}" class="btn btn-sm btn-success">📄 Create Invoice</a>
+        <form method="post" action="{% url 'mark_paid' job.id %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-primary">Mark as Paid</button>
+        </form>
       {% elif section == 'invoiced' %}
-        <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
         {% if job.invoices.exists %}
-          <a href="{% url 'invoice_detail' job.invoices.first.id %}" class="btn btn-sm btn-outline-success">Invoice</a>
+          <a href="{% url 'invoice_detail' job.invoices.first.id %}" class="btn btn-sm btn-outline-success">View Invoice</a>
         {% endif %}
       {% endif %}
     </div>
