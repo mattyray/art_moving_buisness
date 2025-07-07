@@ -34,7 +34,7 @@
     <div class="collapse show" id="pendingSection">
       <div class="card-body p-0">
         <div id="pending-jobs-container">
-          {% include 'workorders/partials/job_rows.html' with jobs=pending_jobs section='pending' %}
+          {% include 'workorders/partials/job_section.html' with jobs=pending_jobs section='pending' %}
         </div>
         {% if pending_jobs|length >= 5 %}
         <div class="p-3 text-center border-top">
@@ -70,7 +70,7 @@
     <div class="collapse show" id="scheduledSection">
       <div class="card-body p-0">
         <div id="scheduled-jobs-container">
-          {% include 'workorders/partials/job_rows.html' with jobs=scheduled_jobs section='scheduled' %}
+          {% include 'workorders/partials/job_section.html' with jobs=scheduled_jobs section='scheduled' %}
         </div>
         {% if scheduled_jobs|length >= 5 %}
         <div class="p-3 text-center border-top">
@@ -106,7 +106,7 @@
     <div class="collapse show" id="completedSection">
       <div class="card-body p-0">
         <div id="completed-jobs-container">
-          {% include 'workorders/partials/job_rows.html' with jobs=completed_uninvoiced_jobs section='completed' %}
+          {% include 'workorders/partials/job_section.html' with jobs=completed_uninvoiced_jobs section='completed' %}
         </div>
         {% if completed_uninvoiced_jobs|length >= 5 %}
         <div class="p-3 text-center border-top">
@@ -142,7 +142,7 @@
     <div class="collapse" id="invoicedSection">
       <div class="card-body p-0">
         <div id="invoiced-jobs-container">
-          {% include 'workorders/partials/job_rows.html' with jobs=completed_invoiced_jobs section='invoiced' %}
+          {% include 'workorders/partials/job_section.html' with jobs=completed_invoiced_jobs section='invoiced' %}
         </div>
         {% if completed_invoiced_jobs|length >= 5 %}
         <div class="p-3 text-center border-top">
@@ -169,10 +169,22 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  // Track original counts for each section
+  const originalCounts = {
+    'pending': {{ pending_jobs|length }},
+    'scheduled': {{ scheduled_jobs|length }},
+    'completed': {{ completed_uninvoiced_jobs|length }},
+    'invoiced': {{ completed_invoiced_jobs|length }}
+  };
+
+  let isLoading = false; // Prevent multiple simultaneous requests
+
   // Handle load more buttons
   document.addEventListener('click', function(e) {
     if (e.target.classList.contains('load-more-btn') || e.target.closest('.load-more-btn')) {
       e.preventDefault();
+      
+      if (isLoading) return; // Prevent multiple requests
       
       const btn = e.target.classList.contains('load-more-btn') ? e.target : e.target.closest('.load-more-btn');
       const section = btn.dataset.section;
@@ -181,7 +193,14 @@ document.addEventListener('DOMContentLoaded', function() {
       const spinner = btn.querySelector('.spinner-border');
       const icon = btn.querySelector('.bi-plus-circle');
       
+      // Validation
+      if (!section || !url || isNaN(offset)) {
+        console.error('Invalid button data:', {section, url, offset});
+        return;
+      }
+      
       // Show loading state
+      isLoading = true;
       spinner.classList.remove('d-none');
       icon.classList.add('d-none');
       btn.disabled = true;
@@ -193,17 +212,38 @@ document.addEventListener('DOMContentLoaded', function() {
           'X-Requested-With': 'XMLHttpRequest',
         }
       })
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
       .then(data => {
-        if (data.html) {
-          // Append new rows
+        if (data.desktop_html && data.mobile_html) {
+          // Find containers
           const container = document.getElementById(`${section}-jobs-container`);
-          container.insertAdjacentHTML('beforeend', data.html);
+          if (!container) {
+            throw new Error(`Container not found: ${section}-jobs-container`);
+          }
+          
+          // Append desktop rows to table body
+          const tableBody = container.querySelector('.job-table-body');
+          if (tableBody) {
+            tableBody.insertAdjacentHTML('beforeend', data.desktop_html);
+          }
+          
+          // Append mobile cards to mobile container
+          const mobileContainer = container.querySelector('.job-cards-container');
+          if (mobileContainer) {
+            mobileContainer.insertAdjacentHTML('beforeend', data.mobile_html);
+          }
           
           // Update count badge
           const countBadge = document.getElementById(`${section}-count`);
-          const currentCount = parseInt(countBadge.textContent);
-          countBadge.textContent = currentCount + data.count;
+          if (countBadge) {
+            const currentCount = parseInt(countBadge.textContent);
+            countBadge.textContent = currentCount + data.count;
+          }
           
           // Update offset for next load
           btn.dataset.offset = offset + 5;
@@ -212,30 +252,149 @@ document.addEventListener('DOMContentLoaded', function() {
           if (!data.has_more) {
             btn.style.display = 'none';
           }
+          
+          // Show "Show Less" button after first load more
+          showShowLessButton(section);
+        } else {
+          throw new Error('No HTML returned from server');
         }
       })
       .catch(error => {
         console.error('Error loading more items:', error);
+        
+        // Remove any existing error messages
+        const existingError = btn.parentElement.querySelector('.error-message');
+        if (existingError) {
+          existingError.remove();
+        }
+        
         // Show error message
-        btn.insertAdjacentHTML('afterend', '<div class="text-danger small mt-2">Error loading more items. Please try again.</div>');
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'text-danger small mt-2 error-message';
+        errorDiv.textContent = 'Error loading more items. Please try again.';
+        btn.parentElement.appendChild(errorDiv);
+        
+        // Remove error message after 5 seconds
+        setTimeout(() => {
+          if (errorDiv.parentElement) {
+            errorDiv.remove();
+          }
+        }, 5000);
       })
       .finally(() => {
         // Hide loading state
+        isLoading = false;
         spinner.classList.add('d-none');
         icon.classList.remove('d-none');
         btn.disabled = false;
       });
     }
+    
+    // Handle show less buttons
+    if (e.target.classList.contains('show-less-btn') || e.target.closest('.show-less-btn')) {
+      e.preventDefault();
+      
+      const btn = e.target.classList.contains('show-less-btn') ? e.target : e.target.closest('.show-less-btn');
+      const section = btn.dataset.section;
+      
+      if (section) {
+        showLessItems(section);
+      }
+    }
   });
+
+  function showShowLessButton(section) {
+    // Check if show less button already exists
+    const existingBtn = document.querySelector(`[data-section="${section}"].show-less-btn`);
+    if (existingBtn) return;
+    
+    // Find load more button
+    const loadMoreBtn = document.querySelector(`[data-section="${section}"].load-more-btn`);
+    if (!loadMoreBtn) return;
+    
+    const buttonContainer = loadMoreBtn.parentElement;
+    
+    // Create show less button
+    const showLessBtn = document.createElement('button');
+    showLessBtn.className = 'btn btn-outline-secondary btn-sm show-less-btn ms-2';
+    showLessBtn.setAttribute('data-section', section);
+    showLessBtn.innerHTML = '<i class="bi bi-dash-circle me-1"></i>Show Less';
+    
+    buttonContainer.appendChild(showLessBtn);
+  }
+
+  function showLessItems(section) {
+    const container = document.getElementById(`${section}-jobs-container`);
+    if (!container) {
+      console.error(`Container not found: ${section}-jobs-container`);
+      return;
+    }
+    
+    const originalCount = originalCounts[section];
+    if (originalCount === undefined) {
+      console.error(`Original count not found for section: ${section}`);
+      return;
+    }
+    
+    // Handle desktop table rows
+    const tableBody = container.querySelector('.job-table-body');
+    if (tableBody) {
+      const rows = tableBody.querySelectorAll('tr.job-row');
+      rows.forEach((row, index) => {
+        if (index >= originalCount) {
+          row.style.display = 'none';
+        } else {
+          row.style.display = '';
+        }
+      });
+    }
+    
+    // Handle mobile cards
+    const mobileContainer = container.querySelector('.job-cards-container');
+    if (mobileContainer) {
+      const cards = mobileContainer.querySelectorAll('.job-card');
+      cards.forEach((card, index) => {
+        if (index >= originalCount) {
+          card.style.display = 'none';
+        } else {
+          card.style.display = '';
+        }
+      });
+    }
+    
+    // Update count badge back to original
+    const countBadge = document.getElementById(`${section}-count`);
+    if (countBadge) {
+      countBadge.textContent = originalCount;
+    }
+    
+    // Reset load more button
+    const loadMoreBtn = document.querySelector(`[data-section="${section}"].load-more-btn`);
+    if (loadMoreBtn) {
+      loadMoreBtn.dataset.offset = '5';
+      loadMoreBtn.style.display = 'inline-block';
+    }
+    
+    // Remove show less button
+    const showLessBtn = document.querySelector(`[data-section="${section}"].show-less-btn`);
+    if (showLessBtn) {
+      showLessBtn.remove();
+    }
+  }
 
   // Handle collapse icon rotation
   document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
     button.addEventListener('click', function() {
       const icon = this.querySelector('i');
+      if (!icon) return;
       
-      // Toggle icon rotation with a slight delay for smooth animation
       setTimeout(() => {
-        const target = document.querySelector(this.getAttribute('data-bs-target'));
+        const targetSelector = this.getAttribute('data-bs-target');
+        if (!targetSelector) return;
+        
+        const target = document.querySelector(targetSelector);
+        if (!target) return;
+        
         if (target.classList.contains('show')) {
           icon.style.transform = 'rotate(180deg)';
         } else {
@@ -263,7 +422,7 @@ document.addEventListener('DOMContentLoaded', function() {
     font-size: 0.7rem;
   }
   
-  .load-more-btn {
+  .load-more-btn, .show-less-btn {
     font-size: 0.875rem;
   }
 }
@@ -272,6 +431,21 @@ document.addEventListener('DOMContentLoaded', function() {
 .spinner-border-sm {
   width: 1rem;
   height: 1rem;
+}
+
+/* Button transitions */
+.show-less-btn {
+  transition: all 0.3s ease;
+}
+
+/* Error message styling */
+.error-message {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 </style>
 {% endblock %}

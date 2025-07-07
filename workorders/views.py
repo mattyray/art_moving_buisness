@@ -445,15 +445,20 @@ def load_more_workorders(request):
         
         has_more = (offset + limit) < total_count
     
-    # Render the jobs using the partial template
+    # Render separate templates for desktop and mobile
     from django.template.loader import render_to_string
-    html = render_to_string('workorders/partials/job_rows.html', {
+    
+    context = {
         'jobs': jobs,
         'section': section,
-    }, request=request)
+    }
+    
+    desktop_html = render_to_string('workorders/partials/job_rows.html', context, request=request)
+    mobile_html = render_to_string('workorders/partials/job_cards_mobile.html', context, request=request)
     
     return JsonResponse({
-        'html': html,
+        'desktop_html': desktop_html,
+        'mobile_html': mobile_html,
         'count': len(jobs),
         'has_more': has_more,
     })

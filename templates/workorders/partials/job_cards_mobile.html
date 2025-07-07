@@ -1,0 +1,47 @@
+<!-- Mobile Cards Only -->
+{% for job in jobs %}
+<div class="border-bottom p-3 job-card" data-job-id="{{ job.id }}">
+  <div class="d-flex justify-content-between align-items-start mb-2">
+    <div class="flex-grow-1">
+      <div class="fw-bold">Work Order #{{ job.id }}</div>
+      <div class="text-muted small">{{ job.client.name }}</div>
+      <div class="text-muted small">{{ job.job_description|truncatewords:6 }}</div>
+    </div>
+    <span class="badge 
+      {% if job.status == 'pending' %}bg-secondary
+      {% elif job.status == 'in_progress' %}bg-info
+      {% else %}bg-success{% endif %} ms-2">
+      {{ job.get_status_display }}
+    </span>
+  </div>
+  
+  <div class="d-flex flex-wrap gap-1">
+    <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info flex-fill">View</a>
+    
+    {% if section == 'pending' %}
+      <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning flex-fill">Schedule</a>
+      <form method="post" action="{% url 'mark_completed' job.id %}" class="flex-fill">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-success w-100">Complete</button>
+      </form>
+    
+    {% elif section == 'scheduled' %}
+      <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning flex-fill">Edit</a>
+      <form method="post" action="{% url 'mark_completed' job.id %}" class="flex-fill">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-success w-100">Complete</button>
+      </form>
+    
+    {% elif section == 'completed' %}
+      <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning flex-fill">Edit</a>
+      <a href="/invoices/create/?work_order={{ job.id }}" class="btn btn-sm btn-success flex-fill">Invoice</a>
+    
+    {% elif section == 'invoiced' %}
+      <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning flex-fill">Edit</a>
+      {% if job.invoices.exists %}
+        <a href="{% url 'invoice_detail' job.invoices.first.id %}" class="btn btn-sm btn-outline-success flex-fill">Invoice</a>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
