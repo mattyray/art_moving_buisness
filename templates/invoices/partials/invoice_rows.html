@@ -1,0 +1,60 @@
+<!-- Desktop Table Rows Only -->
+{% for inv in invoices %}
+<tr class="invoice-row" data-invoice-id="{{ inv.id }}">
+  <td>{{ inv.invoice_number }}</td>
+  <td>{{ inv.client.name }}</td>
+  <td>${{ inv.amount }}</td>
+  <td>
+    <div class="d-flex flex-row gap-1">
+      <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
+      <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+      
+      {% if section == 'unpaid' %}
+        <form method="post" action="{% url 'change_invoice_status' inv.id %}" class="d-inline">
+          {% csrf_token %}
+          <input type="hidden" name="new_status" value="in_quickbooks">
+          <button type="submit" class="btn btn-sm btn-success">Mark as In QB</button>
+        </form>
+        <form method="post" action="{% url 'change_invoice_status' inv.id %}" class="d-inline">
+          {% csrf_token %}
+          <input type="hidden" name="new_status" value="paid">
+          <button type="submit" class="btn btn-sm btn-primary">Mark as Paid</button>
+        </form>
+      
+      {% elif section == 'in_quickbooks' %}
+        <form method="post" action="{% url 'change_invoice_status' inv.id %}" class="d-inline">
+          {% csrf_token %}
+          <input type="hidden" name="new_status" value="unpaid">
+          <button type="submit" class="btn btn-sm btn-outline-danger"
+                  onclick="return confirm('Move back to Not in QuickBooks?')">
+            <i class="bi bi-arrow-left"></i> Back to Not in QB
+          </button>
+        </form>
+        <form method="post" action="{% url 'change_invoice_status' inv.id %}" class="d-inline">
+          {% csrf_token %}
+          <input type="hidden" name="new_status" value="paid">
+          <button type="submit" class="btn btn-sm btn-success">Mark as Paid</button>
+        </form>
+      
+      {% elif section == 'paid' %}
+        <form method="post" action="{% url 'change_invoice_status' inv.id %}" class="d-inline">
+          {% csrf_token %}
+          <input type="hidden" name="new_status" value="in_quickbooks">
+          <button type="submit" class="btn btn-sm btn-outline-warning"
+                  onclick="return confirm('Move back to In QuickBooks?')">
+            <i class="bi bi-arrow-left"></i> Back to QB
+          </button>
+        </form>
+        <form method="post" action="{% url 'change_invoice_status' inv.id %}" class="d-inline">
+          {% csrf_token %}
+          <input type="hidden" name="new_status" value="unpaid">
+          <button type="submit" class="btn btn-sm btn-outline-danger"
+                  onclick="return confirm('Move back to Not in QuickBooks?')">
+            <i class="bi bi-arrow-left"></i> Back to Unpaid
+          </button>
+        </form>
+      {% endif %}
+    </div>
+  </td>
+</tr>
+{% endfor %}
