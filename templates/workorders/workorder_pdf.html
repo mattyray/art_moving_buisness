@@ -4,130 +4,219 @@
   <meta charset="UTF-8">
   <title>Work Order #{{ job.id }}</title>
   <style>
+    /* Reset and base styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
     body { 
       font-family: 'Arial', sans-serif; 
       color: #333; 
-      margin: 1rem;
+      font-size: 12pt;
       line-height: 1.4;
+      margin: 0;
+      padding: 15mm;
+      background: white;
     }
     
+    /* Page setup for print */
+    @page {
+      size: A4;
+      margin: 15mm;
+    }
+    
+    @media print {
+      body { 
+        margin: 0; 
+        font-size: 11pt;
+      }
+      .section { 
+        break-inside: avoid; 
+      }
+      .page-break {
+        page-break-before: always;
+      }
+      .no-print {
+        display: none;
+      }
+    }
+    
+    /* Header styling */
     .header { 
       text-align: center; 
-      margin-bottom: 2rem; 
-      border-bottom: 2px solid #007bff;
-      padding-bottom: 1rem;
+      margin-bottom: 20pt; 
+      border-bottom: 2pt solid #007bff;
+      padding-bottom: 10pt;
     }
     
     .logo { 
-      font-size: 1.5rem; 
+      font-size: 18pt; 
       font-weight: bold; 
-      margin-bottom: 0.5rem;
-    }
-    
-    .work-order-title {
-      font-size: 1.8rem;
-      margin: 0;
+      margin-bottom: 5pt;
       color: #007bff;
     }
     
+    .work-order-title {
+      font-size: 24pt;
+      margin: 0;
+      color: #007bff;
+      font-weight: bold;
+    }
+    
+    /* Section styling */
     .section { 
-      margin-bottom: 1.5rem; 
+      margin-bottom: 15pt; 
       break-inside: avoid;
     }
     
     .section-title { 
       background-color: #f8f9fa;
-      border-left: 4px solid #007bff;
-      padding: 0.5rem 1rem;
-      margin-bottom: 1rem; 
-      font-size: 1.1rem;
+      border-left: 4pt solid #007bff;
+      padding: 8pt 12pt;
+      margin-bottom: 10pt; 
+      font-size: 14pt;
       font-weight: bold;
       color: #495057;
     }
     
-    .info-row {
-      display: flex;
-      margin-bottom: 0.5rem;
+    /* Simple info layout - more reliable than tables */
+    .info-item {
+      margin-bottom: 8pt;
+      overflow: hidden;
+      clear: both;
     }
     
     .info-label { 
       font-weight: bold; 
-      width: 150px; 
-      display: inline-block;
       color: #495057;
+      display: inline-block;
+      width: 100pt;
+      vertical-align: top;
+      float: left;
     }
     
     .info-value {
-      flex: 1;
+      display: block;
+      margin-left: 110pt;
+      word-wrap: break-word;
     }
     
+    /* Two column layout using float (more reliable for WeasyPrint) */
+    .two-column {
+      width: 100%;
+      overflow: hidden;
+      margin-bottom: 10pt;
+    }
+    
+    .column {
+      width: 48%;
+      float: left;
+      margin-right: 4%;
+    }
+    
+    .column:last-child {
+      margin-right: 0;
+    }
+    
+    /* Clear floats */
+    .clearfix::after {
+      content: "";
+      display: table;
+      clear: both;
+    }
+    
+    /* Status badge */
     .status-badge {
       background-color: #28a745;
       color: white;
-      padding: 0.25rem 0.5rem;
-      border-radius: 0.25rem;
-      font-size: 0.875rem;
+      padding: 3pt 8pt;
+      border-radius: 3pt;
+      font-size: 10pt;
       display: inline-block;
+      font-weight: bold;
     }
     
+    /* Event items */
     .event-item {
       background-color: #f8f9fa;
-      border: 1px solid #dee2e6;
-      border-radius: 0.25rem;
-      padding: 0.75rem;
-      margin-bottom: 0.5rem;
+      border: 1pt solid #dee2e6;
+      border-radius: 3pt;
+      padding: 8pt;
+      margin-bottom: 8pt;
+      break-inside: avoid;
     }
     
     .event-type {
       font-weight: bold;
       color: #007bff;
-      margin-bottom: 0.25rem;
+      margin-bottom: 3pt;
+      font-size: 12pt;
     }
     
     .event-details {
-      font-size: 0.9rem;
+      font-size: 10pt;
       color: #6c757d;
     }
     
+    /* Note items */
     .note-item {
       background-color: #fff3cd;
-      border: 1px solid #ffeaa7;
-      border-radius: 0.25rem;
-      padding: 0.75rem;
-      margin-bottom: 0.5rem;
+      border: 1pt solid #ffeaa7;
+      border-radius: 3pt;
+      padding: 8pt;
+      margin-bottom: 8pt;
+      break-inside: avoid;
     }
     
     .note-text {
-      margin-bottom: 0.25rem;
+      margin-bottom: 3pt;
+      line-height: 1.3;
     }
     
     .note-date {
-      font-size: 0.8rem;
+      font-size: 9pt;
       color: #6c757d;
       font-style: italic;
     }
     
-    .two-column {
-      display: flex;
-      gap: 2rem;
+    /* Job description box */
+    .job-description {
+      background-color: #e9ecef;
+      border: 1pt solid #dee2e6;
+      border-radius: 3pt;
+      padding: 10pt;
+      margin: 5pt 0 10pt 0;
+      line-height: 1.4;
+      width: 100%;
+      display: block;
     }
     
-    .column {
-      flex: 1;
+    /* Attachments list */
+    .attachment-list {
+      margin: 0;
+      padding-left: 15pt;
     }
     
+    .attachment-item {
+      margin-bottom: 5pt;
+      break-inside: avoid;
+    }
+    
+    /* Footer */
     .footer {
-      margin-top: 2rem;
-      padding-top: 1rem;
-      border-top: 1px solid #dee2e6;
+      margin-top: 20pt;
+      padding-top: 10pt;
+      border-top: 1pt solid #dee2e6;
       text-align: center;
-      font-size: 0.9rem;
+      font-size: 10pt;
       color: #6c757d;
     }
     
-    @media print {
-      body { margin: 0; }
-      .section { break-inside: avoid; }
+    /* Ensure proper spacing */
+    p {
+      margin-bottom: 5pt;
     }
   </style>
 </head>
@@ -141,27 +230,27 @@
   <!-- Client Information -->
   <div class="section">
     <div class="section-title">Client Information</div>
-    <div class="two-column">
+    <div class="two-column clearfix">
       <div class="column">
-        <div class="info-row">
+        <div class="info-item">
           <span class="info-label">Name:</span>
           <span class="info-value">{{ job.client.name }}</span>
         </div>
-        <div class="info-row">
+        <div class="info-item">
           <span class="info-label">Email:</span>
           <span class="info-value">{{ job.client.email|default:"Not provided" }}</span>
         </div>
-        <div class="info-row">
+        <div class="info-item">
           <span class="info-label">Phone:</span>
           <span class="info-value">{{ job.client.phone|default:"Not provided" }}</span>
         </div>
       </div>
       <div class="column">
-        <div class="info-row">
+        <div class="info-item">
           <span class="info-label">Service Address:</span>
           <span class="info-value">{{ job.client.address|default:"Not provided" }}</span>
         </div>
-        <div class="info-row">
+        <div class="info-item">
           <span class="info-label">Billing Address:</span>
           <span class="info-value">{{ job.client.billing_address|default:"Not provided" }}</span>
         </div>
@@ -172,42 +261,44 @@
   <!-- Work Order Details -->
   <div class="section">
     <div class="section-title">Work Order Details</div>
-    <div class="two-column">
+    <div class="two-column clearfix">
       <div class="column">
-        <div class="info-row">
-          <span class="info-label">Job Description:</span>
-          <span class="info-value">{{ job.job_description|default:"No description provided" }}</span>
-        </div>
-        <div class="info-row">
+        <div class="info-item">
           <span class="info-label">Estimated Cost:</span>
           <span class="info-value">${{ job.estimated_cost|default:"0.00" }}</span>
         </div>
+        <div class="info-item">
+          <span class="info-label">Status:</span>
+          <span class="info-value"><span class="status-badge">{{ job.get_status_display }}</span></span>
+        </div>
       </div>
       <div class="column">
-        <div class="info-row">
-          <span class="info-label">Status:</span>
-          <span class="info-value">
-            <span class="status-badge">{{ job.get_status_display }}</span>
-          </span>
-        </div>
-        <div class="info-row">
+        <div class="info-item">
           <span class="info-label">Created:</span>
           <span class="info-value">{{ job.created_at|date:"F j, Y g:i A" }}</span>
         </div>
         {% if job.completed_at %}
-        <div class="info-row">
+        <div class="info-item">
           <span class="info-label">Completed:</span>
           <span class="info-value">{{ job.completed_at|date:"F j, Y g:i A" }}</span>
         </div>
         {% endif %}
         {% if job.invoiced %}
-        <div class="info-row">
+        <div class="info-item">
           <span class="info-label">Invoiced:</span>
           <span class="info-value">Yes</span>
         </div>
         {% endif %}
       </div>
     </div>
+    
+    <!-- Job Description -->
+    {% if job.job_description %}
+    <div class="info-item">
+      <span class="info-label">Description:</span>
+      <div class="job-description">{{ job.job_description }}</div>
+    </div>
+    {% endif %}
   </div>
 
   <!-- Scheduled Events -->
@@ -253,14 +344,16 @@
   {% if job.attachments.all %}
   <div class="section">
     <div class="section-title">Attachments</div>
-    {% for attachment in job.attachments.all %}
-      {% if attachment.file %}
-        <div class="info-row">
-          <span class="info-label">File:</span>
-          <span class="info-value">{{ attachment.file.name }} ({{ attachment.uploaded_at|date:"F j, Y" }})</span>
-        </div>
-      {% endif %}
-    {% endfor %}
+    <ul class="attachment-list">
+      {% for attachment in job.attachments.all %}
+        {% if attachment.file %}
+          <li class="attachment-item">
+            <strong>{{ attachment.file.name }}</strong> 
+            <span style="color: #6c757d;">(uploaded {{ attachment.uploaded_at|date:"F j, Y" }})</span>
+          </li>
+        {% endif %}
+      {% endfor %}
+    </ul>
   </div>
   {% endif %}
 
