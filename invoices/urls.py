@@ -24,4 +24,7 @@ urlpatterns = [
     # AJAX endpoints
     path('ajax/get_clients/', views.ajax_get_clients, name='ajax_get_clients'),
     path('ajax_get_active_workorders/', views.ajax_get_active_workorders, name='ajax_get_active_workorders'),
+
+    path('load-more/', views.load_more_invoices, name='load_more_invoices'),
+
 ]

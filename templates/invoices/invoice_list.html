@@ -21,183 +21,397 @@
     </div>
   </form>
 
-  <!-- Not In QuickBooks -->
+  <!-- Not In QuickBooks Section -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header bg-danger text-white position-relative">
-      <h5 class="mb-0">
-        <a href="{% url 'invoice_unpaid' %}" class="stretched-link text-white text-decoration-none">Not in QuickBooks</a>
-      </h5>
+    <div class="card-header bg-danger text-white">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <a href="{% url 'invoice_unpaid' %}" class="text-white text-decoration-none">
+            Not in QuickBooks
+            <span class="badge bg-light text-dark ms-2" id="unpaid-count">{{ unpaid_invoices|length }}</span>
+          </a>
+        </h5>
+        <button class="btn btn-link text-white p-0" type="button" data-bs-toggle="collapse" 
+                data-bs-target="#unpaidSection" aria-expanded="true">
+          <i class="bi bi-chevron-down fs-5"></i>
+        </button>
+      </div>
     </div>
-    <div class="card-body p-0">
-      {% if unpaid_invoices %}
-        <!-- Desktop Table View -->
-        <div class="d-none d-md-block">
-          <div class="table-responsive">
-            <table class="table table-sm table-striped align-middle mb-0">
-              <thead class="small">
-                <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
-              </thead>
-              <tbody>
-                {% for inv in unpaid_invoices %}
-                <tr>
-                  <td>{{ inv.invoice_number }}</td>
-                  <td>{{ inv.client.name }}</td>
-                  <td>${{ inv.amount }}</td>
-                  <td>
-                    <div class="d-flex flex-row gap-1">
-                      <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
-                      <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
-                      <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="d-inline">{% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-success">Mark as In QB</button>
-                      </form>
-                    </div>
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
+    <div class="collapse show" id="unpaidSection">
+      <div class="card-body p-0">
+        <div id="unpaid-invoices-container">
+          {% include 'invoices/partials/invoice_section.html' with invoices=unpaid_invoices section='unpaid' %}
         </div>
-        
-        <!-- Mobile Card View -->
-        <div class="d-md-none">
-          {% for inv in unpaid_invoices %}
-          <div class="border-bottom p-3">
-            <div class="mb-2">
-              <div><strong>Invoice #{{ inv.invoice_number }}</strong></div>
-              <div class="text-muted small">{{ inv.client.name }}</div>
-              <div class="text-success fw-bold">${{ inv.amount }}</div>
-            </div>
-            <div class="d-flex flex-column gap-2">
-              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
-              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
-              <form method="post" action="{% url 'mark_invoice_paid' inv.id %}">{% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-success w-100">Mark as In QuickBooks</button>
-              </form>
-            </div>
-          </div>
-          {% endfor %}
+        {% if unpaid_invoices|length >= 5 %}
+        <div class="p-3 text-center border-top">
+          <button class="btn btn-outline-primary btn-sm load-more-btn" 
+                  data-section="unpaid" 
+                  data-offset="5"
+                  data-url="{% url 'load_more_invoices' %}">
+            <i class="bi bi-plus-circle me-1"></i>Load 5 More
+            <span class="spinner-border spinner-border-sm ms-2 d-none" role="status"></span>
+          </button>
         </div>
-      {% else %}<p class="p-3 mb-0">No unpaid invoices found.</p>{% endif %}
+        {% endif %}
+      </div>
     </div>
   </div>
 
-  <!-- In QuickBooks -->
+  <!-- In QuickBooks Section -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header bg-warning text-white position-relative">
-      <h5 class="mb-0">
-        <a href="{% url 'invoice_in_quickbooks' %}" class="stretched-link text-white text-decoration-none">In QuickBooks</a>
-      </h5>
+    <div class="card-header bg-warning text-dark">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <a href="{% url 'invoice_in_quickbooks' %}" class="text-dark text-decoration-none">
+            In QuickBooks
+            <span class="badge bg-light text-dark ms-2" id="in_quickbooks-count">{{ paid_invoices|length }}</span>
+          </a>
+        </h5>
+        <button class="btn btn-link text-dark p-0" type="button" data-bs-toggle="collapse" 
+                data-bs-target="#inQuickbooksSection" aria-expanded="true">
+          <i class="bi bi-chevron-down fs-5"></i>
+        </button>
+      </div>
     </div>
-    <div class="card-body p-0">
-      {% if paid_invoices %}
-        <!-- Desktop Table View -->
-        <div class="d-none d-md-block">
-          <div class="table-responsive">
-            <table class="table table-sm table-striped align-middle mb-0">
-              <thead class="small">
-                <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
-              </thead>
-              <tbody>
-                {% for inv in paid_invoices %}
-                <tr>
-                  <td>{{ inv.invoice_number }}</td>
-                  <td>{{ inv.client.name }}</td>
-                  <td>${{ inv.amount }}</td>
-                  <td>
-                    <div class="d-flex flex-row gap-1">
-                      <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
-                      <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
-                      <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="d-inline">{% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-success">Mark as Paid</button>
-                      </form>
-                    </div>
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
+    <div class="collapse show" id="inQuickbooksSection">
+      <div class="card-body p-0">
+        <div id="in_quickbooks-invoices-container">
+          {% include 'invoices/partials/invoice_section.html' with invoices=paid_invoices section='in_quickbooks' %}
         </div>
-        
-        <!-- Mobile Card View -->
-        <div class="d-md-none">
-          {% for inv in paid_invoices %}
-          <div class="border-bottom p-3">
-            <div class="mb-2">
-              <div><strong>Invoice #{{ inv.invoice_number }}</strong></div>
-              <div class="text-muted small">{{ inv.client.name }}</div>
-              <div class="text-success fw-bold">${{ inv.amount }}</div>
-            </div>
-            <div class="d-flex flex-column gap-2">
-              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
-              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
-              <form method="post" action="{% url 'mark_invoice_paid' inv.id %}">{% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-success w-100">Mark as Paid</button>
-              </form>
-            </div>
-          </div>
-          {% endfor %}
+        {% if paid_invoices|length >= 5 %}
+        <div class="p-3 text-center border-top">
+          <button class="btn btn-outline-primary btn-sm load-more-btn" 
+                  data-section="in_quickbooks" 
+                  data-offset="5"
+                  data-url="{% url 'load_more_invoices' %}">
+            <i class="bi bi-plus-circle me-1"></i>Load 5 More
+            <span class="spinner-border spinner-border-sm ms-2 d-none" role="status"></span>
+          </button>
         </div>
-      {% else %}<p class="p-3 mb-0">No invoices in QuickBooks found.</p>{% endif %}
+        {% endif %}
+      </div>
     </div>
   </div>
 
-  <!-- Paid Invoices -->
+  <!-- Paid Invoices Section -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header bg-success text-white position-relative">
-      <h5 class="mb-0">
-        <a href="{% url 'invoice_paid' %}" class="stretched-link text-white text-decoration-none">Paid</a>
-      </h5>
+    <div class="card-header bg-success text-white">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <a href="{% url 'invoice_paid' %}" class="text-white text-decoration-none">
+            Paid
+            <span class="badge bg-light text-dark ms-2" id="paid-count">{{ overdue_invoices|length }}</span>
+          </a>
+        </h5>
+        <button class="btn btn-link text-white p-0" type="button" data-bs-toggle="collapse" 
+                data-bs-target="#paidSection" aria-expanded="false">
+          <i class="bi bi-chevron-down fs-5"></i>
+        </button>
+      </div>
     </div>
-    <div class="card-body p-0">
-      {% if overdue_invoices %}
-        <!-- Desktop Table View -->
-        <div class="d-none d-md-block">
-          <div class="table-responsive">
-            <table class="table table-sm table-striped align-middle mb-0">
-              <thead class="small">
-                <tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Actions</th></tr>
-              </thead>
-              <tbody>
-                {% for inv in overdue_invoices %}
-                <tr>
-                  <td>{{ inv.invoice_number }}</td>
-                  <td>{{ inv.client.name }}</td>
-                  <td>${{ inv.amount }}</td>
-                  <td>
-                    <div class="d-flex flex-row gap-1">
-                      <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
-                      <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
-                    </div>
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
+    <div class="collapse" id="paidSection">
+      <div class="card-body p-0">
+        <div id="paid-invoices-container">
+          {% include 'invoices/partials/invoice_section.html' with invoices=overdue_invoices section='paid' %}
         </div>
-        
-        <!-- Mobile Card View -->
-        <div class="d-md-none">
-          {% for inv in overdue_invoices %}
-          <div class="border-bottom p-3">
-            <div class="mb-2">
-              <div><strong>Invoice #{{ inv.invoice_number }}</strong></div>
-              <div class="text-muted small">{{ inv.client.name }}</div>
-              <div class="text-success fw-bold">${{ inv.amount }}</div>
-            </div>
-            <div class="d-flex flex-column gap-2">
-              <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
-              <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
-            </div>
-          </div>
-          {% endfor %}
+        {% if overdue_invoices|length >= 5 %}
+        <div class="p-3 text-center border-top">
+          <button class="btn btn-outline-primary btn-sm load-more-btn" 
+                  data-section="paid" 
+                  data-offset="5"
+                  data-url="{% url 'load_more_invoices' %}">
+            <i class="bi bi-plus-circle me-1"></i>Load 5 More
+            <span class="spinner-border spinner-border-sm ms-2 d-none" role="status"></span>
+          </button>
         </div>
-      {% else %}<p class="p-3 mb-0">No paid invoices found.</p>{% endif %}
+        {% endif %}
+      </div>
     </div>
   </div>
 
   <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto mt-3">Back to Dashboard</a>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Track original counts for each section
+  const originalCounts = {
+    'unpaid': {{ unpaid_invoices|length }},
+    'in_quickbooks': {{ paid_invoices|length }},
+    'paid': {{ overdue_invoices|length }}
+  };
+
+  let isLoading = false; // Prevent multiple simultaneous requests
+
+  // Handle load more buttons
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('load-more-btn') || e.target.closest('.load-more-btn')) {
+      e.preventDefault();
+      
+      if (isLoading) return; // Prevent multiple requests
+      
+      const btn = e.target.classList.contains('load-more-btn') ? e.target : e.target.closest('.load-more-btn');
+      const section = btn.dataset.section;
+      const offset = parseInt(btn.dataset.offset);
+      const url = btn.dataset.url;
+      const spinner = btn.querySelector('.spinner-border');
+      const icon = btn.querySelector('.bi-plus-circle');
+      
+      // Validation
+      if (!section || !url || isNaN(offset)) {
+        console.error('Invalid button data:', {section, url, offset});
+        return;
+      }
+      
+      // Show loading state
+      isLoading = true;
+      spinner.classList.remove('d-none');
+      icon.classList.add('d-none');
+      btn.disabled = true;
+      
+      // Make AJAX request
+      fetch(`${url}?section=${section}&offset=${offset}`, {
+        method: 'GET',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.desktop_html && data.mobile_html) {
+          // Find containers
+          const container = document.getElementById(`${section}-invoices-container`);
+          if (!container) {
+            throw new Error(`Container not found: ${section}-invoices-container`);
+          }
+          
+          // Append desktop rows to table body
+          const tableBody = container.querySelector('.invoice-table-body');
+          if (tableBody) {
+            tableBody.insertAdjacentHTML('beforeend', data.desktop_html);
+          }
+          
+          // Append mobile cards to mobile container
+          const mobileContainer = container.querySelector('.invoice-cards-container');
+          if (mobileContainer) {
+            mobileContainer.insertAdjacentHTML('beforeend', data.mobile_html);
+          }
+          
+          // Update count badge
+          const countBadge = document.getElementById(`${section}-count`);
+          if (countBadge) {
+            const currentCount = parseInt(countBadge.textContent);
+            countBadge.textContent = currentCount + data.count;
+          }
+          
+          // Update offset for next load
+          btn.dataset.offset = offset + 5;
+          
+          // Hide button if no more items
+          if (!data.has_more) {
+            btn.style.display = 'none';
+          }
+          
+          // Show "Show Less" button after first load more
+          showShowLessButton(section);
+        } else {
+          throw new Error('No HTML returned from server');
+        }
+      })
+      .catch(error => {
+        console.error('Error loading more items:', error);
+        
+        // Remove any existing error messages
+        const existingError = btn.parentElement.querySelector('.error-message');
+        if (existingError) {
+          existingError.remove();
+        }
+        
+        // Show error message
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'text-danger small mt-2 error-message';
+        errorDiv.textContent = 'Error loading more items. Please try again.';
+        btn.parentElement.appendChild(errorDiv);
+        
+        // Remove error message after 5 seconds
+        setTimeout(() => {
+          if (errorDiv.parentElement) {
+            errorDiv.remove();
+          }
+        }, 5000);
+      })
+      .finally(() => {
+        // Hide loading state
+        isLoading = false;
+        spinner.classList.add('d-none');
+        icon.classList.remove('d-none');
+        btn.disabled = false;
+      });
+    }
+    
+    // Handle show less buttons
+    if (e.target.classList.contains('show-less-btn') || e.target.closest('.show-less-btn')) {
+      e.preventDefault();
+      
+      const btn = e.target.classList.contains('show-less-btn') ? e.target : e.target.closest('.show-less-btn');
+      const section = btn.dataset.section;
+      
+      if (section) {
+        showLessItems(section);
+      }
+    }
+  });
+
+  function showShowLessButton(section) {
+    // Check if show less button already exists
+    const existingBtn = document.querySelector(`[data-section="${section}"].show-less-btn`);
+    if (existingBtn) return;
+    
+    // Find load more button
+    const loadMoreBtn = document.querySelector(`[data-section="${section}"].load-more-btn`);
+    if (!loadMoreBtn) return;
+    
+    const buttonContainer = loadMoreBtn.parentElement;
+    
+    // Create show less button
+    const showLessBtn = document.createElement('button');
+    showLessBtn.className = 'btn btn-outline-secondary btn-sm show-less-btn ms-2';
+    showLessBtn.setAttribute('data-section', section);
+    showLessBtn.innerHTML = '<i class="bi bi-dash-circle me-1"></i>Show Less';
+    
+    buttonContainer.appendChild(showLessBtn);
+  }
+
+  function showLessItems(section) {
+    const container = document.getElementById(`${section}-invoices-container`);
+    if (!container) {
+      console.error(`Container not found: ${section}-invoices-container`);
+      return;
+    }
+    
+    const originalCount = originalCounts[section];
+    if (originalCount === undefined) {
+      console.error(`Original count not found for section: ${section}`);
+      return;
+    }
+    
+    // Handle desktop table rows
+    const tableBody = container.querySelector('.invoice-table-body');
+    if (tableBody) {
+      const rows = tableBody.querySelectorAll('tr.invoice-row');
+      rows.forEach((row, index) => {
+        if (index >= originalCount) {
+          row.style.display = 'none';
+        } else {
+          row.style.display = '';
+        }
+      });
+    }
+    
+    // Handle mobile cards
+    const mobileContainer = container.querySelector('.invoice-cards-container');
+    if (mobileContainer) {
+      const cards = mobileContainer.querySelectorAll('.invoice-card');
+      cards.forEach((card, index) => {
+        if (index >= originalCount) {
+          card.style.display = 'none';
+        } else {
+          card.style.display = '';
+        }
+      });
+    }
+    
+    // Update count badge back to original
+    const countBadge = document.getElementById(`${section}-count`);
+    if (countBadge) {
+      countBadge.textContent = originalCount;
+    }
+    
+    // Reset load more button
+    const loadMoreBtn = document.querySelector(`[data-section="${section}"].load-more-btn`);
+    if (loadMoreBtn) {
+      loadMoreBtn.dataset.offset = '5';
+      loadMoreBtn.style.display = 'inline-block';
+    }
+    
+    // Remove show less button
+    const showLessBtn = document.querySelector(`[data-section="${section}"].show-less-btn`);
+    if (showLessBtn) {
+      showLessBtn.remove();
+    }
+  }
+
+  // Handle collapse icon rotation
+  document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
+    button.addEventListener('click', function() {
+      const icon = this.querySelector('i');
+      if (!icon) return;
+      
+      setTimeout(() => {
+        const targetSelector = this.getAttribute('data-bs-target');
+        if (!targetSelector) return;
+        
+        const target = document.querySelector(targetSelector);
+        if (!target) return;
+        
+        if (target.classList.contains('show')) {
+          icon.style.transform = 'rotate(180deg)';
+        } else {
+          icon.style.transform = 'rotate(0deg)';
+        }
+      }, 150);
+    });
+  });
+});
+</script>
+
+<style>
+/* Smooth icon rotation */
+.card-header i {
+  transition: transform 0.3s ease;
+}
+
+/* Mobile responsive improvements */
+@media (max-width: 768px) {
+  .card-header h5 {
+    font-size: 1rem;
+  }
+  
+  .badge {
+    font-size: 0.7rem;
+  }
+  
+  .load-more-btn, .show-less-btn {
+    font-size: 0.875rem;
+  }
+}
+
+/* Loading animation */
+.spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Button transitions */
+.show-less-btn {
+  transition: all 0.3s ease;
+}
+
+/* Error message styling */
+.error-message {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+</style>
 {% endblock %}

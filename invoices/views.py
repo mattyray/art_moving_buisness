@@ -274,3 +274,57 @@ def change_invoice_status(request, invoice_id):
         messages.success(request, f"Invoice #{invoice.invoice_number} {status_messages[new_status]}.")
         
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('invoice_list')))
+
+@login_required
+def load_more_invoices(request):
+    """AJAX endpoint to load more invoices"""
+    if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+    
+    section = request.GET.get('section')
+    offset = int(request.GET.get('offset', 0))
+    limit = 5
+    
+    # Determine which queryset to use based on section
+    if section == 'unpaid':
+        invoices = Invoice.objects.filter(status='unpaid')\
+                                 .order_by('-date_created')[offset:offset+limit]
+    elif section == 'in_quickbooks':
+        invoices = Invoice.objects.filter(status='in_quickbooks')\
+                                 .order_by('-date_created')[offset:offset+limit]
+    elif section == 'paid':
+        invoices = Invoice.objects.filter(status='paid')\
+                                 .order_by('-date_created')[offset:offset+limit]
+    else:
+        return JsonResponse({'error': 'Invalid section'}, status=400)
+    
+    # Check if there are more items after this batch
+    has_more = len(invoices) == limit
+    if has_more:
+        # Check if there are actually more items beyond this batch
+        if section == 'unpaid':
+            total_count = Invoice.objects.filter(status='unpaid').count()
+        elif section == 'in_quickbooks':
+            total_count = Invoice.objects.filter(status='in_quickbooks').count()
+        elif section == 'paid':
+            total_count = Invoice.objects.filter(status='paid').count()
+        
+        has_more = (offset + limit) < total_count
+    
+    # Render separate templates for desktop and mobile
+    from django.template.loader import render_to_string
+    
+    context = {
+        'invoices': invoices,
+        'section': section,
+    }
+    
+    desktop_html = render_to_string('invoices/partials/invoice_rows.html', context, request=request)
+    mobile_html = render_to_string('invoices/partials/invoice_cards_mobile.html', context, request=request)
+    
+    return JsonResponse({
+        'desktop_html': desktop_html,
+        'mobile_html': mobile_html,
+        'count': len(invoices),
+        'has_more': has_more,
+    })
