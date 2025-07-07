@@ -5,21 +5,16 @@ from django.conf import settings
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("accounts/", include("accounts.urls")),         # Custom signup and logout routes
-    path("accounts/", include("django.contrib.auth.urls")),  # Login, password reset, etc.
+    path("accounts/", include("accounts.urls")),
+    path("accounts/", include("django.contrib.auth.urls")),
     path("", include("pages.urls")),           
-    path("workorders/", include("workorders.urls")),  # Work Orders routes
+    path("workorders/", include("workorders.urls")),
     path("clients/", include("clients.urls")),
     path("invoices/", include("invoices.urls")),
-    path("workorders/", include("workorders.urls")),
-    path("invoices/", include("invoices.urls")),
     path('calendar/', include('calendar_app.urls', namespace='calendar_app')),
-
-
 ]
-
 
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-
-
+    # ✅ ADD THIS LINE - this is what's missing!
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
