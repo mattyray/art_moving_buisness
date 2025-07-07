@@ -732,6 +732,117 @@ def completed_jobs_view(request):
     }
     return render(request, 'workorders/completed_jobs.html', context)
 
+@login_required
+def change_workorder_status(request, job_id):
+    """Change work order status with confirmation"""
+    workorder = get_object_or_404(WorkOrder, id=job_id)
+    new_status = request.POST.get('new_status')
+    
+    if request.method == 'POST' and new_status in ['pending', 'in_progress', 'completed']:
+        old_status = workorder.status
+        workorder.status = new_status
+        
+        # Handle completion timestamp
+        if new_status == 'completed' and not workorder.completed_at:
+            workorder.completed_at = timezone.now()
+        elif new_status != 'completed':
+            workorder.completed_at = None
+            
+        workorder.save()
+        
+        # Create a status change message
+        status_messages = {
+            'pending': 'moved back to Pending',
+            'in_progress': 'marked as In Progress', 
+            'completed': 'marked as Completed'
+        }
+        
+        messages.success(request, f"Work Order #{job_id} {status_messages[new_status]}.")
+        
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('workorder_list')))
+
+@login_required
+def reset_workorder_invoiced(request, job_id):
+    """Reset the invoiced flag on a work order"""
+    workorder = get_object_or_404(WorkOrder, id=job_id)
+    
+    if request.method == 'POST':
+        workorder.invoiced = False
+        workorder.save()
+        messages.success(request, f"Work Order #{job_id} invoiced status reset.")
+        
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('workorder_list')))
+
+@login_required
+def load_more_workorders(request):
+    """AJAX endpoint to load more work orders"""
+    if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+    
+    section = request.GET.get('section')
+    offset = int(request.GET.get('offset', 0))
+    limit = 5
+    
+    # Determine which queryset to use based on section
+    if section == 'pending':
+        jobs = WorkOrder.objects.exclude(events__date__isnull=False)\
+                                .filter(status__in=["pending", "in_progress"])\
+                                .order_by('-updated_at')[offset:offset+limit]
+    elif section == 'scheduled':
+        jobs = WorkOrder.objects.filter(
+            events__date__isnull=False,
+            status__in=["pending", "in_progress"]
+        ).distinct().order_by('-updated_at')[offset:offset+limit]
+    elif section == 'completed':
+        jobs = WorkOrder.objects.filter(
+            status='completed', 
+            invoiced=False
+        ).order_by('-completed_at')[offset:offset+limit]
+    elif section == 'invoiced':
+        jobs = WorkOrder.objects.filter(
+            status='completed', 
+            invoiced=True
+        ).order_by('-completed_at')[offset:offset+limit]
+    else:
+        return JsonResponse({'error': 'Invalid section'}, status=400)
+    
+    # Check if there are more items after this batch
+    has_more = len(jobs) == limit
+    if has_more:
+        # Check if there are actually more items beyond this batch
+        if section == 'pending':
+            total_count = WorkOrder.objects.exclude(events__date__isnull=False)\
+                                          .filter(status__in=["pending", "in_progress"]).count()
+        elif section == 'scheduled':
+            total_count = WorkOrder.objects.filter(
+                events__date__isnull=False,
+                status__in=["pending", "in_progress"]
+            ).distinct().count()
+        elif section == 'completed':
+            total_count = WorkOrder.objects.filter(status='completed', invoiced=False).count()
+        elif section == 'invoiced':
+            total_count = WorkOrder.objects.filter(status='completed', invoiced=True).count()
+        
+        has_more = (offset + limit) < total_count
+    
+    # Render separate templates for desktop and mobile
+    from django.template.loader import render_to_string
+    
+    context = {
+        'jobs': jobs,
+        'section': section,
+    }
+    
+    desktop_html = render_to_string('workorders/partials/job_rows.html', context, request=request)
+    mobile_html = render_to_string('workorders/partials/job_cards_mobile.html', context, request=request)
+    
+    return JsonResponse({
+        'desktop_html': desktop_html,
+        'mobile_html': mobile_html,
+        'count': len(jobs),
+        'has_more': has_more,
+    })
+
 ===== workorders/forms.py =====
 from django import forms
 from django.forms import inlineformset_factory
@@ -835,11 +946,16 @@ urlpatterns = [
     path('detail/<int:job_id>/', views.workorder_detail, name='workorder_detail'),
     path('mark_paid/<int:job_id>/', views.mark_paid, name='mark_paid'),
 
+    # Enhanced status management
+    path('change_status/<int:job_id>/', views.change_workorder_status, name='change_workorder_status'),
+    path('reset_invoiced/<int:job_id>/', views.reset_workorder_invoiced, name='reset_workorder_invoiced'),
 
     # Calendar JSON API
     path("calendar-data/workorders/", views.workorder_calendar_data, name="workorder_calendar_data"),
 
     path("<int:pk>/pdf/", views.workorder_pdf, name="workorder_pdf"),
+
+    path('load-more/', views.load_more_workorders, name='load_more_workorders'),
 
 ]
 
@@ -1089,18 +1205,19 @@ class Invoice(models.Model):
 
 ===== invoices/views.py =====
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
+from django.urls import reverse  # ← This was missing
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.utils import timezone
+from django.template.loader import render_to_string
+from weasyprint import HTML
+
 from .models import Invoice
 from .forms import InvoiceForm
 from clients.models import Client
 from workorders.models import WorkOrder
-from django.utils import timezone
-# Add these imports at the top of invoices/views.py
-from django.template.loader import render_to_string
-from weasyprint import HTML
 
 # Add this function to invoices/views.py
 @login_required 
@@ -1342,6 +1459,28 @@ def ajax_get_active_workorders(request):
     ]
     return JsonResponse(results, safe=False)
 
+@login_required
+def change_invoice_status(request, invoice_id):
+    """Change invoice status with confirmation"""
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    new_status = request.POST.get('new_status')
+    
+    if request.method == 'POST' and new_status in ['unpaid', 'in_quickbooks', 'paid']:
+        old_status = invoice.status
+        invoice.status = new_status
+        invoice.save()
+        
+        # Create a status change message
+        status_messages = {
+            'unpaid': 'moved back to Not in QuickBooks',
+            'in_quickbooks': 'marked as In QuickBooks',
+            'paid': 'marked as Paid'
+        }
+        
+        messages.success(request, f"Invoice #{invoice.invoice_number} {status_messages[new_status]}.")
+        
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('invoice_list')))
+
 ===== invoices/forms.py =====
 from django import forms
 from .models import Invoice
@@ -1380,6 +1519,9 @@ urlpatterns = [
     path('paid/', views.invoice_paid, name='invoice_paid'),
     
     path('<int:invoice_id>/mark_paid/', views.mark_invoice_paid, name='mark_invoice_paid'),
+
+    # Enhanced status management
+    path('change_status/<int:invoice_id>/', views.change_invoice_status, name='change_invoice_status'),
 
     # PDF generation
     path('<int:invoice_id>/pdf/', views.invoice_pdf, name='invoice_pdf'),
@@ -2138,6 +2280,22 @@ document.addEventListener("DOMContentLoaded", function () {
                     <div class="d-flex flex-row gap-1">
                       <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
                       <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+                      <form method="post" action="{% url 'change_invoice_status' inv.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="new_status" value="in_quickbooks">
+                        <button type="submit" class="btn btn-sm btn-outline-warning"
+                                onclick="return confirm('Move back to In QuickBooks?')">
+                          <i class="bi bi-arrow-left"></i> Back to QB
+                        </button>
+                      </form>
+                      <form method="post" action="{% url 'change_invoice_status' inv.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="new_status" value="unpaid">
+                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('Move back to Not in QuickBooks?')">
+                          <i class="bi bi-arrow-left"></i> Back to Unpaid
+                        </button>
+                      </form>
                     </div>
                   </td>
                 </tr>
@@ -2159,6 +2317,22 @@ document.addEventListener("DOMContentLoaded", function () {
             <div class="d-flex flex-column gap-2">
               <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
               <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
+              <form method="post" action="{% url 'change_invoice_status' inv.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="new_status" value="in_quickbooks">
+                <button type="submit" class="btn btn-sm btn-outline-warning w-100"
+                        onclick="return confirm('Move back to In QuickBooks?')">
+                  <i class="bi bi-arrow-left"></i> Back to QuickBooks
+                </button>
+              </form>
+              <form method="post" action="{% url 'change_invoice_status' inv.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="new_status" value="unpaid">
+                <button type="submit" class="btn btn-sm btn-outline-danger w-100"
+                        onclick="return confirm('Move back to Not in QuickBooks?')">
+                  <i class="bi bi-arrow-left"></i> Back to Not in QB
+                </button>
+              </form>
             </div>
           </div>
           {% endfor %}
@@ -2223,8 +2397,15 @@ document.addEventListener("DOMContentLoaded", function () {
                     <div class="d-flex flex-row gap-1">
                       <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
                       <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
-                      <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="d-inline">{% csrf_token %}
+                      <form method="post" action="{% url 'change_invoice_status' inv.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="new_status" value="in_quickbooks">
                         <button type="submit" class="btn btn-sm btn-success">Mark as In QB</button>
+                      </form>
+                      <form method="post" action="{% url 'change_invoice_status' inv.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="new_status" value="paid">
+                        <button type="submit" class="btn btn-sm btn-primary">Mark as Paid</button>
                       </form>
                     </div>
                   </td>
@@ -2247,8 +2428,15 @@ document.addEventListener("DOMContentLoaded", function () {
             <div class="d-flex flex-column gap-2">
               <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
               <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
-              <form method="post" action="{% url 'mark_invoice_paid' inv.id %}">{% csrf_token %}
+              <form method="post" action="{% url 'change_invoice_status' inv.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="new_status" value="in_quickbooks">
                 <button type="submit" class="btn btn-sm btn-success w-100">Mark as In QuickBooks</button>
+              </form>
+              <form method="post" action="{% url 'change_invoice_status' inv.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="new_status" value="paid">
+                <button type="submit" class="btn btn-sm btn-primary w-100">Mark as Paid</button>
               </form>
             </div>
           </div>
@@ -2690,7 +2878,17 @@ document.addEventListener("DOMContentLoaded", function () {
                     <div class="d-flex flex-row gap-1">
                       <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
                       <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
-                      <form method="post" action="{% url 'mark_invoice_paid' inv.id %}" class="d-inline">{% csrf_token %}
+                      <form method="post" action="{% url 'change_invoice_status' inv.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="new_status" value="unpaid">
+                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('Move back to Not in QuickBooks?')">
+                          <i class="bi bi-arrow-left"></i> Back to Not in QB
+                        </button>
+                      </form>
+                      <form method="post" action="{% url 'change_invoice_status' inv.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="new_status" value="paid">
                         <button type="submit" class="btn btn-sm btn-success">Mark as Paid</button>
                       </form>
                     </div>
@@ -2714,7 +2912,17 @@ document.addEventListener("DOMContentLoaded", function () {
             <div class="d-flex flex-column gap-2">
               <a href="{% url 'invoice_detail' inv.id %}" class="btn btn-sm btn-info">View</a>
               <a href="{% url 'invoice_update' inv.id %}" class="btn btn-sm btn-warning">Edit</a>
-              <form method="post" action="{% url 'mark_invoice_paid' inv.id %}">{% csrf_token %}
+              <form method="post" action="{% url 'change_invoice_status' inv.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="new_status" value="unpaid">
+                <button type="submit" class="btn btn-sm btn-outline-danger w-100"
+                        onclick="return confirm('Move back to Not in QuickBooks?')">
+                  <i class="bi bi-arrow-left"></i> Back to Not in QB
+                </button>
+              </form>
+              <form method="post" action="{% url 'change_invoice_status' inv.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="new_status" value="paid">
                 <button type="submit" class="btn btn-sm btn-success w-100">Mark as Paid</button>
               </form>
             </div>
@@ -3241,7 +3449,7 @@ document.addEventListener("DOMContentLoaded", function () {
       <div class="row">
         <div class="col-md-6">
           <p class="mb-1"><strong>Amount:</strong> ${{ invoice.amount }}</p>
-          <p class="mb-1"><strong>Status:</strong> 
+          <p class="mb-1"><strong>Current Status:</strong> 
             <span class="badge 
               {% if invoice.status == 'unpaid' %}bg-danger
               {% elif invoice.status == 'in_quickbooks' %}bg-warning text-dark
@@ -3256,6 +3464,53 @@ document.addEventListener("DOMContentLoaded", function () {
             <p class="mb-1"><strong>Notes:</strong> {{ invoice.notes }}</p>
           {% endif %}
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Management -->
+  <div class="card mb-4">
+    <div class="card-header bg-warning text-dark">
+      <h5 class="mb-0">Status Management</h5>
+    </div>
+    <div class="card-body">
+      <h6 class="mb-3">Change Invoice Status:</h6>
+      <div class="d-flex flex-wrap gap-2">
+        
+        <!-- Unpaid Button -->
+        {% if invoice.status != 'unpaid' %}
+        <form method="post" action="{% url 'change_invoice_status' invoice.id %}" class="d-inline">
+          {% csrf_token %}
+          <input type="hidden" name="new_status" value="unpaid">
+          <button type="submit" class="btn btn-outline-danger"
+                  onclick="return confirm('Move this invoice back to Not in QuickBooks?')">
+            <i class="bi bi-arrow-left me-1"></i>Move to Not in QB
+          </button>
+        </form>
+        {% endif %}
+        
+        <!-- In QuickBooks Button -->
+        {% if invoice.status != 'in_quickbooks' %}
+        <form method="post" action="{% url 'change_invoice_status' invoice.id %}" class="d-inline">
+          {% csrf_token %}
+          <input type="hidden" name="new_status" value="in_quickbooks">
+          <button type="submit" class="btn btn-outline-warning">
+            <i class="bi bi-check me-1"></i>Mark In QuickBooks
+          </button>
+        </form>
+        {% endif %}
+        
+        <!-- Paid Button -->
+        {% if invoice.status != 'paid' %}
+        <form method="post" action="{% url 'change_invoice_status' invoice.id %}" class="d-inline">
+          {% csrf_token %}
+          <input type="hidden" name="new_status" value="paid">
+          <button type="submit" class="btn btn-outline-success">
+            <i class="bi bi-cash me-1"></i>Mark Paid
+          </button>
+        </form>
+        {% endif %}
+        
       </div>
     </div>
   </div>
@@ -3292,7 +3547,9 @@ document.addEventListener("DOMContentLoaded", function () {
       <h6>Work Order Details</h6>
       <div class="row mb-3">
         <div class="col-md-6">
-          <p class="mb-1"><strong>Work Order ID:</strong> {{ invoice.work_order.id }}</p>
+          <p class="mb-1"><strong>Work Order ID:</strong> 
+            <a href="{% url 'workorder_detail' invoice.work_order.id %}">#{{ invoice.work_order.id }}</a>
+          </p>
           <p class="mb-1"><strong>Status:</strong> {{ invoice.work_order.get_status_display }}</p>
         </div>
         <div class="col-md-6">
@@ -3367,9 +3624,9 @@ document.addEventListener("DOMContentLoaded", function () {
     </div>
     <div class="card-body">
       <div class="d-flex flex-column flex-sm-row gap-2">
-        <button class="btn btn-primary" onclick="window.print();">
+        <a href="{% url 'invoice_pdf' invoice.id %}" class="btn btn-primary" target="_blank">
           <i class="bi bi-printer me-1"></i>Print Invoice
-        </button>
+        </a>
         <a href="{% url 'invoice_update' invoice.id %}" class="btn btn-warning">
           <i class="bi bi-pencil me-1"></i>Edit Invoice
         </a>
@@ -3556,10 +3813,10 @@ document.addEventListener("DOMContentLoaded", function () {
     </div>
   </div>
 
-  <!-- Completed – Not Yet Paid -->
+  <!-- Completed Jobs -->
   <div class="card mb-4">
     <div class="card-header bg-warning text-dark">
-      <h5 class="mb-0">Completed – Not Yet Paid</h5>
+      <h5 class="mb-0">Completed Jobs</h5>
     </div>
     <div class="card-body p-0">
       {% if uninvoiced_jobs %}
@@ -3600,10 +3857,10 @@ document.addEventListener("DOMContentLoaded", function () {
     </div>
   </div>
 
-  <!-- Completed – Paid -->
+  <!-- Completed – Invoiced or Paid -->
   <div class="card mb-4">
     <div class="card-header bg-success text-white">
-      <h5 class="mb-0">Completed – Paid</h5>
+      <h5 class="mb-0">Completed – Invoiced or Paid</h5>
     </div>
     <div class="card-body p-0">
       {% if invoiced_jobs %}
@@ -3627,6 +3884,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 <div class="d-flex flex-column flex-sm-row gap-2">
                   <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
                   <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
+                  {% if job.invoices.exists %}
+                    <a href="{% url 'invoice_detail' job.invoices.first.id %}" class="btn btn-sm btn-outline-success w-100 w-sm-auto">View Invoice</a>
+                  {% endif %}
                 </div>
               </td>
             </tr>
@@ -3635,7 +3895,7 @@ document.addEventListener("DOMContentLoaded", function () {
         </table>
       </div>
       {% else %}
-      <p class="p-3 mb-0">No paid jobs found.</p>
+      <p class="p-3 mb-0">No invoiced or paid jobs found.</p>
       {% endif %}
     </div>
   </div>
@@ -3930,7 +4190,7 @@ document.addEventListener("DOMContentLoaded", function () {
 {% block content %}
 <div class="container py-4">
 
-  <!-- Client Information - MOVED TO TOP -->
+  <!-- Client Information -->
   <div class="card mb-4">
     <div class="card-header bg-info text-white">
       <h5 class="mb-0">Client Information</h5>
@@ -3955,19 +4215,27 @@ document.addEventListener("DOMContentLoaded", function () {
       </div>
       <div class="mt-3">
         <a href="{% url 'client_detail' job.client.id %}" class="btn btn-sm btn-outline-info">
-          <i class="bi bi-person-circle me-1"></i>View Full Client Profile
+          <i class="bi bi-person-circle me-1"></i>View Client
         </a>
         <a href="{% url 'client_edit' job.client.id %}" class="btn btn-sm btn-outline-warning">
-          <i class="bi bi-pencil me-1"></i>Edit Client Info
+          <i class="bi bi-pencil me-1"></i>Edit Client
         </a>
       </div>
     </div>
   </div>
 
-  <!-- Work Order Summary -->
+  <!-- Work Order Summary with Status -->
   <div class="card mb-4">
-    <div class="card-header bg-secondary text-white">
+    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
       <h5 class="mb-0">Work Order #{{ job.id }}</h5>
+      <span class="badge fs-6
+        {% if job.status == 'pending' %}bg-warning text-dark
+        {% elif job.status == 'in_progress' %}bg-info
+        {% elif job.status == 'completed' %}bg-success
+        {% endif %}">
+        {{ job.get_status_display }}
+        {% if job.invoiced %} • Invoiced{% endif %}
+      </span>
     </div>
     <div class="card-body">
       <div class="row">
@@ -3976,101 +4244,149 @@ document.addEventListener("DOMContentLoaded", function () {
           <p><strong>Estimated Cost:</strong> ${{ job.estimated_cost }}</p>
         </div>
         <div class="col-md-6">
-          <p><strong>Status:</strong> 
-            <span class="badge 
-              {% if job.status == 'pending' %}bg-secondary
-              {% elif job.status == 'in_progress' %}bg-info
-              {% elif job.status == 'completed' %}bg-success
-              {% endif %}">
-              {{ job.get_status_display }}
-            </span>
-          </p>
-          <p><strong>Created At:</strong> {{ job.created_at|date:"M d, Y g:i A" }}</p>
+          <p><strong>Created:</strong> {{ job.created_at|date:"M d, Y g:i A" }}</p>
           {% if job.completed_at %}
-            <p><strong>Completed At:</strong> {{ job.completed_at|date:"M d, Y g:i A" }}</p>
+            <p><strong>Completed:</strong> {{ job.completed_at|date:"M d, Y g:i A" }}</p>
           {% endif %}
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Status Progression Action Bar -->
+  <!-- Workflow Actions (Smart/Context-Aware) -->
   <div class="card mb-4">
     <div class="card-header bg-primary text-white">
-      <h5 class="mb-0">Actions - Next Steps</h5>
+      <h5 class="mb-0">
+        <i class="bi bi-arrow-right-circle me-2"></i>Next Steps
+      </h5>
     </div>
     <div class="card-body">
-      {% if job.status == 'pending' or job.status == 'in_progress' %}
-        {% if job.status == 'pending' %}
-          <div class="alert alert-info mb-3">
-            <i class="bi bi-info-circle me-2"></i>
-            <strong>Status: Pending</strong> - This job needs to be scheduled or marked as completed.
-          </div>
-        {% else %}
-          <div class="alert alert-info mb-3">
-            <i class="bi bi-calendar-event me-2"></i>
-            <strong>Status: Scheduled</strong> - This job has scheduled events and is ready to be completed.
-          </div>
-        {% endif %}
-        
-        <div class="d-flex flex-column flex-lg-row gap-2">
-          <a href="{% url 'workorder_edit' job.id %}" class="btn btn-warning">
-            <i class="bi bi-pencil me-1"></i>
-            {% if job.status == 'pending' %}Schedule Events{% else %}Edit Schedule{% endif %}
+      
+      {% if job.status == 'pending' %}
+        <!-- Pending Job Actions -->
+        <p class="text-muted mb-3">This job is pending. What would you like to do next?</p>
+        <div class="d-grid gap-2 d-md-flex">
+          <a href="{% url 'workorder_edit' job.id %}" class="btn btn-warning btn-lg flex-fill">
+            <i class="bi bi-calendar-plus me-2"></i>Schedule Events
           </a>
-          <form method="post" action="{% url 'mark_completed' job.id %}" class="flex-fill">
+          <form method="post" action="{% url 'change_workorder_status' job.id %}" class="flex-fill">
             {% csrf_token %}
-            <button type="submit" class="btn btn-success w-100">
-              <i class="bi bi-check-circle me-1"></i>Mark Completed
-            </button>
-          </form>
-          <form method="post" action="{% url 'complete_and_invoice' job.id %}" class="flex-fill">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-primary w-100">
-              <i class="bi bi-receipt me-1"></i>Complete & Create Invoice
-            </button>
-          </form>
-          <form method="post" action="{% url 'mark_completed_and_paid' job.id %}" class="flex-fill">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-dark w-100">
-              <i class="bi bi-cash me-1"></i>Complete & Mark Paid
+            <input type="hidden" name="new_status" value="completed">
+            <button type="submit" class="btn btn-success btn-lg w-100">
+              <i class="bi bi-check-circle me-2"></i>Mark Completed
             </button>
           </form>
         </div>
-      
-      {% elif job.status == 'completed' %}
-        {% if not job.invoiced %}
-          <div class="alert alert-warning mb-3">
-            <i class="bi bi-exclamation-triangle me-2"></i>
-            <strong>Status: Completed - Not Yet Paid</strong> - Ready to create invoice or mark as paid.
+        
+      {% elif job.status == 'in_progress' %}
+        <!-- In Progress Job Actions -->
+        <p class="text-muted mb-3">This job is scheduled and in progress.</p>
+        <div class="d-grid gap-2 d-md-flex">
+          <a href="{% url 'workorder_edit' job.id %}" class="btn btn-warning btn-lg flex-fill">
+            <i class="bi bi-pencil me-2"></i>Edit Schedule
+          </a>
+          <form method="post" action="{% url 'change_workorder_status' job.id %}" class="flex-fill">
+            {% csrf_token %}
+            <input type="hidden" name="new_status" value="completed">
+            <button type="submit" class="btn btn-success btn-lg w-100">
+              <i class="bi bi-check-circle me-2"></i>Mark Completed
+            </button>
+          </form>
+        </div>
+        
+      {% elif job.status == 'completed' and not job.invoiced %}
+        <!-- Completed but Not Invoiced -->
+        <p class="text-muted mb-3">Job completed! Ready to create invoice or mark as paid.</p>
+        <div class="d-grid gap-2 d-md-flex">
+          <a href="/invoices/create/?work_order={{ job.id }}" class="btn btn-success btn-lg flex-fill">
+            <i class="bi bi-receipt me-2"></i>Create Invoice
+          </a>
+          <form method="post" action="{% url 'mark_paid' job.id %}" class="flex-fill">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary btn-lg w-100">
+              <i class="bi bi-cash me-2"></i>Mark as Paid
+            </button>
+          </form>
+        </div>
+        
+      {% elif job.status == 'completed' and job.invoiced %}
+        <!-- Completed and Invoiced -->
+        <div class="alert alert-success d-flex align-items-center mb-3">
+          <i class="bi bi-check-circle-fill me-3 fs-4"></i>
+          <div>
+            <strong>Job Complete!</strong><br>
+            This job is finished and has been invoiced/paid.
           </div>
-          
-          <div class="d-flex flex-column flex-lg-row gap-2">
-            <a href="/invoices/create/?work_order={{ job.id }}" class="btn btn-success">
-              <i class="bi bi-receipt me-1"></i>Create Invoice
-            </a>
-            <form method="post" action="{% url 'mark_paid' job.id %}" class="flex-fill">
-              {% csrf_token %}
-              <button type="submit" class="btn btn-primary w-100">
-                <i class="bi bi-cash me-1"></i>Mark as Paid (No Invoice)
-              </button>
-            </form>
-          </div>
-        {% else %}
-          <div class="alert alert-success mb-3">
-            <i class="bi bi-check-circle me-2"></i>
-            <strong>Status: Completed & Paid</strong> - This job is finished and has been invoiced/paid.
-          </div>
-          
-          <div class="d-flex flex-column flex-lg-row gap-2">
-            {% if job.invoices.exists %}
-              <a href="{% url 'invoice_detail' job.invoices.first.id %}" class="btn btn-outline-success">
-                <i class="bi bi-receipt me-1"></i>View Invoice
-              </a>
-            {% endif %}
-          </div>
+        </div>
+        {% if job.invoices.exists %}
+          <a href="{% url 'invoice_detail' job.invoices.first.id %}" class="btn btn-outline-success">
+            <i class="bi bi-receipt me-1"></i>View Invoice
+          </a>
         {% endif %}
       {% endif %}
+      
+    </div>
+  </div>
+
+  <!-- Status Override (Collapsible) -->
+  <div class="card mb-4">
+    <div class="card-header bg-light">
+      <button class="btn btn-link text-decoration-none p-0 text-start w-100" type="button" data-bs-toggle="collapse" data-bs-target="#statusOverride" aria-expanded="false">
+        <i class="bi bi-gear me-2"></i>Status Override & Advanced Options
+        <i class="bi bi-chevron-down float-end"></i>
+      </button>
+    </div>
+    <div class="collapse" id="statusOverride">
+      <div class="card-body">
+        
+        <!-- Status Change Options -->
+        <h6 class="mb-3">Change Status:</h6>
+        <div class="d-flex flex-wrap gap-2 mb-4">
+          {% if job.status != 'pending' %}
+          <form method="post" action="{% url 'change_workorder_status' job.id %}" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="new_status" value="pending">
+            <button type="submit" class="btn btn-outline-secondary btn-sm" 
+                    onclick="return confirm('Move back to Pending status?')">
+              <i class="bi bi-arrow-left me-1"></i>Back to Pending
+            </button>
+          </form>
+          {% endif %}
+          
+          {% if job.status != 'in_progress' %}
+          <form method="post" action="{% url 'change_workorder_status' job.id %}" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="new_status" value="in_progress">
+            <button type="submit" class="btn btn-outline-info btn-sm">
+              <i class="bi bi-play me-1"></i>Mark In Progress
+            </button>
+          </form>
+          {% endif %}
+          
+          {% if job.status != 'completed' %}
+          <form method="post" action="{% url 'change_workorder_status' job.id %}" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="new_status" value="completed">
+            <button type="submit" class="btn btn-outline-success btn-sm">
+              <i class="bi bi-check-circle me-1"></i>Mark Completed
+            </button>
+          </form>
+          {% endif %}
+        </div>
+
+        <!-- Invoice Status Reset -->
+        {% if job.invoiced %}
+        <h6 class="mb-3">Invoice Status:</h6>
+        <form method="post" action="{% url 'reset_workorder_invoiced' job.id %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-warning btn-sm"
+                  onclick="return confirm('Reset invoiced status? This will move the job back to uninvoiced lists.')">
+            <i class="bi bi-arrow-counterclockwise me-1"></i>Reset Invoiced Status
+          </button>
+        </form>
+        {% endif %}
+        
+      </div>
     </div>
   </div>
 
@@ -4080,19 +4396,31 @@ document.addEventListener("DOMContentLoaded", function () {
       <h5 class="mb-0">Scheduled Events</h5>
     </div>
     <div class="card-body">
-      <ul class="list-group">
-        {% for event in events %}
-          <li class="list-group-item d-flex justify-content-between align-items-center">
-            <div>
-              <strong>{{ event.get_event_type_display }}:</strong> 
-              {{ event.address }}
+      {% if events %}
+        <div class="row">
+          {% for event in events %}
+          <div class="col-md-6 mb-3">
+            <div class="card border-start border-primary border-3">
+              <div class="card-body py-2">
+                <h6 class="card-title text-primary mb-1">{{ event.get_event_type_display }}</h6>
+                <p class="card-text mb-1 small"><i class="bi bi-calendar3 me-1"></i>{{ event.date|date:"M d, Y" }}</p>
+                <p class="card-text mb-0 small"><i class="bi bi-geo-alt me-1"></i>{{ event.address }}</p>
+              </div>
             </div>
-            <span class="badge bg-primary">{{ event.date|date:"M d, Y" }}</span>
-          </li>
-        {% empty %}
-          <li class="list-group-item">No scheduled events.</li>
-        {% endfor %}
-      </ul>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-center text-muted py-4">
+          <i class="bi bi-calendar-x fs-1 mb-2 d-block"></i>
+          No events scheduled
+          <div class="mt-2">
+            <a href="{% url 'workorder_edit' job.id %}" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-plus me-1"></i>Add Events
+            </a>
+          </div>
+        </div>
+      {% endif %}
     </div>
   </div>
 
@@ -4105,16 +4433,22 @@ document.addEventListener("DOMContentLoaded", function () {
           <h5 class="mb-0">Attachments</h5>
         </div>
         <div class="card-body">
-          <ul class="list-group">
+          {% if attachments %}
             {% for attachment in attachments %}
-              <li class="list-group-item">
-                <a href="{{ attachment.file.url }}">{{ attachment.file.name }}</a>
-                <small class="text-muted d-block">{{ attachment.uploaded_at|date:"M d, Y g:i A" }}</small>
-              </li>
-            {% empty %}
-              <li class="list-group-item">No attachments.</li>
+              <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-paperclip me-2 text-muted"></i>
+                <div class="flex-grow-1">
+                  <a href="{{ attachment.file.url }}" class="text-decoration-none">{{ attachment.file.name }}</a>
+                  <small class="text-muted d-block">{{ attachment.uploaded_at|date:"M d, Y" }}</small>
+                </div>
+              </div>
             {% endfor %}
-          </ul>
+          {% else %}
+            <div class="text-center text-muted py-3">
+              <i class="bi bi-paperclip fs-3 mb-2 d-block"></i>
+              No attachments
+            </div>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -4126,46 +4460,63 @@ document.addEventListener("DOMContentLoaded", function () {
           <h5 class="mb-0">Notes</h5>
         </div>
         <div class="card-body">
-          <ul class="list-group">
+          {% if notes %}
             {% for note in notes %}
-              <li class="list-group-item">
-                {{ note.note }}
-                <small class="text-muted d-block">{{ note.created_at|date:"M d, Y g:i A" }}</small>
-              </li>
-            {% empty %}
-              <li class="list-group-item">No notes.</li>
+              <div class="mb-3 pb-2 border-bottom">
+                <p class="mb-1">{{ note.note }}</p>
+                <small class="text-muted">
+                  <i class="bi bi-clock me-1"></i>{{ note.created_at|date:"M d, Y g:i A" }}
+                </small>
+              </div>
             {% endfor %}
-          </ul>
+          {% else %}
+            <div class="text-center text-muted py-3">
+              <i class="bi bi-sticky fs-3 mb-2 d-block"></i>
+              No notes
+            </div>
+          {% endif %}
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Management Action Buttons -->
-  <div class="mt-4 d-flex flex-column flex-sm-row justify-content-between gap-2">
-    <a href="{% url 'workorder_edit' job.id %}" class="btn btn-outline-primary w-100 w-sm-auto">
-      <i class="bi bi-pencil me-1"></i>Edit Work Order
-    </a>
-    <a href="{% url 'workorder_pdf' job.id %}" class="btn btn-light border d-flex align-items-center gap-2 shadow-sm px-4 py-2 w-100 w-sm-auto" target="_blank" style="border-color: #999;">
-      <i class="bi bi-printer-fill text-primary fs-5"></i>
-      <span class="fw-semibold text-dark">Print Work Order</span>
-    </a>
-    <a href="{% url 'workorder_delete' job.id %}" class="btn btn-outline-danger w-100 w-sm-auto">
-      <i class="bi bi-trash me-1"></i>Delete Work Order
-    </a>
+  <!-- Management Actions -->
+  <div class="card mt-4">
+    <div class="card-header bg-light">
+      <h6 class="mb-0 text-muted">
+        <i class="bi bi-tools me-2"></i>Management
+      </h6>
+    </div>
+    <div class="card-body">
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'workorder_edit' job.id %}" class="btn btn-outline-primary">
+          <i class="bi bi-pencil me-1"></i>Edit
+        </a>
+        <a href="{% url 'workorder_pdf' job.id %}" class="btn btn-outline-secondary" target="_blank">
+          <i class="bi bi-printer me-1"></i>Print
+        </a>
+        <a href="{% url 'workorder_delete' job.id %}" class="btn btn-outline-danger">
+          <i class="bi bi-trash me-1"></i>Delete
+        </a>
+      </div>
+    </div>
   </div>
 
-  <!-- Navigation Buttons -->
+  <!-- Navigation -->
   <div class="text-center mt-4">
-    <a href="{% url 'workorder_list' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Work Orders</a>
-    <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+    <a href="{% url 'workorder_list' %}" class="btn btn-secondary me-2">
+      <i class="bi bi-arrow-left me-1"></i>Back to Work Orders
+    </a>
+    <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-house me-1"></i>Dashboard
+    </a>
   </div>
 
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<!-- Optional JS for future interactivity -->
+<!-- Bootstrap JS for collapsible sections -->
 {% endblock %}
 
 ===== templates/workorders/workorder_form.html =====
@@ -4745,6 +5096,129 @@ function removeEvent(tempId) {
 </div>
 {% endblock %}
 
+===== templates/workorders/partials/job_cards_mobile.html =====
+<!-- Mobile Cards Only -->
+{% for job in jobs %}
+<div class="border-bottom p-3 job-card" data-job-id="{{ job.id }}">
+  <div class="d-flex justify-content-between align-items-start mb-2">
+    <div class="flex-grow-1">
+      <div class="fw-bold">Work Order #{{ job.id }}</div>
+      <div class="text-muted small">{{ job.client.name }}</div>
+      <div class="text-muted small">{{ job.job_description|truncatewords:6 }}</div>
+    </div>
+    <span class="badge 
+      {% if job.status == 'pending' %}bg-secondary
+      {% elif job.status == 'in_progress' %}bg-info
+      {% else %}bg-success{% endif %} ms-2">
+      {{ job.get_status_display }}
+    </span>
+  </div>
+  
+  <div class="d-flex flex-wrap gap-1">
+    <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info flex-fill">View</a>
+    
+    {% if section == 'pending' %}
+      <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning flex-fill">Schedule</a>
+      <form method="post" action="{% url 'mark_completed' job.id %}" class="flex-fill">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-success w-100">Complete</button>
+      </form>
+    
+    {% elif section == 'scheduled' %}
+      <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning flex-fill">Edit</a>
+      <form method="post" action="{% url 'mark_completed' job.id %}" class="flex-fill">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-success w-100">Complete</button>
+      </form>
+    
+    {% elif section == 'completed' %}
+      <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning flex-fill">Edit</a>
+      <a href="/invoices/create/?work_order={{ job.id }}" class="btn btn-sm btn-success flex-fill">Invoice</a>
+    
+    {% elif section == 'invoiced' %}
+      <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning flex-fill">Edit</a>
+      {% if job.invoices.exists %}
+        <a href="{% url 'invoice_detail' job.invoices.first.id %}" class="btn btn-sm btn-outline-success flex-fill">Invoice</a>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+
+===== templates/workorders/partials/job_section.html =====
+{% if jobs %}
+  <!-- Desktop Table View -->
+  <div class="d-none d-md-block">
+    <div class="table-responsive">
+      <table class="table table-sm table-striped align-middle mb-0">
+        <thead class="small">
+          <tr>
+            <th>ID</th>
+            <th>Client</th>
+            <th class="d-none d-lg-table-cell">Description</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody class="job-table-body">
+          {% include 'workorders/partials/job_rows.html' with jobs=jobs section=section %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <!-- Mobile Card View -->
+  <div class="d-md-none job-cards-container">
+    {% include 'workorders/partials/job_cards_mobile.html' with jobs=jobs section=section %}
+  </div>
+{% else %}
+  <div class="p-4 text-center text-muted">
+    <i class="bi bi-inbox fs-1 mb-2 d-block"></i>
+    No jobs found.
+  </div>
+{% endif %}
+
+===== templates/workorders/partials/job_rows.html =====
+<!-- Desktop Table Rows Only -->
+{% for job in jobs %}
+<tr class="job-row" data-job-id="{{ job.id }}">
+  <td>{{ job.id }}</td>
+  <td>{{ job.client.name }}</td>
+  <td class="d-none d-lg-table-cell text-truncate" style="max-width:200px;">
+    {{ job.job_description|truncatewords:8 }}
+  </td>
+  <td>
+    <div class="d-flex flex-wrap gap-1">
+      <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
+      
+      {% if section == 'pending' %}
+        <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Schedule</a>
+        <form method="post" action="{% url 'mark_completed' job.id %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-success">Complete</button>
+        </form>
+      
+      {% elif section == 'scheduled' %}
+        <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
+        <form method="post" action="{% url 'mark_completed' job.id %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-success">Complete</button>
+        </form>
+      
+      {% elif section == 'completed' %}
+        <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
+        <a href="/invoices/create/?work_order={{ job.id }}" class="btn btn-sm btn-success">Invoice</a>
+      
+      {% elif section == 'invoiced' %}
+        <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning">Edit</a>
+        {% if job.invoices.exists %}
+          <a href="{% url 'invoice_detail' job.invoices.first.id %}" class="btn btn-sm btn-outline-success">Invoice</a>
+        {% endif %}
+      {% endif %}
+    </div>
+  </td>
+</tr>
+{% endfor %}
+
 ===== templates/workorders/workorder_list.html =====
 {% extends "base.html" %}
 {% block title %}Work Orders{% endblock %}
@@ -4763,167 +5237,147 @@ function removeEvent(tempId) {
     </div>
   </div>
 
-  <!-- Pending Jobs -->
+  <!-- Pending Jobs Section -->
   <div class="card mb-4">
-    <div class="card-header bg-secondary text-white position-relative">
-      <h5 class="mb-0">
-        <a href="{% url 'pending_jobs' %}" class="stretched-link text-white text-decoration-none">Pending Jobs</a>
-      </h5>
-    </div>
-    <div class="card-body p-0">
-      {% if pending_jobs %}
-      <div class="table-responsive">
-        <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="small"><tr><th>ID</th><th>Client</th><th class="d-none d-md-table-cell">Description</th><th>Actions</th></tr></thead>
-          <tbody>
-            {% for job in pending_jobs %}
-            <tr>
-              <td>{{ job.id }}</td>
-              <td>{{ job.client.name }}</td>
-              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
-              <td>
-                <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Schedule</a>
-                  <form method="post" action="{% url 'mark_completed' job.id %}" class="w-100 w-sm-auto">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-success w-100">Complete</button>
-                  </form>
-                  <form method="post" action="{% url 'complete_and_invoice' job.id %}" class="w-100 w-sm-auto">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-primary w-100">Complete & Invoice</button>
-                  </form>
-                  <form method="post" action="{% url 'mark_completed_and_paid' job.id %}" class="w-100 w-sm-auto">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-dark w-100">Complete & Paid</button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    <div class="card-header bg-secondary text-white">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <a href="{% url 'pending_jobs' %}" class="text-white text-decoration-none">
+            Pending Jobs
+            <span class="badge bg-light text-dark ms-2" id="pending-count">{{ pending_jobs|length }}</span>
+          </a>
+        </h5>
+        <button class="btn btn-link text-white p-0" type="button" data-bs-toggle="collapse" 
+                data-bs-target="#pendingSection" aria-expanded="true">
+          <i class="bi bi-chevron-down fs-5"></i>
+        </button>
       </div>
-      {% else %}<p class="p-3 mb-0">No pending jobs found.</p>{% endif %}
+    </div>
+    <div class="collapse show" id="pendingSection">
+      <div class="card-body p-0">
+        <div id="pending-jobs-container">
+          {% include 'workorders/partials/job_section.html' with jobs=pending_jobs section='pending' %}
+        </div>
+        {% if pending_jobs|length >= 5 %}
+        <div class="p-3 text-center border-top">
+          <button class="btn btn-outline-primary btn-sm load-more-btn" 
+                  data-section="pending" 
+                  data-offset="5"
+                  data-url="{% url 'load_more_workorders' %}">
+            <i class="bi bi-plus-circle me-1"></i>Load 5 More
+            <span class="spinner-border spinner-border-sm ms-2 d-none" role="status"></span>
+          </button>
+        </div>
+        {% endif %}
+      </div>
     </div>
   </div>
 
-  <!-- Scheduled Jobs -->
+  <!-- Scheduled Jobs Section -->
   <div class="card mb-4">
-    <div class="card-header bg-info text-white position-relative">
-      <h5 class="mb-0">
-        <a href="{% url 'scheduled_jobs' %}" class="stretched-link text-white text-decoration-none">Scheduled Jobs</a>
-      </h5>
-    </div>
-    <div class="card-body p-0">
-      {% if scheduled_jobs %}
-      <div class="table-responsive">
-        <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="small"><tr><th>ID</th><th>Client</th><th class="d-none d-md-table-cell">Description</th><th>Actions</th></tr></thead>
-          <tbody>
-            {% for job in scheduled_jobs %}
-            <tr>
-              <td>{{ job.id }}</td>
-              <td>{{ job.client.name }}</td>
-              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
-              <td>
-                <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                  <form method="post" action="{% url 'mark_completed' job.id %}" class="w-100 w-sm-auto">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-success w-100">Complete</button>
-                  </form>
-                  <form method="post" action="{% url 'complete_and_invoice' job.id %}" class="w-100 w-sm-auto">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-primary w-100">Complete & Invoice</button>
-                  </form>
-                  <form method="post" action="{% url 'mark_completed_and_paid' job.id %}" class="w-100 w-sm-auto">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-dark w-100">Complete & Paid</button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    <div class="card-header bg-info text-white">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <a href="{% url 'scheduled_jobs' %}" class="text-white text-decoration-none">
+            Scheduled Jobs
+            <span class="badge bg-light text-dark ms-2" id="scheduled-count">{{ scheduled_jobs|length }}</span>
+          </a>
+        </h5>
+        <button class="btn btn-link text-white p-0" type="button" data-bs-toggle="collapse" 
+                data-bs-target="#scheduledSection" aria-expanded="true">
+          <i class="bi bi-chevron-down fs-5"></i>
+        </button>
       </div>
-      {% else %}<p class="p-3 mb-0">No scheduled jobs found.</p>{% endif %}
+    </div>
+    <div class="collapse show" id="scheduledSection">
+      <div class="card-body p-0">
+        <div id="scheduled-jobs-container">
+          {% include 'workorders/partials/job_section.html' with jobs=scheduled_jobs section='scheduled' %}
+        </div>
+        {% if scheduled_jobs|length >= 5 %}
+        <div class="p-3 text-center border-top">
+          <button class="btn btn-outline-primary btn-sm load-more-btn" 
+                  data-section="scheduled" 
+                  data-offset="5"
+                  data-url="{% url 'load_more_workorders' %}">
+            <i class="bi bi-plus-circle me-1"></i>Load 5 More
+            <span class="spinner-border spinner-border-sm ms-2 d-none" role="status"></span>
+          </button>
+        </div>
+        {% endif %}
+      </div>
     </div>
   </div>
 
-  <!-- Completed – Not Yet Paid -->
+  <!-- Completed Jobs Section -->
   <div class="card mb-4">
-    <div class="card-header bg-warning text-dark position-relative">
-      <h5 class="mb-0">
-        <a href="{% url 'completed_jobs' %}" class="stretched-link text-dark text-decoration-none">Completed – Not Yet Paid</a>
-      </h5>
-    </div>
-    <div class="card-body p-0">
-      {% if completed_uninvoiced_jobs %}
-      <div class="table-responsive">
-        <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="small"><tr><th>ID</th><th>Client</th><th class="d-none d-md-table-cell">Description</th><th>Actions</th></tr></thead>
-          <tbody>
-            {% for job in completed_uninvoiced_jobs %}
-            <tr>
-              <td>{{ job.id }}</td>
-              <td>{{ job.client.name }}</td>
-              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
-              <td>
-                <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                  <a href="/invoices/create/?work_order={{ job.id }}" class="btn btn-sm btn-success w-100 w-sm-auto">📄 Create Invoice</a>
-                  <form method="post" action="{% url 'mark_paid' job.id %}" class="w-100 w-sm-auto">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-primary w-100">Mark as Paid</button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    <div class="card-header bg-warning text-dark">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <a href="{% url 'completed_jobs' %}" class="text-dark text-decoration-none">
+            Completed Jobs
+            <span class="badge bg-light text-dark ms-2" id="completed-count">{{ completed_uninvoiced_jobs|length }}</span>
+          </a>
+        </h5>
+        <button class="btn btn-link text-dark p-0" type="button" data-bs-toggle="collapse" 
+                data-bs-target="#completedSection" aria-expanded="true">
+          <i class="bi bi-chevron-down fs-5"></i>
+        </button>
       </div>
-      {% else %}<p class="p-3 mb-0">No completed jobs awaiting payment.</p>{% endif %}
+    </div>
+    <div class="collapse show" id="completedSection">
+      <div class="card-body p-0">
+        <div id="completed-jobs-container">
+          {% include 'workorders/partials/job_section.html' with jobs=completed_uninvoiced_jobs section='completed' %}
+        </div>
+        {% if completed_uninvoiced_jobs|length >= 5 %}
+        <div class="p-3 text-center border-top">
+          <button class="btn btn-outline-primary btn-sm load-more-btn" 
+                  data-section="completed" 
+                  data-offset="5"
+                  data-url="{% url 'load_more_workorders' %}">
+            <i class="bi bi-plus-circle me-1"></i>Load 5 More
+            <span class="spinner-border spinner-border-sm ms-2 d-none" role="status"></span>
+          </button>
+        </div>
+        {% endif %}
+      </div>
     </div>
   </div>
 
-  <!-- Completed – Paid -->
+  <!-- Completed – Invoiced or Paid Section -->
   <div class="card mb-4">
-    <div class="card-header bg-success text-white position-relative">
-      <h5 class="mb-0">
-        <a href="{% url 'completed_jobs' %}" class="stretched-link text-white text-decoration-none">Completed – Paid</a>
-      </h5>
-    </div>
-    <div class="card-body p-0">
-      {% if completed_invoiced_jobs %}
-      <div class="table-responsive">
-        <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="small"><tr><th>ID</th><th>Client</th><th class="d-none d-md-table-cell">Description</th><th>Actions</th></tr></thead>
-          <tbody>
-            {% for job in completed_invoiced_jobs %}
-            <tr>
-              <td>{{ job.id }}</td>
-              <td>{{ job.client.name }}</td>
-              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
-              <td>
-                <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                  {% if job.invoices.exists %}
-                    <a href="{% url 'invoice_detail' job.invoices.first.id %}" class="btn btn-sm btn-outline-success w-100 w-sm-auto">View Invoice</a>
-                  {% endif %}
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    <div class="card-header bg-success text-white">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <a href="{% url 'completed_jobs' %}" class="text-white text-decoration-none">
+            Completed – Invoiced or Paid
+            <span class="badge bg-light text-dark ms-2" id="invoiced-count">{{ completed_invoiced_jobs|length }}</span>
+          </a>
+        </h5>
+        <button class="btn btn-link text-white p-0" type="button" data-bs-toggle="collapse" 
+                data-bs-target="#invoicedSection" aria-expanded="false">
+          <i class="bi bi-chevron-down fs-5"></i>
+        </button>
       </div>
-      {% else %}<p class="p-3 mb-0">No paid jobs found.</p>{% endif %}
+    </div>
+    <div class="collapse" id="invoicedSection">
+      <div class="card-body p-0">
+        <div id="invoiced-jobs-container">
+          {% include 'workorders/partials/job_section.html' with jobs=completed_invoiced_jobs section='invoiced' %}
+        </div>
+        {% if completed_invoiced_jobs|length >= 5 %}
+        <div class="p-3 text-center border-top">
+          <button class="btn btn-outline-primary btn-sm load-more-btn" 
+                  data-section="invoiced" 
+                  data-offset="5"
+                  data-url="{% url 'load_more_workorders' %}">
+            <i class="bi bi-plus-circle me-1"></i>Load 5 More
+            <span class="spinner-border spinner-border-sm ms-2 d-none" role="status"></span>
+          </button>
+        </div>
+        {% endif %}
+      </div>
     </div>
   </div>
 
@@ -4932,4 +5386,288 @@ function removeEvent(tempId) {
     <a href="{% url 'home' %}" class="btn btn-secondary w-100">Back to Dashboard</a>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Track original counts for each section
+  const originalCounts = {
+    'pending': {{ pending_jobs|length }},
+    'scheduled': {{ scheduled_jobs|length }},
+    'completed': {{ completed_uninvoiced_jobs|length }},
+    'invoiced': {{ completed_invoiced_jobs|length }}
+  };
+
+  let isLoading = false; // Prevent multiple simultaneous requests
+
+  // Handle load more buttons
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('load-more-btn') || e.target.closest('.load-more-btn')) {
+      e.preventDefault();
+      
+      if (isLoading) return; // Prevent multiple requests
+      
+      const btn = e.target.classList.contains('load-more-btn') ? e.target : e.target.closest('.load-more-btn');
+      const section = btn.dataset.section;
+      const offset = parseInt(btn.dataset.offset);
+      const url = btn.dataset.url;
+      const spinner = btn.querySelector('.spinner-border');
+      const icon = btn.querySelector('.bi-plus-circle');
+      
+      // Validation
+      if (!section || !url || isNaN(offset)) {
+        console.error('Invalid button data:', {section, url, offset});
+        return;
+      }
+      
+      // Show loading state
+      isLoading = true;
+      spinner.classList.remove('d-none');
+      icon.classList.add('d-none');
+      btn.disabled = true;
+      
+      // Make AJAX request
+      fetch(`${url}?section=${section}&offset=${offset}`, {
+        method: 'GET',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.desktop_html && data.mobile_html) {
+          // Find containers
+          const container = document.getElementById(`${section}-jobs-container`);
+          if (!container) {
+            throw new Error(`Container not found: ${section}-jobs-container`);
+          }
+          
+          // Append desktop rows to table body
+          const tableBody = container.querySelector('.job-table-body');
+          if (tableBody) {
+            tableBody.insertAdjacentHTML('beforeend', data.desktop_html);
+          }
+          
+          // Append mobile cards to mobile container
+          const mobileContainer = container.querySelector('.job-cards-container');
+          if (mobileContainer) {
+            mobileContainer.insertAdjacentHTML('beforeend', data.mobile_html);
+          }
+          
+          // Update count badge
+          const countBadge = document.getElementById(`${section}-count`);
+          if (countBadge) {
+            const currentCount = parseInt(countBadge.textContent);
+            countBadge.textContent = currentCount + data.count;
+          }
+          
+          // Update offset for next load
+          btn.dataset.offset = offset + 5;
+          
+          // Hide button if no more items
+          if (!data.has_more) {
+            btn.style.display = 'none';
+          }
+          
+          // Show "Show Less" button after first load more
+          showShowLessButton(section);
+        } else {
+          throw new Error('No HTML returned from server');
+        }
+      })
+      .catch(error => {
+        console.error('Error loading more items:', error);
+        
+        // Remove any existing error messages
+        const existingError = btn.parentElement.querySelector('.error-message');
+        if (existingError) {
+          existingError.remove();
+        }
+        
+        // Show error message
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'text-danger small mt-2 error-message';
+        errorDiv.textContent = 'Error loading more items. Please try again.';
+        btn.parentElement.appendChild(errorDiv);
+        
+        // Remove error message after 5 seconds
+        setTimeout(() => {
+          if (errorDiv.parentElement) {
+            errorDiv.remove();
+          }
+        }, 5000);
+      })
+      .finally(() => {
+        // Hide loading state
+        isLoading = false;
+        spinner.classList.add('d-none');
+        icon.classList.remove('d-none');
+        btn.disabled = false;
+      });
+    }
+    
+    // Handle show less buttons
+    if (e.target.classList.contains('show-less-btn') || e.target.closest('.show-less-btn')) {
+      e.preventDefault();
+      
+      const btn = e.target.classList.contains('show-less-btn') ? e.target : e.target.closest('.show-less-btn');
+      const section = btn.dataset.section;
+      
+      if (section) {
+        showLessItems(section);
+      }
+    }
+  });
+
+  function showShowLessButton(section) {
+    // Check if show less button already exists
+    const existingBtn = document.querySelector(`[data-section="${section}"].show-less-btn`);
+    if (existingBtn) return;
+    
+    // Find load more button
+    const loadMoreBtn = document.querySelector(`[data-section="${section}"].load-more-btn`);
+    if (!loadMoreBtn) return;
+    
+    const buttonContainer = loadMoreBtn.parentElement;
+    
+    // Create show less button
+    const showLessBtn = document.createElement('button');
+    showLessBtn.className = 'btn btn-outline-secondary btn-sm show-less-btn ms-2';
+    showLessBtn.setAttribute('data-section', section);
+    showLessBtn.innerHTML = '<i class="bi bi-dash-circle me-1"></i>Show Less';
+    
+    buttonContainer.appendChild(showLessBtn);
+  }
+
+  function showLessItems(section) {
+    const container = document.getElementById(`${section}-jobs-container`);
+    if (!container) {
+      console.error(`Container not found: ${section}-jobs-container`);
+      return;
+    }
+    
+    const originalCount = originalCounts[section];
+    if (originalCount === undefined) {
+      console.error(`Original count not found for section: ${section}`);
+      return;
+    }
+    
+    // Handle desktop table rows
+    const tableBody = container.querySelector('.job-table-body');
+    if (tableBody) {
+      const rows = tableBody.querySelectorAll('tr.job-row');
+      rows.forEach((row, index) => {
+        if (index >= originalCount) {
+          row.style.display = 'none';
+        } else {
+          row.style.display = '';
+        }
+      });
+    }
+    
+    // Handle mobile cards
+    const mobileContainer = container.querySelector('.job-cards-container');
+    if (mobileContainer) {
+      const cards = mobileContainer.querySelectorAll('.job-card');
+      cards.forEach((card, index) => {
+        if (index >= originalCount) {
+          card.style.display = 'none';
+        } else {
+          card.style.display = '';
+        }
+      });
+    }
+    
+    // Update count badge back to original
+    const countBadge = document.getElementById(`${section}-count`);
+    if (countBadge) {
+      countBadge.textContent = originalCount;
+    }
+    
+    // Reset load more button
+    const loadMoreBtn = document.querySelector(`[data-section="${section}"].load-more-btn`);
+    if (loadMoreBtn) {
+      loadMoreBtn.dataset.offset = '5';
+      loadMoreBtn.style.display = 'inline-block';
+    }
+    
+    // Remove show less button
+    const showLessBtn = document.querySelector(`[data-section="${section}"].show-less-btn`);
+    if (showLessBtn) {
+      showLessBtn.remove();
+    }
+  }
+
+  // Handle collapse icon rotation
+  document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
+    button.addEventListener('click', function() {
+      const icon = this.querySelector('i');
+      if (!icon) return;
+      
+      setTimeout(() => {
+        const targetSelector = this.getAttribute('data-bs-target');
+        if (!targetSelector) return;
+        
+        const target = document.querySelector(targetSelector);
+        if (!target) return;
+        
+        if (target.classList.contains('show')) {
+          icon.style.transform = 'rotate(180deg)';
+        } else {
+          icon.style.transform = 'rotate(0deg)';
+        }
+      }, 150);
+    });
+  });
+});
+</script>
+
+<style>
+/* Smooth icon rotation */
+.card-header i {
+  transition: transform 0.3s ease;
+}
+
+/* Mobile responsive improvements */
+@media (max-width: 768px) {
+  .card-header h5 {
+    font-size: 1rem;
+  }
+  
+  .badge {
+    font-size: 0.7rem;
+  }
+  
+  .load-more-btn, .show-less-btn {
+    font-size: 0.875rem;
+  }
+}
+
+/* Loading animation */
+.spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Button transitions */
+.show-less-btn {
+  transition: all 0.3s ease;
+}
+
+/* Error message styling */
+.error-message {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+</style>
 {% endblock %}
