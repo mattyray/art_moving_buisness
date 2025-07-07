@@ -7,7 +7,7 @@
     {{ job.job_description|truncatewords:8 }}
   </td>
   <td>
-    <div class="d-flex flex-wrap gap-1">
+    <div class="d-flex flex-row gap-1">
       <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info">View</a>
       
       {% if section == 'pending' %}
@@ -23,17 +23,17 @@
         </form>
         <form method="post" action="{% url 'complete_and_invoice' job.id %}" class="d-inline">
           {% csrf_token %}
-          <button type="submit" class="btn btn-sm btn-primary">Complete & Invoice</button>
+          <button type="submit" class="btn btn-sm btn-danger">Complete & Invoice</button>
         </form>
         <form method="post" action="{% url 'mark_completed_and_paid' job.id %}" class="d-inline">
           {% csrf_token %}
-          <button type="submit" class="btn btn-sm btn-danger">Complete & Paid</button>
+          <button type="submit" class="btn btn-sm btn-dark">Complete & Paid</button>
         </form>
       {% elif section == 'completed' %}
         <a href="/invoices/create/?work_order={{ job.id }}" class="btn btn-sm btn-success">📄 Create Invoice</a>
         <form method="post" action="{% url 'mark_paid' job.id %}" class="d-inline">
           {% csrf_token %}
-          <button type="submit" class="btn btn-sm btn-primary">Mark as Paid</button>
+          <button type="submit" class="btn btn-sm btn-warning">Mark as Paid</button>
         </form>
       {% elif section == 'invoiced' %}
         {% if job.invoices.exists %}

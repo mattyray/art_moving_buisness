@@ -15,37 +15,42 @@
     </span>
   </div>
   
-  <div class="d-flex flex-wrap gap-1">
-    <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info flex-fill">View</a>
-    
-    {% if section == 'pending' %}
-      <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning flex-fill">Schedule</a>
-    {% else %}
-      <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning flex-fill">Edit</a>
-    {% endif %}
+  <div class="d-flex flex-column gap-1">
+    <div class="d-flex gap-1">
+      <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info flex-fill">View</a>
+      {% if section == 'pending' %}
+        <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning flex-fill">Schedule</a>
+      {% else %}
+        <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning flex-fill">Edit</a>
+      {% endif %}
+    </div>
     
     {% if job.status != 'completed' %}
-      <form method="post" action="{% url 'mark_completed' job.id %}" class="flex-fill">
+      <div class="d-flex gap-1">
+        <form method="post" action="{% url 'mark_completed' job.id %}" class="flex-fill">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-success w-100">Complete</button>
+        </form>
+        <form method="post" action="{% url 'complete_and_invoice' job.id %}" class="flex-fill">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-danger w-100">Complete & Invoice</button>
+        </form>
+      </div>
+      <form method="post" action="{% url 'mark_completed_and_paid' job.id %}">
         {% csrf_token %}
-        <button type="submit" class="btn btn-sm btn-success w-100">Complete</button>
-      </form>
-      <form method="post" action="{% url 'complete_and_invoice' job.id %}" class="flex-fill">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-sm btn-primary w-100">Complete & Invoice</button>
-      </form>
-      <form method="post" action="{% url 'mark_completed_and_paid' job.id %}" class="flex-fill">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-sm btn-danger w-100">Complete & Paid</button>
+        <button type="submit" class="btn btn-sm btn-dark w-100">Complete & Paid</button>
       </form>
     {% elif section == 'completed' %}
-      <a href="/invoices/create/?work_order={{ job.id }}" class="btn btn-sm btn-success flex-fill">📄 Create Invoice</a>
-      <form method="post" action="{% url 'mark_paid' job.id %}" class="flex-fill">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-sm btn-primary w-100">Mark as Paid</button>
-      </form>
+      <div class="d-flex gap-1">
+        <a href="/invoices/create/?work_order={{ job.id }}" class="btn btn-sm btn-success flex-fill">📄 Create Invoice</a>
+        <form method="post" action="{% url 'mark_paid' job.id %}" class="flex-fill">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-primary w-100">Mark as Paid</button>
+        </form>
+      </div>
     {% elif section == 'invoiced' %}
       {% if job.invoices.exists %}
-        <a href="{% url 'invoice_detail' job.invoices.first.id %}" class="btn btn-sm btn-outline-success flex-fill">View Invoice</a>
+        <a href="{% url 'invoice_detail' job.invoices.first.id %}" class="btn btn-sm btn-outline-success w-100">View Invoice</a>
       {% endif %}
     {% endif %}
   </div>
