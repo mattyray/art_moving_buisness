@@ -26,4 +26,7 @@ urlpatterns = [
     path("calendar-data/workorders/", views.workorder_calendar_data, name="workorder_calendar_data"),
 
     path("<int:pk>/pdf/", views.workorder_pdf, name="workorder_pdf"),
+
+    path('load-more/', views.load_more_workorders, name='load_more_workorders'),
+
 ]

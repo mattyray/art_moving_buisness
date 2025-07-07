@@ -15,167 +15,147 @@
     </div>
   </div>
 
-  <!-- Pending Jobs -->
+  <!-- Pending Jobs Section -->
   <div class="card mb-4">
-    <div class="card-header bg-secondary text-white position-relative">
-      <h5 class="mb-0">
-        <a href="{% url 'pending_jobs' %}" class="stretched-link text-white text-decoration-none">Pending Jobs</a>
-      </h5>
-    </div>
-    <div class="card-body p-0">
-      {% if pending_jobs %}
-      <div class="table-responsive">
-        <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="small"><tr><th>ID</th><th>Client</th><th class="d-none d-md-table-cell">Description</th><th>Actions</th></tr></thead>
-          <tbody>
-            {% for job in pending_jobs %}
-            <tr>
-              <td>{{ job.id }}</td>
-              <td>{{ job.client.name }}</td>
-              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
-              <td>
-                <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Schedule</a>
-                  <form method="post" action="{% url 'mark_completed' job.id %}" class="w-100 w-sm-auto">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-success w-100">Complete</button>
-                  </form>
-                  <form method="post" action="{% url 'complete_and_invoice' job.id %}" class="w-100 w-sm-auto">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-primary w-100">Complete & Invoice</button>
-                  </form>
-                  <form method="post" action="{% url 'mark_completed_and_paid' job.id %}" class="w-100 w-sm-auto">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-dark w-100">Complete & Paid</button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    <div class="card-header bg-secondary text-white">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <a href="{% url 'pending_jobs' %}" class="text-white text-decoration-none">
+            Pending Jobs
+            <span class="badge bg-light text-dark ms-2" id="pending-count">{{ pending_jobs|length }}</span>
+          </a>
+        </h5>
+        <button class="btn btn-link text-white p-0" type="button" data-bs-toggle="collapse" 
+                data-bs-target="#pendingSection" aria-expanded="true">
+          <i class="bi bi-chevron-down fs-5"></i>
+        </button>
       </div>
-      {% else %}<p class="p-3 mb-0">No pending jobs found.</p>{% endif %}
+    </div>
+    <div class="collapse show" id="pendingSection">
+      <div class="card-body p-0">
+        <div id="pending-jobs-container">
+          {% include 'workorders/partials/job_rows.html' with jobs=pending_jobs section='pending' %}
+        </div>
+        {% if pending_jobs|length >= 5 %}
+        <div class="p-3 text-center border-top">
+          <button class="btn btn-outline-primary btn-sm load-more-btn" 
+                  data-section="pending" 
+                  data-offset="5"
+                  data-url="{% url 'load_more_workorders' %}">
+            <i class="bi bi-plus-circle me-1"></i>Load 5 More
+            <span class="spinner-border spinner-border-sm ms-2 d-none" role="status"></span>
+          </button>
+        </div>
+        {% endif %}
+      </div>
     </div>
   </div>
 
-  <!-- Scheduled Jobs -->
+  <!-- Scheduled Jobs Section -->
   <div class="card mb-4">
-    <div class="card-header bg-info text-white position-relative">
-      <h5 class="mb-0">
-        <a href="{% url 'scheduled_jobs' %}" class="stretched-link text-white text-decoration-none">Scheduled Jobs</a>
-      </h5>
-    </div>
-    <div class="card-body p-0">
-      {% if scheduled_jobs %}
-      <div class="table-responsive">
-        <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="small"><tr><th>ID</th><th>Client</th><th class="d-none d-md-table-cell">Description</th><th>Actions</th></tr></thead>
-          <tbody>
-            {% for job in scheduled_jobs %}
-            <tr>
-              <td>{{ job.id }}</td>
-              <td>{{ job.client.name }}</td>
-              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
-              <td>
-                <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                  <form method="post" action="{% url 'mark_completed' job.id %}" class="w-100 w-sm-auto">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-success w-100">Complete</button>
-                  </form>
-                  <form method="post" action="{% url 'complete_and_invoice' job.id %}" class="w-100 w-sm-auto">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-primary w-100">Complete & Invoice</button>
-                  </form>
-                  <form method="post" action="{% url 'mark_completed_and_paid' job.id %}" class="w-100 w-sm-auto">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-dark w-100">Complete & Paid</button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    <div class="card-header bg-info text-white">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <a href="{% url 'scheduled_jobs' %}" class="text-white text-decoration-none">
+            Scheduled Jobs
+            <span class="badge bg-light text-dark ms-2" id="scheduled-count">{{ scheduled_jobs|length }}</span>
+          </a>
+        </h5>
+        <button class="btn btn-link text-white p-0" type="button" data-bs-toggle="collapse" 
+                data-bs-target="#scheduledSection" aria-expanded="true">
+          <i class="bi bi-chevron-down fs-5"></i>
+        </button>
       </div>
-      {% else %}<p class="p-3 mb-0">No scheduled jobs found.</p>{% endif %}
+    </div>
+    <div class="collapse show" id="scheduledSection">
+      <div class="card-body p-0">
+        <div id="scheduled-jobs-container">
+          {% include 'workorders/partials/job_rows.html' with jobs=scheduled_jobs section='scheduled' %}
+        </div>
+        {% if scheduled_jobs|length >= 5 %}
+        <div class="p-3 text-center border-top">
+          <button class="btn btn-outline-primary btn-sm load-more-btn" 
+                  data-section="scheduled" 
+                  data-offset="5"
+                  data-url="{% url 'load_more_workorders' %}">
+            <i class="bi bi-plus-circle me-1"></i>Load 5 More
+            <span class="spinner-border spinner-border-sm ms-2 d-none" role="status"></span>
+          </button>
+        </div>
+        {% endif %}
+      </div>
     </div>
   </div>
 
-  <!-- Completed Jobs -->
+  <!-- Completed Jobs Section -->
   <div class="card mb-4">
-    <div class="card-header bg-warning text-dark position-relative">
-      <h5 class="mb-0">
-        <a href="{% url 'completed_jobs' %}" class="stretched-link text-dark text-decoration-none">Completed Jobs</a>
-      </h5>
-    </div>
-    <div class="card-body p-0">
-      {% if completed_uninvoiced_jobs %}
-      <div class="table-responsive">
-        <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="small"><tr><th>ID</th><th>Client</th><th class="d-none d-md-table-cell">Description</th><th>Actions</th></tr></thead>
-          <tbody>
-            {% for job in completed_uninvoiced_jobs %}
-            <tr>
-              <td>{{ job.id }}</td>
-              <td>{{ job.client.name }}</td>
-              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
-              <td>
-                <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                  <a href="/invoices/create/?work_order={{ job.id }}" class="btn btn-sm btn-success w-100 w-sm-auto">📄 Create Invoice</a>
-                  <form method="post" action="{% url 'mark_paid' job.id %}" class="w-100 w-sm-auto">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-primary w-100">Mark as Paid</button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    <div class="card-header bg-warning text-dark">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <a href="{% url 'completed_jobs' %}" class="text-dark text-decoration-none">
+            Completed Jobs
+            <span class="badge bg-light text-dark ms-2" id="completed-count">{{ completed_uninvoiced_jobs|length }}</span>
+          </a>
+        </h5>
+        <button class="btn btn-link text-dark p-0" type="button" data-bs-toggle="collapse" 
+                data-bs-target="#completedSection" aria-expanded="true">
+          <i class="bi bi-chevron-down fs-5"></i>
+        </button>
       </div>
-      {% else %}<p class="p-3 mb-0">No completed jobs awaiting payment.</p>{% endif %}
+    </div>
+    <div class="collapse show" id="completedSection">
+      <div class="card-body p-0">
+        <div id="completed-jobs-container">
+          {% include 'workorders/partials/job_rows.html' with jobs=completed_uninvoiced_jobs section='completed' %}
+        </div>
+        {% if completed_uninvoiced_jobs|length >= 5 %}
+        <div class="p-3 text-center border-top">
+          <button class="btn btn-outline-primary btn-sm load-more-btn" 
+                  data-section="completed" 
+                  data-offset="5"
+                  data-url="{% url 'load_more_workorders' %}">
+            <i class="bi bi-plus-circle me-1"></i>Load 5 More
+            <span class="spinner-border spinner-border-sm ms-2 d-none" role="status"></span>
+          </button>
+        </div>
+        {% endif %}
+      </div>
     </div>
   </div>
 
-  <!-- Completed – Invoiced or Paid -->
+  <!-- Completed – Invoiced or Paid Section -->
   <div class="card mb-4">
-    <div class="card-header bg-success text-white position-relative">
-      <h5 class="mb-0">
-        <a href="{% url 'completed_jobs' %}" class="stretched-link text-white text-decoration-none">Completed – Invoiced or Paid</a>
-      </h5>
-    </div>
-    <div class="card-body p-0">
-      {% if completed_invoiced_jobs %}
-      <div class="table-responsive">
-        <table class="table table-sm table-striped align-middle mb-0">
-          <thead class="small"><tr><th>ID</th><th>Client</th><th class="d-none d-md-table-cell">Description</th><th>Actions</th></tr></thead>
-          <tbody>
-            {% for job in completed_invoiced_jobs %}
-            <tr>
-              <td>{{ job.id }}</td>
-              <td>{{ job.client.name }}</td>
-              <td class="d-none d-md-table-cell text-truncate" style="max-width:200px;">{{ job.job_description|truncatewords:10 }}</td>
-              <td>
-                <div class="d-flex flex-column flex-sm-row gap-2">
-                  <a href="{% url 'workorder_detail' job.id %}" class="btn btn-sm btn-info w-100 w-sm-auto">View</a>
-                  <a href="{% url 'workorder_edit' job.id %}" class="btn btn-sm btn-warning w-100 w-sm-auto">Edit</a>
-                  {% if job.invoices.exists %}
-                    <a href="{% url 'invoice_detail' job.invoices.first.id %}" class="btn btn-sm btn-outline-success w-100 w-sm-auto">View Invoice</a>
-                  {% endif %}
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    <div class="card-header bg-success text-white">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <a href="{% url 'completed_jobs' %}" class="text-white text-decoration-none">
+            Completed – Invoiced or Paid
+            <span class="badge bg-light text-dark ms-2" id="invoiced-count">{{ completed_invoiced_jobs|length }}</span>
+          </a>
+        </h5>
+        <button class="btn btn-link text-white p-0" type="button" data-bs-toggle="collapse" 
+                data-bs-target="#invoicedSection" aria-expanded="false">
+          <i class="bi bi-chevron-down fs-5"></i>
+        </button>
       </div>
-      {% else %}<p class="p-3 mb-0">No invoiced or paid jobs found.</p>{% endif %}
+    </div>
+    <div class="collapse" id="invoicedSection">
+      <div class="card-body p-0">
+        <div id="invoiced-jobs-container">
+          {% include 'workorders/partials/job_rows.html' with jobs=completed_invoiced_jobs section='invoiced' %}
+        </div>
+        {% if completed_invoiced_jobs|length >= 5 %}
+        <div class="p-3 text-center border-top">
+          <button class="btn btn-outline-primary btn-sm load-more-btn" 
+                  data-section="invoiced" 
+                  data-offset="5"
+                  data-url="{% url 'load_more_workorders' %}">
+            <i class="bi bi-plus-circle me-1"></i>Load 5 More
+            <span class="spinner-border spinner-border-sm ms-2 d-none" role="status"></span>
+          </button>
+        </div>
+        {% endif %}
+      </div>
     </div>
   </div>
 
@@ -184,4 +164,114 @@
     <a href="{% url 'home' %}" class="btn btn-secondary w-100">Back to Dashboard</a>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Handle load more buttons
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('load-more-btn') || e.target.closest('.load-more-btn')) {
+      e.preventDefault();
+      
+      const btn = e.target.classList.contains('load-more-btn') ? e.target : e.target.closest('.load-more-btn');
+      const section = btn.dataset.section;
+      const offset = parseInt(btn.dataset.offset);
+      const url = btn.dataset.url;
+      const spinner = btn.querySelector('.spinner-border');
+      const icon = btn.querySelector('.bi-plus-circle');
+      
+      // Show loading state
+      spinner.classList.remove('d-none');
+      icon.classList.add('d-none');
+      btn.disabled = true;
+      
+      // Make AJAX request
+      fetch(`${url}?section=${section}&offset=${offset}`, {
+        method: 'GET',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.html) {
+          // Append new rows
+          const container = document.getElementById(`${section}-jobs-container`);
+          container.insertAdjacentHTML('beforeend', data.html);
+          
+          // Update count badge
+          const countBadge = document.getElementById(`${section}-count`);
+          const currentCount = parseInt(countBadge.textContent);
+          countBadge.textContent = currentCount + data.count;
+          
+          // Update offset for next load
+          btn.dataset.offset = offset + 5;
+          
+          // Hide button if no more items
+          if (!data.has_more) {
+            btn.style.display = 'none';
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error loading more items:', error);
+        // Show error message
+        btn.insertAdjacentHTML('afterend', '<div class="text-danger small mt-2">Error loading more items. Please try again.</div>');
+      })
+      .finally(() => {
+        // Hide loading state
+        spinner.classList.add('d-none');
+        icon.classList.remove('d-none');
+        btn.disabled = false;
+      });
+    }
+  });
+
+  // Handle collapse icon rotation
+  document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(button => {
+    button.addEventListener('click', function() {
+      const icon = this.querySelector('i');
+      
+      // Toggle icon rotation with a slight delay for smooth animation
+      setTimeout(() => {
+        const target = document.querySelector(this.getAttribute('data-bs-target'));
+        if (target.classList.contains('show')) {
+          icon.style.transform = 'rotate(180deg)';
+        } else {
+          icon.style.transform = 'rotate(0deg)';
+        }
+      }, 150);
+    });
+  });
+});
+</script>
+
+<style>
+/* Smooth icon rotation */
+.card-header i {
+  transition: transform 0.3s ease;
+}
+
+/* Mobile responsive improvements */
+@media (max-width: 768px) {
+  .card-header h5 {
+    font-size: 1rem;
+  }
+  
+  .badge {
+    font-size: 0.7rem;
+  }
+  
+  .load-more-btn {
+    font-size: 0.875rem;
+  }
+}
+
+/* Loading animation */
+.spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+}
+</style>
 {% endblock %}

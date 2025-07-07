@@ -392,3 +392,68 @@ def reset_workorder_invoiced(request, job_id):
         messages.success(request, f"Work Order #{job_id} invoiced status reset.")
         
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('workorder_list')))
+
+@login_required
+def load_more_workorders(request):
+    """AJAX endpoint to load more work orders"""
+    if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+    
+    section = request.GET.get('section')
+    offset = int(request.GET.get('offset', 0))
+    limit = 5
+    
+    # Determine which queryset to use based on section
+    if section == 'pending':
+        jobs = WorkOrder.objects.exclude(events__date__isnull=False)\
+                                .filter(status__in=["pending", "in_progress"])\
+                                .order_by('-updated_at')[offset:offset+limit]
+    elif section == 'scheduled':
+        jobs = WorkOrder.objects.filter(
+            events__date__isnull=False,
+            status__in=["pending", "in_progress"]
+        ).distinct().order_by('-updated_at')[offset:offset+limit]
+    elif section == 'completed':
+        jobs = WorkOrder.objects.filter(
+            status='completed', 
+            invoiced=False
+        ).order_by('-completed_at')[offset:offset+limit]
+    elif section == 'invoiced':
+        jobs = WorkOrder.objects.filter(
+            status='completed', 
+            invoiced=True
+        ).order_by('-completed_at')[offset:offset+limit]
+    else:
+        return JsonResponse({'error': 'Invalid section'}, status=400)
+    
+    # Check if there are more items after this batch
+    has_more = len(jobs) == limit
+    if has_more:
+        # Check if there are actually more items beyond this batch
+        if section == 'pending':
+            total_count = WorkOrder.objects.exclude(events__date__isnull=False)\
+                                          .filter(status__in=["pending", "in_progress"]).count()
+        elif section == 'scheduled':
+            total_count = WorkOrder.objects.filter(
+                events__date__isnull=False,
+                status__in=["pending", "in_progress"]
+            ).distinct().count()
+        elif section == 'completed':
+            total_count = WorkOrder.objects.filter(status='completed', invoiced=False).count()
+        elif section == 'invoiced':
+            total_count = WorkOrder.objects.filter(status='completed', invoiced=True).count()
+        
+        has_more = (offset + limit) < total_count
+    
+    # Render the jobs using the partial template
+    from django.template.loader import render_to_string
+    html = render_to_string('workorders/partials/job_rows.html', {
+        'jobs': jobs,
+        'section': section,
+    }, request=request)
+    
+    return JsonResponse({
+        'html': html,
+        'count': len(jobs),
+        'has_more': has_more,
+    })
