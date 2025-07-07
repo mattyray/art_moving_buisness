@@ -31,19 +31,27 @@
       </div>
       <div class="mt-3">
         <a href="{% url 'client_detail' job.client.id %}" class="btn btn-sm btn-outline-info">
-          <i class="bi bi-person-circle me-1"></i>View Full Client Profile
+          <i class="bi bi-person-circle me-1"></i>View Client
         </a>
         <a href="{% url 'client_edit' job.client.id %}" class="btn btn-sm btn-outline-warning">
-          <i class="bi bi-pencil me-1"></i>Edit Client Info
+          <i class="bi bi-pencil me-1"></i>Edit Client
         </a>
       </div>
     </div>
   </div>
 
-  <!-- Work Order Summary -->
+  <!-- Work Order Summary with Status -->
   <div class="card mb-4">
-    <div class="card-header bg-secondary text-white">
+    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
       <h5 class="mb-0">Work Order #{{ job.id }}</h5>
+      <span class="badge fs-6
+        {% if job.status == 'pending' %}bg-warning text-dark
+        {% elif job.status == 'in_progress' %}bg-info
+        {% elif job.status == 'completed' %}bg-success
+        {% endif %}">
+        {{ job.get_status_display }}
+        {% if job.invoiced %} • Invoiced{% endif %}
+      </span>
     </div>
     <div class="card-body">
       <div class="row">
@@ -52,114 +60,148 @@
           <p><strong>Estimated Cost:</strong> ${{ job.estimated_cost }}</p>
         </div>
         <div class="col-md-6">
-          <p><strong>Current Status:</strong> 
-            <span class="badge 
-              {% if job.status == 'pending' %}bg-secondary
-              {% elif job.status == 'in_progress' %}bg-info
-              {% elif job.status == 'completed' %}bg-success
-              {% endif %}">
-              {{ job.get_status_display }}
-            </span>
-          </p>
-          <p><strong>Created At:</strong> {{ job.created_at|date:"M d, Y g:i A" }}</p>
+          <p><strong>Created:</strong> {{ job.created_at|date:"M d, Y g:i A" }}</p>
           {% if job.completed_at %}
-            <p><strong>Completed At:</strong> {{ job.completed_at|date:"M d, Y g:i A" }}</p>
+            <p><strong>Completed:</strong> {{ job.completed_at|date:"M d, Y g:i A" }}</p>
           {% endif %}
-          <p><strong>Invoiced:</strong> 
-            <span class="badge {% if job.invoiced %}bg-success{% else %}bg-secondary{% endif %}">
-              {% if job.invoiced %}Yes{% else %}No{% endif %}
-            </span>
-          </p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Enhanced Status Management Panel -->
+  <!-- Workflow Actions (Smart/Context-Aware) -->
   <div class="card mb-4">
     <div class="card-header bg-primary text-white">
-      <h5 class="mb-0">Status Management</h5>
+      <h5 class="mb-0">
+        <i class="bi bi-arrow-right-circle me-2"></i>Next Steps
+      </h5>
     </div>
     <div class="card-body">
       
-      <!-- Status Change Buttons -->
-      <div class="mb-4">
-        <h6 class="mb-3">Change Work Order Status:</h6>
-        <div class="d-flex flex-wrap gap-2">
-          
-          <!-- Pending Button -->
+      {% if job.status == 'pending' %}
+        <!-- Pending Job Actions -->
+        <p class="text-muted mb-3">This job is pending. What would you like to do next?</p>
+        <div class="d-grid gap-2 d-md-flex">
+          <a href="{% url 'workorder_edit' job.id %}" class="btn btn-warning btn-lg flex-fill">
+            <i class="bi bi-calendar-plus me-2"></i>Schedule Events
+          </a>
+          <form method="post" action="{% url 'change_workorder_status' job.id %}" class="flex-fill">
+            {% csrf_token %}
+            <input type="hidden" name="new_status" value="completed">
+            <button type="submit" class="btn btn-success btn-lg w-100">
+              <i class="bi bi-check-circle me-2"></i>Mark Completed
+            </button>
+          </form>
+        </div>
+        
+      {% elif job.status == 'in_progress' %}
+        <!-- In Progress Job Actions -->
+        <p class="text-muted mb-3">This job is scheduled and in progress.</p>
+        <div class="d-grid gap-2 d-md-flex">
+          <a href="{% url 'workorder_edit' job.id %}" class="btn btn-warning btn-lg flex-fill">
+            <i class="bi bi-pencil me-2"></i>Edit Schedule
+          </a>
+          <form method="post" action="{% url 'change_workorder_status' job.id %}" class="flex-fill">
+            {% csrf_token %}
+            <input type="hidden" name="new_status" value="completed">
+            <button type="submit" class="btn btn-success btn-lg w-100">
+              <i class="bi bi-check-circle me-2"></i>Mark Completed
+            </button>
+          </form>
+        </div>
+        
+      {% elif job.status == 'completed' and not job.invoiced %}
+        <!-- Completed but Not Invoiced -->
+        <p class="text-muted mb-3">Job completed! Ready to create invoice or mark as paid.</p>
+        <div class="d-grid gap-2 d-md-flex">
+          <a href="/invoices/create/?work_order={{ job.id }}" class="btn btn-success btn-lg flex-fill">
+            <i class="bi bi-receipt me-2"></i>Create Invoice
+          </a>
+          <form method="post" action="{% url 'mark_paid' job.id %}" class="flex-fill">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary btn-lg w-100">
+              <i class="bi bi-cash me-2"></i>Mark as Paid
+            </button>
+          </form>
+        </div>
+        
+      {% elif job.status == 'completed' and job.invoiced %}
+        <!-- Completed and Invoiced -->
+        <div class="alert alert-success d-flex align-items-center mb-3">
+          <i class="bi bi-check-circle-fill me-3 fs-4"></i>
+          <div>
+            <strong>Job Complete!</strong><br>
+            This job is finished and has been invoiced/paid.
+          </div>
+        </div>
+        {% if job.invoices.exists %}
+          <a href="{% url 'invoice_detail' job.invoices.first.id %}" class="btn btn-outline-success">
+            <i class="bi bi-receipt me-1"></i>View Invoice
+          </a>
+        {% endif %}
+      {% endif %}
+      
+    </div>
+  </div>
+
+  <!-- Status Override (Collapsible) -->
+  <div class="card mb-4">
+    <div class="card-header bg-light">
+      <button class="btn btn-link text-decoration-none p-0 text-start w-100" type="button" data-bs-toggle="collapse" data-bs-target="#statusOverride" aria-expanded="false">
+        <i class="bi bi-gear me-2"></i>Status Override & Advanced Options
+        <i class="bi bi-chevron-down float-end"></i>
+      </button>
+    </div>
+    <div class="collapse" id="statusOverride">
+      <div class="card-body">
+        
+        <!-- Status Change Options -->
+        <h6 class="mb-3">Change Status:</h6>
+        <div class="d-flex flex-wrap gap-2 mb-4">
           {% if job.status != 'pending' %}
           <form method="post" action="{% url 'change_workorder_status' job.id %}" class="d-inline">
             {% csrf_token %}
             <input type="hidden" name="new_status" value="pending">
-            <button type="submit" class="btn btn-outline-secondary" 
-                    onclick="return confirm('Move this work order back to Pending status?')">
-              <i class="bi bi-arrow-left me-1"></i>Move to Pending
+            <button type="submit" class="btn btn-outline-secondary btn-sm" 
+                    onclick="return confirm('Move back to Pending status?')">
+              <i class="bi bi-arrow-left me-1"></i>Back to Pending
             </button>
           </form>
           {% endif %}
           
-          <!-- In Progress Button -->
           {% if job.status != 'in_progress' %}
           <form method="post" action="{% url 'change_workorder_status' job.id %}" class="d-inline">
             {% csrf_token %}
             <input type="hidden" name="new_status" value="in_progress">
-            <button type="submit" class="btn btn-outline-info">
+            <button type="submit" class="btn btn-outline-info btn-sm">
               <i class="bi bi-play me-1"></i>Mark In Progress
             </button>
           </form>
           {% endif %}
           
-          <!-- Completed Button -->
           {% if job.status != 'completed' %}
           <form method="post" action="{% url 'change_workorder_status' job.id %}" class="d-inline">
             {% csrf_token %}
             <input type="hidden" name="new_status" value="completed">
-            <button type="submit" class="btn btn-outline-success">
+            <button type="submit" class="btn btn-outline-success btn-sm">
               <i class="bi bi-check-circle me-1"></i>Mark Completed
             </button>
           </form>
           {% endif %}
-          
         </div>
-      </div>
 
-      <!-- Invoiced Status Management -->
-      {% if job.invoiced %}
-      <div class="mb-4">
-        <h6 class="mb-3">Invoice Management:</h6>
+        <!-- Invoice Status Reset -->
+        {% if job.invoiced %}
+        <h6 class="mb-3">Invoice Status:</h6>
         <form method="post" action="{% url 'reset_workorder_invoiced' job.id %}" class="d-inline">
           {% csrf_token %}
-          <button type="submit" class="btn btn-outline-warning"
-                  onclick="return confirm('Reset invoiced status? This will allow the job to appear in uninvoiced lists again.')">
+          <button type="submit" class="btn btn-outline-warning btn-sm"
+                  onclick="return confirm('Reset invoiced status? This will move the job back to uninvoiced lists.')">
             <i class="bi bi-arrow-counterclockwise me-1"></i>Reset Invoiced Status
           </button>
         </form>
-      </div>
-      {% endif %}
-
-      <!-- Quick Actions -->
-      <div>
-        <h6 class="mb-3">Quick Actions:</h6>
-        <div class="d-flex flex-wrap gap-2">
-          <a href="{% url 'workorder_edit' job.id %}" class="btn btn-warning">
-            <i class="bi bi-pencil me-1"></i>Edit Work Order
-          </a>
-          {% if job.status == 'completed' and not job.invoiced %}
-          <a href="/invoices/create/?work_order={{ job.id }}" class="btn btn-success">
-            <i class="bi bi-receipt me-1"></i>Create Invoice
-          </a>
-          {% endif %}
-          <a href="{% url 'complete_and_invoice' job.id %}" class="btn btn-primary">
-            <i class="bi bi-receipt me-1"></i>Complete & Invoice
-          </a>
-          <form method="post" action="{% url 'mark_completed_and_paid' job.id %}" class="d-inline">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-dark">
-              <i class="bi bi-cash me-1"></i>Complete & Mark Paid
-            </button>
-          </form>
-        </div>
+        {% endif %}
+        
       </div>
     </div>
   </div>
@@ -170,19 +212,31 @@
       <h5 class="mb-0">Scheduled Events</h5>
     </div>
     <div class="card-body">
-      <ul class="list-group">
-        {% for event in events %}
-          <li class="list-group-item d-flex justify-content-between align-items-center">
-            <div>
-              <strong>{{ event.get_event_type_display }}:</strong> 
-              {{ event.address }}
+      {% if events %}
+        <div class="row">
+          {% for event in events %}
+          <div class="col-md-6 mb-3">
+            <div class="card border-start border-primary border-3">
+              <div class="card-body py-2">
+                <h6 class="card-title text-primary mb-1">{{ event.get_event_type_display }}</h6>
+                <p class="card-text mb-1 small"><i class="bi bi-calendar3 me-1"></i>{{ event.date|date:"M d, Y" }}</p>
+                <p class="card-text mb-0 small"><i class="bi bi-geo-alt me-1"></i>{{ event.address }}</p>
+              </div>
             </div>
-            <span class="badge bg-primary">{{ event.date|date:"M d, Y" }}</span>
-          </li>
-        {% empty %}
-          <li class="list-group-item">No scheduled events.</li>
-        {% endfor %}
-      </ul>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-center text-muted py-4">
+          <i class="bi bi-calendar-x fs-1 mb-2 d-block"></i>
+          No events scheduled
+          <div class="mt-2">
+            <a href="{% url 'workorder_edit' job.id %}" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-plus me-1"></i>Add Events
+            </a>
+          </div>
+        </div>
+      {% endif %}
     </div>
   </div>
 
@@ -195,16 +249,22 @@
           <h5 class="mb-0">Attachments</h5>
         </div>
         <div class="card-body">
-          <ul class="list-group">
+          {% if attachments %}
             {% for attachment in attachments %}
-              <li class="list-group-item">
-                <a href="{{ attachment.file.url }}">{{ attachment.file.name }}</a>
-                <small class="text-muted d-block">{{ attachment.uploaded_at|date:"M d, Y g:i A" }}</small>
-              </li>
-            {% empty %}
-              <li class="list-group-item">No attachments.</li>
+              <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-paperclip me-2 text-muted"></i>
+                <div class="flex-grow-1">
+                  <a href="{{ attachment.file.url }}" class="text-decoration-none">{{ attachment.file.name }}</a>
+                  <small class="text-muted d-block">{{ attachment.uploaded_at|date:"M d, Y" }}</small>
+                </div>
+              </div>
             {% endfor %}
-          </ul>
+          {% else %}
+            <div class="text-center text-muted py-3">
+              <i class="bi bi-paperclip fs-3 mb-2 d-block"></i>
+              No attachments
+            </div>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -216,44 +276,61 @@
           <h5 class="mb-0">Notes</h5>
         </div>
         <div class="card-body">
-          <ul class="list-group">
+          {% if notes %}
             {% for note in notes %}
-              <li class="list-group-item">
-                {{ note.note }}
-                <small class="text-muted d-block">{{ note.created_at|date:"M d, Y g:i A" }}</small>
-              </li>
-            {% empty %}
-              <li class="list-group-item">No notes.</li>
+              <div class="mb-3 pb-2 border-bottom">
+                <p class="mb-1">{{ note.note }}</p>
+                <small class="text-muted">
+                  <i class="bi bi-clock me-1"></i>{{ note.created_at|date:"M d, Y g:i A" }}
+                </small>
+              </div>
             {% endfor %}
-          </ul>
+          {% else %}
+            <div class="text-center text-muted py-3">
+              <i class="bi bi-sticky fs-3 mb-2 d-block"></i>
+              No notes
+            </div>
+          {% endif %}
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Management Action Buttons -->
-  <div class="mt-4 d-flex flex-column flex-sm-row justify-content-between gap-2">
-    <a href="{% url 'workorder_edit' job.id %}" class="btn btn-outline-primary w-100 w-sm-auto">
-      <i class="bi bi-pencil me-1"></i>Edit Work Order
-    </a>
-    <a href="{% url 'workorder_pdf' job.id %}" class="btn btn-light border d-flex align-items-center gap-2 shadow-sm px-4 py-2 w-100 w-sm-auto" target="_blank" style="border-color: #999;">
-      <i class="bi bi-printer-fill text-primary fs-5"></i>
-      <span class="fw-semibold text-dark">Print Work Order</span>
-    </a>
-    <a href="{% url 'workorder_delete' job.id %}" class="btn btn-outline-danger w-100 w-sm-auto">
-      <i class="bi bi-trash me-1"></i>Delete Work Order
-    </a>
+  <!-- Management Actions -->
+  <div class="card mt-4">
+    <div class="card-header bg-light">
+      <h6 class="mb-0 text-muted">
+        <i class="bi bi-tools me-2"></i>Management
+      </h6>
+    </div>
+    <div class="card-body">
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'workorder_edit' job.id %}" class="btn btn-outline-primary">
+          <i class="bi bi-pencil me-1"></i>Edit
+        </a>
+        <a href="{% url 'workorder_pdf' job.id %}" class="btn btn-outline-secondary" target="_blank">
+          <i class="bi bi-printer me-1"></i>Print
+        </a>
+        <a href="{% url 'workorder_delete' job.id %}" class="btn btn-outline-danger">
+          <i class="bi bi-trash me-1"></i>Delete
+        </a>
+      </div>
+    </div>
   </div>
 
-  <!-- Navigation Buttons -->
+  <!-- Navigation -->
   <div class="text-center mt-4">
-    <a href="{% url 'workorder_list' %}" class="btn btn-secondary w-100 w-sm-auto mb-2">Back to Work Orders</a>
-    <a href="{% url 'home' %}" class="btn btn-secondary w-100 w-sm-auto">Back to Dashboard</a>
+    <a href="{% url 'workorder_list' %}" class="btn btn-secondary me-2">
+      <i class="bi bi-arrow-left me-1"></i>Back to Work Orders
+    </a>
+    <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-house me-1"></i>Dashboard
+    </a>
   </div>
 
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<!-- Optional JS for future interactivity -->
+<!-- Bootstrap JS for collapsible sections -->
 {% endblock %}
