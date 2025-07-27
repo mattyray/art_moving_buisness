@@ -106,20 +106,26 @@ def workorder_calendar_data(request):
     def get_color(wo_id):
         return palette[wo_id % len(palette)]
 
-    # UPDATED: Use select_related and order by daily_order
+    # FIXED: Proper ordering by date first, then daily_order, then scheduled_time
     scheduled_events = Event.objects.select_related('work_order__client')\
                                    .filter(date__isnull=False,
                                           work_order__status__in=["pending", "in_progress"])\
                                    .order_by('date', 'daily_order', 'scheduled_time', 'id')
     
     for evt in scheduled_events:
+        # Build title with order number if it exists
+        title = f"{evt.get_event_type_display()}: {evt.work_order.client.name}"
+        if evt.daily_order:
+            title = f"{evt.daily_order}. {title}"
+        
         events.append({
-            "title": f"{evt.get_event_type_display()}: {evt.work_order.client.name}",
+            "title": title,
             "start": evt.date.isoformat(),
             "color": get_color(evt.work_order.id),
             "url": f"/workorders/detail/{evt.work_order.id}/",
-            "id": evt.id,  # Add event ID
-            "workOrderId": evt.work_order.id,  # Add work order ID
+            "id": evt.id,
+            "workOrderId": evt.work_order.id,
+            "dailyOrder": evt.daily_order or 999,  # Put unordered events last
         })
 
     return JsonResponse(events, safe=False)
