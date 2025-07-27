@@ -1,58 +1,91 @@
+import datetime
 from django.shortcuts import render
-from datetime import datetime, timedelta, date
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
 from workorders.models import Event
-from django.db.models import Q
+import json
 
 
-def parse_mmddyy(date_str):
-    return datetime.strptime(date_str, '%m-%d-%y').date()
-
-def week_detail(request, date):
-    # parse and compute week start/end
-    day   = parse_mmddyy(date)
-    start = day - timedelta(days=day.weekday())
-    end   = start + timedelta(days=6)
-
-    # build a simple list of each date in that week
-    week_days = [start + timedelta(days=i) for i in range(7)]
-
-    # fetch events in the range
-    events = Event.objects.filter(date__range=(start, end))
-
-    # optional filtering
-    q = request.GET.get('q', '')
-    if q:
-        events = events.filter(
-            Q(work_order__client__name__icontains=q) |
-            Q(event_type__icontains=q)
-        )
-
+def week_detail(request, week_str):
+    # Parse week_str (format: mm-dd-yy for the Monday of that week)
+    month, day, year = week_str.split('-')
+    if len(year) == 2:
+        year = '20' + year
+    
+    start = datetime.date(int(year), int(month), int(day))
+    
+    # Calculate the Monday of this week if not already Monday
+    days_since_monday = start.weekday()
+    start = start - datetime.timedelta(days=days_since_monday)
+    
+    query = request.GET.get('q', '')
+    
+    # Get events for the week
+    end = start + datetime.timedelta(days=6)
+    events = Event.objects.filter(
+        date__gte=start,
+        date__lte=end
+    ).select_related('work_order__client').order_by('date', 'daily_order', 'scheduled_time', 'id')
+    
+    if query:
+        events = events.filter(work_order__client__name__icontains=query)
+    
     context = {
         'start': start,
-        'end': end,
-        'week_days': week_days,
         'events': events,
-        'query': q,
+        'query': query,
     }
     return render(request, 'calendar/week_detail.html', context)
 
 
-def day_detail(request, date):
-    # date is mm-dd-yy
-    day = parse_mmddyy(date)
-
-    events = Event.objects.filter(date=day)
-
-    q = request.GET.get('q', '')
-    if q:
-        events = events.filter(
-            Q(work_order__client__name__icontains=q) |
-            Q(event_type__icontains=q)
-        )
-
+def day_detail(request, day_str):
+    # Parse day_str (format: mm-dd-yy)
+    month, day, year = day_str.split('-')
+    if len(year) == 2:
+        year = '20' + year
+    
+    day = datetime.date(int(year), int(month), int(day))
+    query = request.GET.get('q', '')
+    
+    # Get events for this day, ordered by daily_order, then time, then id
+    events = Event.objects.filter(date=day).select_related('work_order__client').order_by('daily_order', 'scheduled_time', 'id')
+    
+    if query:
+        events = events.filter(work_order__client__name__icontains=query)
+    
     context = {
         'day': day,
         'events': events,
-        'query': q,
+        'query': query,
     }
     return render(request, 'calendar/day_detail.html', context)
+
+
+@require_http_methods(["POST"])
+def update_daily_order(request, day_str):
+    """AJAX endpoint to save daily event ordering and times"""
+    try:
+        # Parse the date
+        month, day, year = day_str.split('-')
+        if len(year) == 2:
+            year = '20' + year
+        day_date = datetime.date(int(year), int(month), int(day))
+        
+        data = json.loads(request.body)
+        event_updates = data.get('events', [])
+        
+        # Update each event
+        for update in event_updates:
+            event_id = update.get('id')
+            daily_order = update.get('order')
+            scheduled_time = update.get('time', '').strip()
+            
+            event = Event.objects.get(id=event_id, date=day_date)
+            event.daily_order = daily_order
+            event.scheduled_time = scheduled_time if scheduled_time else None
+            event.save(update_fields=['daily_order', 'scheduled_time'])
+        
+        return JsonResponse({'success': True})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
