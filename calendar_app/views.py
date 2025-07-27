@@ -78,11 +78,19 @@ def update_daily_order(request, day_str):
         for update in event_updates:
             event_id = update.get('id')
             daily_order = update.get('order')
-            scheduled_time = update.get('time', '').strip()
+            scheduled_time = update.get('time')
+            
+            # Handle the time field more safely
+            if scheduled_time:
+                scheduled_time = str(scheduled_time).strip()
+                if not scheduled_time:  # If it's an empty string after stripping
+                    scheduled_time = None
+            else:
+                scheduled_time = None
             
             event = Event.objects.get(id=event_id, date=day_date)
             event.daily_order = daily_order
-            event.scheduled_time = scheduled_time if scheduled_time else None
+            event.scheduled_time = scheduled_time
             event.save(update_fields=['daily_order', 'scheduled_time'])
         
         return JsonResponse({'success': True})
