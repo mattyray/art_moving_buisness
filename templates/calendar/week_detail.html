@@ -32,8 +32,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   async function fetchSources(info, success, fail) {
     try {
+      // Backend now provides colors and proper ordering
       const wo = await fetch("/workorders/calendar-data/workorders/").then(r => r.json());
-      success(wo);  // 🔥 Removed invoice events
+      success(wo);
     } catch (e) {
       console.error("Calendar fetch error:", e);
       fail(e);
