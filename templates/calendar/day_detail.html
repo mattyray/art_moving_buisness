@@ -35,13 +35,13 @@
   background: #495057;
   color: white;
   border-radius: 50%;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   flex-shrink: 0;
 }
 
@@ -83,32 +83,6 @@
   background: #f8d7da;
   color: #721c24;
   border: 1px solid #f5c6cb;
-}
-
-/* Simple event list styling */
-.simple-event-list .event-item {
-  border-left: 4px solid;
-  padding: 8px 12px;
-  margin-bottom: 4px;
-  background: #f8f9fa;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.simple-event-list .order-badge {
-  background: #495057;
-  color: white;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 0.7rem;
-  flex-shrink: 0;
 }
 
 /* Mobile optimizations */
@@ -165,27 +139,7 @@
   <!-- Calendar -->
   <div id="calendar" class="mb-4"></div>
 
-  <!-- Simple Event List for Print -->
-  {% if events %}
-  <div class="simple-event-list mb-4">
-    <h5>Events for {{ day|date:"l, F j, Y" }}</h5>
-    {% for evt in events %}
-      <div class="event-item" style="border-left-color: {{ evt.color }};">
-        <div class="order-badge">{{ evt.display_order }}</div>
-        <div>
-          <strong>{{ evt.get_event_type_display }}</strong> –
-          <a href="{% url 'workorder_detail' evt.work_order.id %}" class="text-decoration-none">
-            {{ evt.work_order.client.name }}
-          </a>
-          {% if evt.scheduled_time %} at {{ evt.scheduled_time|time:"g:i A" }}{% endif %}
-          {% if evt.address %}<br><small class="text-muted">{{ evt.address }}</small>{% endif %}
-        </div>
-      </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  <!-- Daily Schedule -->
+  <!-- Daily Schedule - SINGLE EVENT LIST -->
   <div class="daily-schedule">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h4>Daily Schedule for {{ day|date:"l, F j, Y" }}</h4>
@@ -255,7 +209,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const dayStr = "{{ day|date:'m-d-y' }}";
   let hasUnsavedChanges = false;
   
-  // Initialize calendar (using backend-provided colors)
+  // Initialize calendar (using backend-provided colors and ordering)
   function toMMDDYY(iso) {
     let [Y, M, D] = iso.split('-');
     return `${M}-${D}-${Y.slice(-2)}`;
@@ -264,7 +218,7 @@ document.addEventListener("DOMContentLoaded", function () {
   async function fetchSources(info, success, fail) {
     try {
       const wo = await fetch("/workorders/calendar-data/workorders/").then(r => r.json());
-      success(wo); // Colors are now provided by backend
+      success(wo); // Backend provides colors and proper ordering
     } catch (e) {
       console.error("Calendar fetch error:", e);
       fail(e);
@@ -286,6 +240,7 @@ document.addEventListener("DOMContentLoaded", function () {
       initialDate: "{{ day|date:'Y-m-d' }}",
       events: fetchSources,
       eventClick: goToEventUrl,
+      eventOrder: "dailyOrder", // Use the dailyOrder field for sorting
       datesSet: function(info) {
         const currentDate = "{{ day|date:'Y-m-d' }}";
         const newDate = info.start.toISOString().split('T')[0];
@@ -369,11 +324,14 @@ document.addEventListener("DOMContentLoaded", function () {
     .then(response => response.json())
     .then(data => {
       if (data.success) {
-        showStatus('Schedule saved successfully!', 'success');
+        showStatus('Schedule saved successfully! All calendar views updated.', 'success');
         hasUnsavedChanges = false;
         saveBtn.style.display = 'none';
-        // Reload to update the simple event list
-        setTimeout(() => location.reload(), 1000);
+        
+        // Refresh the calendar widget to show new ordering
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
       } else {
         showStatus('Error saving schedule: ' + data.error, 'error');
       }
@@ -395,7 +353,7 @@ document.addEventListener("DOMContentLoaded", function () {
     
     setTimeout(() => {
       statusEl.style.display = 'none';
-    }, 3000);
+    }, 5000);
   }
 
   function getCookie(name) {
