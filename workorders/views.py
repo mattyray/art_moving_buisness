@@ -98,16 +98,19 @@ def workorder_pdf(request, pk):
 def workorder_calendar_data(request):
     """Returns only pending and scheduled events for calendar display, excluding completed jobs."""
     events = []
+    
+    # Color palette - moved from JavaScript to Python
     palette = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
                "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
     
     def get_color(wo_id):
         return palette[wo_id % len(palette)]
 
-    # OPTIMIZED: Use select_related to reduce queries
+    # UPDATED: Use select_related and order by daily_order
     scheduled_events = Event.objects.select_related('work_order__client')\
                                    .filter(date__isnull=False,
-                                          work_order__status__in=["pending", "in_progress"])
+                                          work_order__status__in=["pending", "in_progress"])\
+                                   .order_by('date', 'daily_order', 'scheduled_time', 'id')
     
     for evt in scheduled_events:
         events.append({
@@ -115,10 +118,11 @@ def workorder_calendar_data(request):
             "start": evt.date.isoformat(),
             "color": get_color(evt.work_order.id),
             "url": f"/workorders/detail/{evt.work_order.id}/",
+            "id": evt.id,  # Add event ID
+            "workOrderId": evt.work_order.id,  # Add work order ID
         })
 
     return JsonResponse(events, safe=False)
-
 # ===== LIST VIEWS (OPTIMIZED) =====
 @login_required
 def workorder_list(request):
