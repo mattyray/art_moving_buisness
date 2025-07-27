@@ -6,6 +6,13 @@ from workorders.models import Event
 import json
 
 
+def get_event_color(work_order_id):
+    """Generate consistent colors for work orders"""
+    palette = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+               "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
+    return palette[work_order_id % len(palette)]
+
+
 def week_detail(request, week_str):
     # Parse week_str (format: mm-dd-yy for the Monday of that week)
     month, day, year = week_str.split('-')
@@ -30,9 +37,15 @@ def week_detail(request, week_str):
     if query:
         events = events.filter(work_order__client__name__icontains=query)
     
+    # Add colors to events
+    events_with_colors = []
+    for event in events:
+        event.color = get_event_color(event.work_order.id)
+        events_with_colors.append(event)
+    
     context = {
         'start': start,
-        'events': events,
+        'events': events_with_colors,
         'query': query,
     }
     return render(request, 'calendar/week_detail.html', context)
@@ -53,9 +66,16 @@ def day_detail(request, day_str):
     if query:
         events = events.filter(work_order__client__name__icontains=query)
     
+    # Add colors and order numbers to events
+    events_with_data = []
+    for i, event in enumerate(events, 1):
+        event.color = get_event_color(event.work_order.id)
+        event.display_order = i
+        events_with_data.append(event)
+    
     context = {
         'day': day,
-        'events': events,
+        'events': events_with_data,
         'query': query,
     }
     return render(request, 'calendar/day_detail.html', context)
@@ -97,5 +117,3 @@ def update_daily_order(request, day_str):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
-    
-    
