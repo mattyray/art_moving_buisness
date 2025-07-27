@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   async function fetchSources(info, success, fail) {
     try {
-      // Backend now provides colors and proper ordering
+      // Backend provides colors and proper ordering
       const wo = await fetch("/workorders/calendar-data/workorders/").then(r => r.json());
       success(wo);
     } catch (e) {
@@ -61,13 +61,14 @@ document.addEventListener("DOMContentLoaded", function () {
     height: "auto",
     initialDate: "{{ start|date:'Y-m-d' }}",
     events: fetchSources,
+    eventOrder: "dailyOrder", // FIXED: Use dailyOrder field for event ordering
     eventClick: goToEventUrl,
     dateClick: goToDayDetail
   });
 
   calendar.render();
 
-  // Make day headers clickable → route to day detail page
+  // Make day headers clickable
   setTimeout(() => {
     document.querySelectorAll(".fc-col-header-cell").forEach((th, i) => {
       const start = new Date("{{ start|date:'Y-m-d' }}");
