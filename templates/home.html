@@ -54,6 +54,8 @@
     </div>
   </div>
 {% endblock %}
+
+
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -73,7 +75,7 @@ document.addEventListener("DOMContentLoaded", function () {
     height: 'auto',
     events: async function(fetchInfo, success, fail) {
       try {
-        // Backend now provides colors and proper ordering
+        // Backend provides colors and proper ordering
         const workOrders = await fetch("/workorders/calendar-data/workorders/").then(r => r.json());
         success(workOrders);
       } catch (e) {
@@ -81,6 +83,7 @@ document.addEventListener("DOMContentLoaded", function () {
         fail(e);
       }
     },
+    eventOrder: "dailyOrder", // Use dailyOrder field for event ordering
     eventClick: info => {
       if (info.event.url) {
         window.location.href = info.event.url;
