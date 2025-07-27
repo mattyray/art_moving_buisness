@@ -24,8 +24,6 @@ class WorkOrder(models.Model):
     completed_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    # ✅ New fields
     invoiced = models.BooleanField(default=False)
 
     def __str__(self):
@@ -53,6 +51,11 @@ class Event(models.Model):
     event_type = models.CharField(max_length=30, choices=EVENT_TYPES)
     address = models.CharField(max_length=255, blank=True)
     date = models.DateField(blank=True, null=True)
+    daily_order = models.PositiveIntegerField(blank=True, null=True, help_text='Order of this event within the day')
+    scheduled_time = models.TimeField(blank=True, null=True, help_text='Scheduled time for this event')
+
+    class Meta:
+        ordering = ['date', 'daily_order', 'scheduled_time', 'id']
 
     def __str__(self):
         return f"{self.get_event_type_display()} for WorkOrder #{self.work_order.id}"
