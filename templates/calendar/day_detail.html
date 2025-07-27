@@ -14,7 +14,7 @@
   border-radius: 8px;
   margin-bottom: 8px;
   padding: 12px;
-  cursor: move;
+  cursor: grab;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
@@ -24,6 +24,10 @@
 
 .event-card:hover {
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.event-card:active {
+  cursor: grabbing;
 }
 
 .event-card.sortable-ghost {
@@ -47,23 +51,26 @@
 
 .drag-handle {
   color: #6c757d;
-  cursor: grab;
   font-size: 1.2em;
   padding: 8px;
   min-width: 40px;
   text-align: center;
 }
 
-.drag-handle:active {
-  cursor: grabbing;
-}
-
 .event-time {
   min-width: 120px;
 }
 
+.event-time input {
+  cursor: text; /* Override draggable cursor for input */
+}
+
 .event-details {
   flex: 1;
+}
+
+.event-details a {
+  cursor: pointer; /* Override draggable cursor for links */
 }
 
 .schedule-status {
@@ -254,11 +261,10 @@ document.addEventListener("DOMContentLoaded", function () {
     calendar.render();
   }
 
-  // Initialize drag & drop
+  // Initialize drag & drop - WHOLE CARD IS NOW DRAGGABLE
   const sortableList = document.getElementById('sortable-events');
   if (sortableList) {
     Sortable.create(sortableList, {
-      handle: '.drag-handle',
       animation: 150,
       ghostClass: 'sortable-ghost',
       onEnd: function(evt) {
