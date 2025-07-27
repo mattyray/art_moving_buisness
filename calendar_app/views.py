@@ -97,3 +97,5 @@ def update_daily_order(request, day_str):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
+    
+    
