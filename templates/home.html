@@ -54,7 +54,6 @@
     </div>
   </div>
 {% endblock %}
-
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -74,8 +73,9 @@ document.addEventListener("DOMContentLoaded", function () {
     height: 'auto',
     events: async function(fetchInfo, success, fail) {
       try {
+        // Backend now provides colors and proper ordering
         const workOrders = await fetch("/workorders/calendar-data/workorders/").then(r => r.json());
-        success(workOrders);  // ✅ Only load Work Order events
+        success(workOrders);
       } catch (e) {
         console.error("Calendar fetch error:", e);
         fail(e);
