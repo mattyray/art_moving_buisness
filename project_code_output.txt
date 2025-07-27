@@ -325,8 +325,6 @@ class WorkOrder(models.Model):
     completed_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    # ✅ New fields
     invoiced = models.BooleanField(default=False)
 
     def __str__(self):
@@ -354,6 +352,11 @@ class Event(models.Model):
     event_type = models.CharField(max_length=30, choices=EVENT_TYPES)
     address = models.CharField(max_length=255, blank=True)
     date = models.DateField(blank=True, null=True)
+    daily_order = models.PositiveIntegerField(blank=True, null=True, help_text='Order of this event within the day')
+    scheduled_time = models.TimeField(blank=True, null=True, help_text='Scheduled time for this event')
+
+    class Meta:
+        ordering = ['date', 'daily_order', 'scheduled_time', 'id']
 
     def __str__(self):
         return f"{self.get_event_type_display()} for WorkOrder #{self.work_order.id}"
@@ -375,7 +378,6 @@ class JobNote(models.Model):
 
     def __str__(self):
         return f"Note {self.id} for WorkOrder {self.work_order.id}"
-
 
 ===== workorders/views.py =====
 # workorders/views.py - Optimized but keeping single file structure
@@ -478,27 +480,37 @@ def workorder_pdf(request, pk):
 def workorder_calendar_data(request):
     """Returns only pending and scheduled events for calendar display, excluding completed jobs."""
     events = []
+    
+    # Color palette - moved from JavaScript to Python
     palette = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
                "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
     
     def get_color(wo_id):
         return palette[wo_id % len(palette)]
 
-    # OPTIMIZED: Use select_related to reduce queries
+    # FIXED: Proper ordering by date first, then daily_order, then scheduled_time
     scheduled_events = Event.objects.select_related('work_order__client')\
                                    .filter(date__isnull=False,
-                                          work_order__status__in=["pending", "in_progress"])
+                                          work_order__status__in=["pending", "in_progress"])\
+                                   .order_by('date', 'daily_order', 'scheduled_time', 'id')
     
     for evt in scheduled_events:
+        # Build title with order number if it exists
+        title = f"{evt.get_event_type_display()}: {evt.work_order.client.name}"
+        if evt.daily_order:
+            title = f"{evt.daily_order}. {title}"
+        
         events.append({
-            "title": f"{evt.get_event_type_display()}: {evt.work_order.client.name}",
+            "title": title,
             "start": evt.date.isoformat(),
             "color": get_color(evt.work_order.id),
             "url": f"/workorders/detail/{evt.work_order.id}/",
+            "id": evt.id,
+            "workOrderId": evt.work_order.id,
+            "dailyOrder": evt.daily_order or 999,  # Put unordered events last
         })
 
     return JsonResponse(events, safe=False)
-
 # ===== LIST VIEWS (OPTIMIZED) =====
 @login_required
 def workorder_list(request):
@@ -1813,25 +1825,21 @@ from django.conf import settings
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("accounts/", include("accounts.urls")),         # Custom signup and logout routes
-    path("accounts/", include("django.contrib.auth.urls")),  # Login, password reset, etc.
+    path("accounts/", include("accounts.urls")),
+    path("accounts/", include("django.contrib.auth.urls")),
     path("", include("pages.urls")),           
-    path("workorders/", include("workorders.urls")),  # Work Orders routes
+    path("workorders/", include("workorders.urls")),
     path("clients/", include("clients.urls")),
     path("invoices/", include("invoices.urls")),
-    path("workorders/", include("workorders.urls")),
-    path("invoices/", include("invoices.urls")),
     path('calendar/', include('calendar_app.urls', namespace='calendar_app')),
-
-
 ]
-
 
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    # ✅ ADD THIS LINE - this is what's missing!
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-
-
+    
 
 ===== django_project/asgi.py =====
 """
@@ -2086,6 +2094,7 @@ application = get_wsgi_application()
   </div>
 {% endblock %}
 
+
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -2105,13 +2114,15 @@ document.addEventListener("DOMContentLoaded", function () {
     height: 'auto',
     events: async function(fetchInfo, success, fail) {
       try {
+        // Backend provides colors and proper ordering
         const workOrders = await fetch("/workorders/calendar-data/workorders/").then(r => r.json());
-        success(workOrders);  // ✅ Only load Work Order events
+        success(workOrders);
       } catch (e) {
         console.error("Calendar fetch error:", e);
         fail(e);
       }
     },
+    eventOrder: "dailyOrder", // Use dailyOrder field for event ordering
     eventClick: info => {
       if (info.event.url) {
         window.location.href = info.event.url;
@@ -2129,10 +2140,134 @@ document.addEventListener("DOMContentLoaded", function () {
 </script>
 {% endblock %}
 
-
 ===== templates/calendar/day_detail.html =====
 {% extends "base.html" %}
 {% block title %}Day: {{ day|date:"F j, Y" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.daily-schedule {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.event-card {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  padding: 12px;
+  cursor: grab;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-left: 4px solid;
+}
+
+.event-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.event-card:active {
+  cursor: grabbing;
+}
+
+.event-card.sortable-ghost {
+  opacity: 0.5;
+  background: #f8f9fa;
+}
+
+.order-number {
+  background: #495057;
+  color: white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.drag-handle {
+  color: #6c757d;
+  font-size: 1.2em;
+  padding: 8px;
+  min-width: 40px;
+  text-align: center;
+}
+
+.event-time {
+  min-width: 120px;
+}
+
+.event-time input {
+  cursor: text; /* Override draggable cursor for input */
+}
+
+.event-details {
+  flex: 1;
+}
+
+.event-details a {
+  cursor: pointer; /* Override draggable cursor for links */
+}
+
+.schedule-status {
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  display: none;
+}
+
+.schedule-status.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.schedule-status.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .event-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .drag-handle {
+    order: -1;
+    align-self: center;
+    padding: 12px;
+  }
+  
+  .event-time {
+    min-width: auto;
+  }
+  
+  .event-time input {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}
+
+@media print {
+  .drag-handle, #save-schedule, .schedule-status {
+    display: none !important;
+  }
+  .event-card {
+    cursor: default;
+  }
+}
+</style>
+{% endblock %}
 
 {% block content %}
   {% now "m-d-y" as today %}
@@ -2152,35 +2287,79 @@ document.addEventListener("DOMContentLoaded", function () {
   </form>
 
   <!-- Calendar -->
-  <div id="calendar" class="mb-5"></div>
+  <div id="calendar" class="mb-4"></div>
 
-  <!-- Printable Details -->
-  <div id="printable-details" class="card shadow-sm p-4">
-    <h4 class="mb-3">Events for {{ day|date:"l, F j, Y" }}</h4>
+  <!-- Daily Schedule - SINGLE EVENT LIST -->
+  <div class="daily-schedule">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4>Daily Schedule for {{ day|date:"l, F j, Y" }}</h4>
+      <button class="btn btn-sm btn-success" id="save-schedule" style="display: none;">
+        <i class="bi bi-floppy me-1"></i>Save Schedule
+      </button>
+    </div>
+    
+    <!-- Status Messages -->
+    <div id="schedule-status" class="schedule-status"></div>
     
     {% if events %}
-      <ul class="list-group mb-3">
+      <div id="sortable-events">
         {% for evt in events %}
-          <li class="list-group-item">
-            <strong>{{ evt.get_event_type_display }}</strong> –
-            <a href="{% url 'workorder_detail' evt.work_order.id %}">
-              {{ evt.work_order.client.name }}
-            </a><br>
-            <small class="text-muted">{{ evt.address }}</small>
-          </li>
+        <div class="event-card" data-event-id="{{ evt.id }}" style="border-left-color: {{ evt.color }};">
+          <div class="order-number">{{ evt.display_order }}</div>
+          
+          <div class="drag-handle">
+            <i class="bi bi-grip-vertical"></i>
+          </div>
+          
+          <div class="event-time">
+            <input type="time" 
+                   class="form-control form-control-sm time-input" 
+                   value="{% if evt.scheduled_time %}{{ evt.scheduled_time|time:'H:i' }}{% endif %}"
+                   placeholder="Set time">
+          </div>
+          
+          <div class="event-details">
+            <div class="fw-bold text-primary">{{ evt.get_event_type_display }}</div>
+            <div>
+              <a href="{% url 'workorder_detail' evt.work_order.id %}" class="text-decoration-none">
+                {{ evt.work_order.client.name }}
+              </a>
+            </div>
+            {% if evt.address %}
+              <small class="text-muted">{{ evt.address }}</small>
+            {% endif %}
+          </div>
+        </div>
         {% endfor %}
-      </ul>
+      </div>
     {% else %}
-      <p>No events scheduled.</p>
+      <div class="text-center text-muted py-5">
+        <i class="bi bi-calendar-x fs-1 mb-2 d-block"></i>
+        <p>No events scheduled for this day.</p>
+      </div>
     {% endif %}
-
-    <button onclick="window.print()" class="btn btn-secondary mt-4">🖨️ Print This Page</button>
   </div>
+
+  <!-- Print Button -->
+  {% if events %}
+  <div class="text-center mt-4">
+    <button onclick="window.print()" class="btn btn-secondary">
+      <i class="bi bi-printer me-1"></i>Print Schedule
+    </button>
+  </div>
+  {% endif %}
 {% endblock %}
 
 {% block extra_js %}
+<!-- Include SortableJS -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+  const dayStr = "{{ day|date:'m-d-y' }}";
+  let hasUnsavedChanges = false;
+  
+  // Initialize calendar (using backend-provided colors and ordering)
   function toMMDDYY(iso) {
     let [Y, M, D] = iso.split('-');
     return `${M}-${D}-${Y.slice(-2)}`;
@@ -2189,7 +2368,7 @@ document.addEventListener("DOMContentLoaded", function () {
   async function fetchSources(info, success, fail) {
     try {
       const wo = await fetch("/workorders/calendar-data/workorders/").then(r => r.json());
-      success(wo);
+      success(wo); // Backend provides colors and proper ordering
     } catch (e) {
       console.error("Calendar fetch error:", e);
       fail(e);
@@ -2204,28 +2383,150 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   const calendarEl = document.getElementById("calendar");
-  if (!calendarEl) return;
-
-  const calendar = new FullCalendar.Calendar(calendarEl, {
-    initialView: "dayGridDay",
-    height: "auto",
-    initialDate: "{{ day|date:'Y-m-d' }}",
-    events: fetchSources,
-    eventClick: goToEventUrl,
-    // ✅ Add navigation handler to redirect to new date
-    datesSet: function(info) {
-      const currentDate = "{{ day|date:'Y-m-d' }}";
-      const newDate = info.start.toISOString().split('T')[0];
-      
-      // Only redirect if the date actually changed (not on initial load)
-      if (newDate !== currentDate) {
-        const mmddyy = toMMDDYY(newDate);
-        window.location.href = `/calendar/day/${mmddyy}/`;
+  if (calendarEl) {
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: "dayGridDay",
+      height: "auto",
+      initialDate: "{{ day|date:'Y-m-d' }}",
+      events: fetchSources,
+      eventClick: goToEventUrl,
+      eventOrder: "dailyOrder", // Use the dailyOrder field for sorting
+      datesSet: function(info) {
+        const currentDate = "{{ day|date:'Y-m-d' }}";
+        const newDate = info.start.toISOString().split('T')[0];
+        
+        if (newDate !== currentDate) {
+          const mmddyy = toMMDDYY(newDate);
+          window.location.href = `/calendar/day/${mmddyy}/`;
+        }
       }
+    });
+    calendar.render();
+  }
+
+  // Initialize drag & drop - WHOLE CARD IS NOW DRAGGABLE
+  const sortableList = document.getElementById('sortable-events');
+  if (sortableList) {
+    Sortable.create(sortableList, {
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      onEnd: function(evt) {
+        updateOrderNumbers();
+        markAsChanged();
+      }
+    });
+  }
+
+  // Update order numbers after drag
+  function updateOrderNumbers() {
+    const cards = document.querySelectorAll('.event-card');
+    cards.forEach((card, index) => {
+      const orderNumber = card.querySelector('.order-number');
+      if (orderNumber) {
+        orderNumber.textContent = index + 1;
+      }
+    });
+  }
+
+  // Handle time input changes
+  document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('time-input')) {
+      markAsChanged();
     }
   });
 
-  calendar.render();
+  // Save button
+  document.getElementById('save-schedule')?.addEventListener('click', saveSchedule);
+
+  function markAsChanged() {
+    hasUnsavedChanges = true;
+    document.getElementById('save-schedule').style.display = 'inline-block';
+  }
+
+  function saveSchedule() {
+    const events = [];
+    const eventCards = document.querySelectorAll('.event-card');
+    
+    eventCards.forEach((card, index) => {
+      const timeInput = card.querySelector('.time-input');
+      events.push({
+        id: card.dataset.eventId,
+        order: index + 1,
+        time: timeInput.value || null
+      });
+    });
+
+    // Show loading state
+    const saveBtn = document.getElementById('save-schedule');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
+    saveBtn.disabled = true;
+
+    fetch(`/calendar/day/${dayStr}/update-order/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken'),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({events: events})
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        showStatus('Schedule saved successfully! All calendar views updated.', 'success');
+        hasUnsavedChanges = false;
+        saveBtn.style.display = 'none';
+        
+        // Refresh the calendar widget to show new ordering
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        showStatus('Error saving schedule: ' + data.error, 'error');
+      }
+    })
+    .catch(error => {
+      showStatus('Error saving schedule. Please try again.', 'error');
+    })
+    .finally(() => {
+      saveBtn.innerHTML = originalText;
+      saveBtn.disabled = false;
+    });
+  }
+
+  function showStatus(message, type) {
+    const statusEl = document.getElementById('schedule-status');
+    statusEl.textContent = message;
+    statusEl.className = `schedule-status ${type}`;
+    statusEl.style.display = 'block';
+    
+    setTimeout(() => {
+      statusEl.style.display = 'none';
+    }, 5000);
+  }
+
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  // Warn about unsaved changes
+  window.addEventListener('beforeunload', function(e) {
+    if (hasUnsavedChanges) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
 });
 </script>
 {% endblock %}
@@ -2265,8 +2566,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   async function fetchSources(info, success, fail) {
     try {
+      // Backend provides colors and proper ordering
       const wo = await fetch("/workorders/calendar-data/workorders/").then(r => r.json());
-      success(wo);  // 🔥 Removed invoice events
+      success(wo);
     } catch (e) {
       console.error("Calendar fetch error:", e);
       fail(e);
@@ -2293,13 +2595,14 @@ document.addEventListener("DOMContentLoaded", function () {
     height: "auto",
     initialDate: "{{ start|date:'Y-m-d' }}",
     events: fetchSources,
+    eventOrder: "dailyOrder", // FIXED: Use dailyOrder field for event ordering
     eventClick: goToEventUrl,
     dateClick: goToDayDetail
   });
 
   calendar.render();
 
-  // Make day headers clickable → route to day detail page
+  // Make day headers clickable
   setTimeout(() => {
     document.querySelectorAll(".fc-col-header-cell").forEach((th, i) => {
       const start = new Date("{{ start|date:'Y-m-d' }}");
@@ -2321,7 +2624,6 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 {% endblock %}
-
 
 ===== templates/invoices/invoice_paid.html =====
 {% extends "base.html" %}
@@ -4990,7 +5292,7 @@ document.addEventListener("DOMContentLoaded", function () {
     </div>
   </div>
 
-  <!-- Scheduled Events --><!-- Scheduled Events -->
+  <!-- Scheduled Events -->
   <div class="card mb-4">
       <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Scheduled Events</h5>
@@ -5165,7 +5467,34 @@ document.addEventListener("DOMContentLoaded", function () {
 {% endblock %}
 
 {% block extra_js %}
-<!-- Bootstrap JS for collapsible sections -->
+<script>
+// Function to handle event deletion confirmation
+function confirmDeleteEvent(eventId, eventType) {
+    // Set the event type in the modal
+    document.getElementById('eventTypeToDelete').textContent = eventType;
+    
+    // Set the form action URL to the delete endpoint
+    const deleteForm = document.getElementById('deleteEventForm');
+    deleteForm.action = `{% url 'workorder_detail' job.id %}`.replace('/detail/{{ job.id }}/', `/detail/{{ job.id }}/delete-event/${eventId}/`);
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('deleteEventModal'));
+    modal.show();
+}
+
+// Handle successful deletion (optional - for better UX)
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteForm = document.getElementById('deleteEventForm');
+    if (deleteForm) {
+        deleteForm.addEventListener('submit', function(e) {
+            // You could add loading state here if desired
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Deleting...';
+            submitBtn.disabled = true;
+        });
+    }
+});
+</script>
 {% endblock %}
 
 ===== templates/workorders/workorder_form.html =====
