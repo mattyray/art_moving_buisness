@@ -9,6 +9,7 @@ gunicorn==23.0.0
 numpy==2.2.5
 packaging==25.0
 pandas==2.2.3
+Pillow==11.0.0
 psycopg2-binary==2.9.10
 python-dateutil==2.9.0.post0
 pytz==2025.2
@@ -20,5 +21,3 @@ tzdata==2025.2
 whitenoise==6.9.0
 weasyprint==60.2
 pydyf==0.8.0
-
-
