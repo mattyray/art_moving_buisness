@@ -28,6 +28,79 @@
     #empty-form-template {
       display: none;
     }
+    
+    /* File grid styles */
+    .file-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .file-card {
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 1rem;
+      text-align: center;
+      background: white;
+      transition: box-shadow 0.2s;
+    }
+
+    .file-card:hover {
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .file-thumbnail {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 4px;
+      margin-bottom: 0.5rem;
+    }
+
+    .file-icon {
+      font-size: 4rem;
+      color: #6c757d;
+      margin-bottom: 0.5rem;
+    }
+
+    .file-name {
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+      word-break: break-word;
+    }
+
+    .file-info {
+      font-size: 0.8rem;
+      color: #6c757d;
+      margin-bottom: 0.5rem;
+    }
+
+    .file-actions {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+
+    @media (max-width: 768px) {
+      .file-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 0.5rem;
+      }
+      
+      .file-card {
+        padding: 0.75rem;
+      }
+      
+      .file-thumbnail {
+        height: 100px;
+      }
+      
+      .file-icon {
+        font-size: 3rem;
+      }
+    }
   </style>
 {% endblock %}
 
@@ -142,7 +215,51 @@
         <h5 class="mb-0">Attachments</h5>
       </div>
       <div class="card-body">
-        {{ attachment_form|crispy }}
+        <!-- Upload Form -->
+        <div class="mb-3">
+          {{ attachment_form|crispy }}
+        </div>
+        
+        <!-- Existing Attachments (Edit Mode Only) -->
+        {% if job %}
+          {% if job.attachments.all %}
+            <hr>
+            <h6>Current Files</h6>
+            <div class="file-grid">
+              {% for attachment in job.attachments.all %}
+                <div class="file-card">
+                  <!-- Image Thumbnail or File Icon -->
+                  {% if attachment.file_type == 'image' and attachment.thumbnail %}
+                    <img src="{{ attachment.thumbnail.url }}" alt="{{ attachment.file.name }}" class="file-thumbnail">
+                  {% else %}
+                    <div class="file-icon">
+                      <i class="{{ attachment.get_file_icon }}"></i>
+                    </div>
+                  {% endif %}
+                  
+                  <!-- File Name -->
+                  <div class="file-name">{{ attachment.file.name|truncatechars:25 }}</div>
+                  
+                  <!-- File Info -->
+                  <div class="file-info">
+                    {{ attachment.file_size|filesizeformat }}<br>
+                    {{ attachment.uploaded_at|date:"M d, Y" }}
+                  </div>
+                  
+                  <!-- Actions -->
+                  <div class="file-actions">
+                    <a href="{{ attachment.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                      <i class="bi bi-eye"></i>
+                    </a>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDeleteFile({{ attachment.id }}, '{{ attachment.file.name }}')">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endif %}
       </div>
     </div>
 
@@ -264,6 +381,29 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="button" class="btn btn-primary" id="saveEvent">Add Event</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete File Modal -->
+<div class="modal fade" id="deleteFileModal" tabindex="-1" aria-labelledby="deleteFileModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteFileModalLabel">Delete File</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete "<span id="fileNameToDelete"></span>"?</p>
+        <p class="text-muted small">This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form id="deleteFileForm" method="post" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Delete File</button>
+        </form>
       </div>
     </div>
   </div>
@@ -392,6 +532,15 @@ function removeEvent(tempId) {
       </div>
     `);
   }
+}
+
+// Function to handle file deletion confirmation
+function confirmDeleteFile(attachmentId, fileName) {
+    document.getElementById('fileNameToDelete').textContent = fileName;
+    const deleteForm = document.getElementById('deleteFileForm');
+    deleteForm.action = `/workorders/attachment/delete/${attachmentId}/`;
+    const modal = new bootstrap.Modal(document.getElementById('deleteFileModal'));
+    modal.show();
 }
 </script>
 {% endblock %}
