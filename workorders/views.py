@@ -129,6 +129,7 @@ def workorder_calendar_data(request):
         })
 
     return JsonResponse(events, safe=False)
+
 # ===== LIST VIEWS (OPTIMIZED) =====
 @login_required
 def workorder_list(request):
@@ -196,6 +197,7 @@ def workorder_detail(request, job_id):
                 attachment = attachment_form.save(commit=False)
                 attachment.work_order = workorder
                 attachment.save()
+                messages.success(request, f'File "{uploaded.name}" uploaded successfully.')
             return redirect('workorder_detail', job_id=workorder.id)
 
         elif 'note_submit' in request.POST:
@@ -206,6 +208,7 @@ def workorder_detail(request, job_id):
                     note = note_form.save(commit=False)
                     note.work_order = workorder
                     note.save()
+                    messages.success(request, 'Note added successfully.')
             return redirect('workorder_detail', job_id=workorder.id)
 
     return render(request, 'workorders/workorder_detail.html', {
@@ -216,6 +219,26 @@ def workorder_detail(request, job_id):
         'attachment_form': attachment_form,
         'note_form': note_form,
     })
+
+# ===== FILE MANAGEMENT =====
+@login_required
+def delete_attachment(request, attachment_id):
+    """Delete a file attachment"""
+    attachment = get_object_or_404(JobAttachment, id=attachment_id)
+    work_order = attachment.work_order
+    
+    if request.method == 'POST':
+        filename = attachment.file.name
+        # Delete the files from storage
+        if attachment.file:
+            attachment.file.delete(save=False)
+        if attachment.thumbnail:
+            attachment.thumbnail.delete(save=False)
+        
+        attachment.delete()
+        messages.success(request, f'File "{filename}" deleted successfully.')
+        
+    return redirect('workorder_detail', job_id=work_order.id)
 
 # ===== REST OF YOUR ORIGINAL VIEWS (UNCHANGED) =====
 @login_required
@@ -332,9 +355,6 @@ def workorder_edit(request, job_id):
         'note_form': note_form,
         'job': workorder,
     })
-
-# Keep all your other existing views exactly as they were...
-# (mark_completed, mark_paid, etc. - unchanged)
 
 @login_required
 def workorder_delete(request, job_id):
@@ -483,7 +503,6 @@ def load_more_workorders(request):
         'has_more': has_more,
     })
 
-# Add this to your workorders/views.py file
 @login_required
 def delete_event(request, job_id, event_id):
     """Delete a specific event from a work order"""
