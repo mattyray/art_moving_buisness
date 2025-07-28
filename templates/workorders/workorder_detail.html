@@ -3,6 +3,82 @@
 
 {% block title %}Work Order Detail{% endblock %}
 
+{% block extra_css %}
+<style>
+.file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.file-card {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  background: white;
+  transition: box-shadow 0.2s;
+}
+
+.file-card:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.file-thumbnail {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.file-icon {
+  font-size: 4rem;
+  color: #6c757d;
+  margin-bottom: 0.5rem;
+}
+
+.file-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  word-break: break-word;
+}
+
+.file-info {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-bottom: 0.5rem;
+}
+
+.file-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .file-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.5rem;
+  }
+  
+  .file-card {
+    padding: 0.75rem;
+  }
+  
+  .file-thumbnail {
+    height: 100px;
+  }
+  
+  .file-icon {
+    font-size: 3rem;
+  }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-4">
 
@@ -289,29 +365,80 @@
     </div>
   </div>
 
-  <!-- Attachments & Notes -->
+  <!-- Attachments & Notes Section -->
   <div class="row">
     <!-- Attachments -->
-    <div class="col-md-6">
-      <div class="card h-100">
-        <div class="card-header bg-success text-white">
+    <div class="col-12">
+      <div class="card mb-4">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
           <h5 class="mb-0">Attachments</h5>
+          <button class="btn btn-light btn-sm" data-bs-toggle="collapse" data-bs-target="#uploadForm" aria-expanded="false">
+            <i class="bi bi-plus me-1"></i>Upload File
+          </button>
         </div>
-        <div class="card-body">
-          {% if attachments %}
-            {% for attachment in attachments %}
-              <div class="d-flex align-items-center mb-2">
-                <i class="bi bi-paperclip me-2 text-muted"></i>
-                <div class="flex-grow-1">
-                  <a href="{{ attachment.file.url }}" class="text-decoration-none">{{ attachment.file.name }}</a>
-                  <small class="text-muted d-block">{{ attachment.uploaded_at|date:"M d, Y" }}</small>
+        
+        <!-- Upload Form (Collapsible) -->
+        <div class="collapse" id="uploadForm">
+          <div class="card-body border-bottom">
+            <form method="post" enctype="multipart/form-data">
+              {% csrf_token %}
+              <div class="row align-items-end">
+                <div class="col-md-8">
+                  {{ attachment_form|crispy }}
+                </div>
+                <div class="col-md-4">
+                  <button type="submit" name="attachment_submit" class="btn btn-success w-100">
+                    <i class="bi bi-upload me-1"></i>Upload
+                  </button>
                 </div>
               </div>
-            {% endfor %}
+            </form>
+          </div>
+        </div>
+        
+        <!-- File Grid -->
+        <div class="card-body">
+          {% if attachments %}
+            <div class="file-grid">
+              {% for attachment in attachments %}
+                <div class="file-card">
+                  <!-- Image Thumbnail or File Icon -->
+                  {% if attachment.file_type == 'image' and attachment.thumbnail %}
+                    <img src="{{ attachment.thumbnail.url }}" alt="{{ attachment.file.name }}" class="file-thumbnail">
+                  {% else %}
+                    <div class="file-icon">
+                      <i class="{{ attachment.get_file_icon }}"></i>
+                    </div>
+                  {% endif %}
+                  
+                  <!-- File Name -->
+                  <div class="file-name">{{ attachment.file.name|truncatechars:25 }}</div>
+                  
+                  <!-- File Info -->
+                  <div class="file-info">
+                    {{ attachment.file_size|filesizeformat }}<br>
+                    {{ attachment.uploaded_at|date:"M d, Y" }}
+                  </div>
+                  
+                  <!-- Actions -->
+                  <div class="file-actions">
+                    <a href="{{ attachment.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                      <i class="bi bi-eye"></i>
+                    </a>
+                    <button class="btn btn-sm btn-outline-danger" onclick="confirmDeleteFile({{ attachment.id }}, '{{ attachment.file.name }}')">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
           {% else %}
-            <div class="text-center text-muted py-3">
-              <i class="bi bi-paperclip fs-3 mb-2 d-block"></i>
-              No attachments
+            <div class="text-center text-muted py-5">
+              <i class="bi bi-paperclip fs-1 mb-2 d-block"></i>
+              <p>No attachments yet</p>
+              <button class="btn btn-outline-success btn-sm" data-bs-toggle="collapse" data-bs-target="#uploadForm">
+                <i class="bi bi-plus me-1"></i>Upload First File
+              </button>
             </div>
           {% endif %}
         </div>
@@ -319,25 +446,52 @@
     </div>
 
     <!-- Notes -->
-    <div class="col-md-6">
-      <div class="card h-100">
-        <div class="card-header bg-warning text-dark">
+    <div class="col-12">
+      <div class="card mb-4">
+        <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
           <h5 class="mb-0">Notes</h5>
+          <button class="btn btn-dark btn-sm" data-bs-toggle="collapse" data-bs-target="#noteForm" aria-expanded="false">
+            <i class="bi bi-plus me-1"></i>Add Note
+          </button>
         </div>
+        
+        <!-- Note Form (Collapsible) -->
+        <div class="collapse" id="noteForm">
+          <div class="card-body border-bottom">
+            <form method="post">
+              {% csrf_token %}
+              <div class="row align-items-end">
+                <div class="col-md-8">
+                  {{ note_form|crispy }}
+                </div>
+                <div class="col-md-4">
+                  <button type="submit" name="note_submit" class="btn btn-warning w-100">
+                    <i class="bi bi-plus me-1"></i>Add Note
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+        
+        <!-- Notes List -->
         <div class="card-body">
           {% if notes %}
             {% for note in notes %}
-              <div class="mb-3 pb-2 border-bottom">
-                <p class="mb-1">{{ note.note }}</p>
+              <div class="mb-3 pb-3 {% if not forloop.last %}border-bottom{% endif %}">
+                <p class="mb-2">{{ note.note }}</p>
                 <small class="text-muted">
                   <i class="bi bi-clock me-1"></i>{{ note.created_at|date:"M d, Y g:i A" }}
                 </small>
               </div>
             {% endfor %}
           {% else %}
-            <div class="text-center text-muted py-3">
-              <i class="bi bi-sticky fs-3 mb-2 d-block"></i>
-              No notes
+            <div class="text-center text-muted py-4">
+              <i class="bi bi-sticky fs-1 mb-2 d-block"></i>
+              <p>No notes yet</p>
+              <button class="btn btn-outline-warning btn-sm" data-bs-toggle="collapse" data-bs-target="#noteForm">
+                <i class="bi bi-plus me-1"></i>Add First Note
+              </button>
             </div>
           {% endif %}
         </div>
@@ -378,30 +532,66 @@
   </div>
 
 </div>
+
+<!-- Delete File Modal -->
+<div class="modal fade" id="deleteFileModal" tabindex="-1" aria-labelledby="deleteFileModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteFileModalLabel">Delete File</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete "<span id="fileNameToDelete"></span>"?</p>
+        <p class="text-muted small">This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form id="deleteFileForm" method="post" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Delete File</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 // Function to handle event deletion confirmation
 function confirmDeleteEvent(eventId, eventType) {
-    // Set the event type in the modal
     document.getElementById('eventTypeToDelete').textContent = eventType;
-    
-    // Set the form action URL to the delete endpoint
     const deleteForm = document.getElementById('deleteEventForm');
     deleteForm.action = `{% url 'workorder_detail' job.id %}`.replace('/detail/{{ job.id }}/', `/detail/{{ job.id }}/delete-event/${eventId}/`);
-    
-    // Show the modal
     const modal = new bootstrap.Modal(document.getElementById('deleteEventModal'));
+    modal.show();
+}
+
+// Function to handle file deletion confirmation
+function confirmDeleteFile(attachmentId, fileName) {
+    document.getElementById('fileNameToDelete').textContent = fileName;
+    const deleteForm = document.getElementById('deleteFileForm');
+    deleteForm.action = `/workorders/attachment/delete/${attachmentId}/`;
+    const modal = new bootstrap.Modal(document.getElementById('deleteFileModal'));
     modal.show();
 }
 
 // Handle successful deletion (optional - for better UX)
 document.addEventListener('DOMContentLoaded', function() {
-    const deleteForm = document.getElementById('deleteEventForm');
-    if (deleteForm) {
-        deleteForm.addEventListener('submit', function(e) {
-            // You could add loading state here if desired
+    const deleteEventForm = document.getElementById('deleteEventForm');
+    const deleteFileForm = document.getElementById('deleteFileForm');
+    
+    if (deleteEventForm) {
+        deleteEventForm.addEventListener('submit', function(e) {
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Deleting...';
+            submitBtn.disabled = true;
+        });
+    }
+    
+    if (deleteFileForm) {
+        deleteFileForm.addEventListener('submit', function(e) {
             const submitBtn = this.querySelector('button[type="submit"]');
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Deleting...';
             submitBtn.disabled = true;
