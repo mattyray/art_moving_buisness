@@ -31,5 +31,6 @@ urlpatterns = [
 
     path('detail/<int:job_id>/delete-event/<int:event_id>/', views.delete_event, name='delete_event'),
 
-
+    # File management
+    path('attachment/delete/<int:attachment_id>/', views.delete_attachment, name='delete_attachment'),
 ]
