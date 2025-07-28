@@ -66,14 +66,25 @@ EventFormSet = inlineformset_factory(
 )
 
 class JobAttachmentForm(forms.ModelForm):
-    file = forms.FileField(required=False)
+    file = forms.FileField(
+        required=False,
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': '.pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt'
+        }),
+        help_text='Allowed: PDF, Images (JPG/PNG/GIF), Word docs, Text files. Max 10MB.'
+    )
 
     class Meta:
         model = JobAttachment
         fields = ['file']
 
 class JobNoteForm(forms.ModelForm):
-    note = forms.CharField(required=False, widget=forms.Textarea, label="Note")
+    note = forms.CharField(
+        required=False, 
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}), 
+        label="Note"
+    )
 
     class Meta:
         model = JobNote
