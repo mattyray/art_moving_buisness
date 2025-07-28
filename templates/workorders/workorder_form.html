@@ -264,14 +264,35 @@
     </div>
 
     <!-- Notes -->
-    <div class="card mb-4">
-      <div class="card-header bg-warning text-dark">
-        <h5 class="mb-0">Notes</h5>
-      </div>
-      <div class="card-body">
-        {{ note_form|crispy }}
-      </div>
-    </div>
+    <!-- Notes -->
+        <div class="card mb-4">
+          <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">Notes</h5>
+          </div>
+          <div class="card-body">
+            <!-- Show existing notes (Edit mode only) -->
+            {% if job and job.notes.all %}
+              <h6 class="mb-3">Existing Notes</h6>
+              <div class="mb-4">
+                {% for note in job.notes.all %}
+                  <div class="card mb-2">
+                    <div class="card-body py-2">
+                      <p class="mb-1">{{ note.note }}</p>
+                      <small class="text-muted">
+                        <i class="bi bi-clock me-1"></i>{{ note.created_at|date:"M d, Y g:i A" }}
+                      </small>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+              <hr>
+              <h6 class="mb-3">Add New Note</h6>
+            {% endif %}
+            
+            <!-- Add note form -->
+            {{ note_form|crispy }}
+          </div>
+        </div>
 
     <!-- Submit Buttons -->
     <div class="d-flex flex-column flex-lg-row justify-content-end gap-2 mb-4">
