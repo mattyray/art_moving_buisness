@@ -1,7 +1,12 @@
 <!-- Desktop Table Rows Only -->
 {% for job in jobs %}
 <tr class="job-row" data-job-id="{{ job.id }}">
-  <td>{{ job.id }}</td>
+  <td>
+    {{ job.id }}
+    {% if job.attachments.exists %}
+      <i class="bi bi-paperclip text-muted ms-1" title="Has attachments"></i>
+    {% endif %}
+  </td>
   <td>{{ job.client.name }}</td>
   <td class="d-none d-lg-table-cell text-truncate" style="max-width:200px;">
     {{ job.job_description|truncatewords:8 }}
