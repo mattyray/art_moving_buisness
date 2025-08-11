@@ -14,7 +14,7 @@
   border-radius: 8px;
   margin-bottom: 8px;
   padding: 12px;
-  cursor: grab;
+  cursor: default; /* Changed from grab - only handle should be grabbable */
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
@@ -24,10 +24,6 @@
 
 .event-card:hover {
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.event-card:active {
-  cursor: grabbing;
 }
 
 .event-card.sortable-ghost {
@@ -51,10 +47,24 @@
 
 .drag-handle {
   color: #6c757d;
-  font-size: 1.2em;
+  font-size: 1.4em;
   padding: 8px;
   min-width: 40px;
   text-align: center;
+  cursor: grab;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.drag-handle:hover {
+  background-color: #f8f9fa;
+  color: #495057;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+  background-color: #e9ecef;
 }
 
 .event-time {
@@ -62,7 +72,7 @@
 }
 
 .event-time input {
-  cursor: text; /* Override draggable cursor for input */
+  cursor: text;
 }
 
 .event-details {
@@ -70,7 +80,7 @@
 }
 
 .event-details a {
-  cursor: pointer; /* Override draggable cursor for links */
+  cursor: pointer;
 }
 
 .schedule-status {
@@ -92,26 +102,51 @@
   border: 1px solid #f5c6cb;
 }
 
-/* Mobile optimizations */
+/* Mobile optimizations - Much more compact */
 @media (max-width: 768px) {
   .event-card {
-    flex-direction: column;
-    align-items: stretch;
+    padding: 8px;
     gap: 8px;
+    margin-bottom: 6px;
+  }
+  
+  .order-number {
+    width: 24px;
+    height: 24px;
+    font-size: 0.8rem;
   }
   
   .drag-handle {
-    order: -1;
-    align-self: center;
-    padding: 12px;
+    min-width: 32px;
+    padding: 6px;
+    font-size: 1.2em;
   }
   
   .event-time {
-    min-width: auto;
+    min-width: 80px;
   }
   
   .event-time input {
-    font-size: 16px; /* Prevents zoom on iOS */
+    font-size: 14px;
+    padding: 4px 6px;
+    height: 32px;
+  }
+  
+  .event-details {
+    font-size: 0.9rem;
+  }
+  
+  .event-details .fw-bold {
+    font-size: 0.95rem;
+    margin-bottom: 2px;
+  }
+  
+  .event-details a {
+    font-size: 0.85rem;
+  }
+  
+  .event-details small {
+    font-size: 0.75rem;
   }
 }
 
@@ -261,10 +296,11 @@ document.addEventListener("DOMContentLoaded", function () {
     calendar.render();
   }
 
-  // Initialize drag & drop - WHOLE CARD IS NOW DRAGGABLE
+  // Initialize drag & drop - ONLY DRAG HANDLE IS DRAGGABLE
   const sortableList = document.getElementById('sortable-events');
   if (sortableList) {
     Sortable.create(sortableList, {
+      handle: '.drag-handle', // Only the drag handle can be used to drag
       animation: 150,
       ghostClass: 'sortable-ghost',
       onEnd: function(evt) {
