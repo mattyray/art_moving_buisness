@@ -220,6 +220,43 @@ def workorder_detail(request, job_id):
         'note_form': note_form,
     })
 
+# ===== NOTE MANAGEMENT VIEWS =====
+@login_required
+def edit_note(request, job_id, note_id):
+    """Edit a specific note via AJAX"""
+    workorder = get_object_or_404(WorkOrder, id=job_id)
+    note = get_object_or_404(JobNote, id=note_id, work_order=workorder)
+    
+    if request.method == 'POST':
+        note_text = request.POST.get('note', '').strip()
+        if note_text:
+            note.note = note_text
+            note.save()
+            return JsonResponse({
+                'success': True,
+                'note': {
+                    'id': note.id,
+                    'text': note.note,
+                    'created_at': note.created_at.strftime('%b %d, %Y %I:%M %p')
+                }
+            })
+        else:
+            return JsonResponse({'success': False, 'error': 'Note cannot be empty'})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+@login_required
+def delete_note(request, job_id, note_id):
+    """Delete a specific note"""
+    workorder = get_object_or_404(WorkOrder, id=job_id)
+    note = get_object_or_404(JobNote, id=note_id, work_order=workorder)
+    
+    if request.method == 'POST':
+        note.delete()
+        return JsonResponse({'success': True})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
 # ===== FILE MANAGEMENT =====
 @login_required
 def delete_attachment(request, attachment_id):
