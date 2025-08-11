@@ -691,7 +691,6 @@
   </div>
 </div>
 {% endblock %}
-
 {% block extra_js %}
 <script>
 // Function to handle event deletion confirmation
@@ -774,7 +773,12 @@ function saveNote(noteId) {
         },
         body: `note=${encodeURIComponent(textarea.value)}`
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             // Update the display text
@@ -787,10 +791,11 @@ function saveNote(noteId) {
             // Show success message
             showToast('Note updated successfully', 'success');
         } else {
-            showToast('Error updating note: ' + data.error, 'error');
+            showToast('Error updating note: ' + (data.error || 'Unknown error'), 'error');
         }
     })
     .catch(error => {
+        console.error('Error updating note:', error);
         showToast('Error updating note. Please try again.', 'error');
     })
     .finally(() => {
@@ -820,12 +825,33 @@ function deleteNote(noteId) {
             'X-CSRFToken': csrfToken,
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Delete response status:', response.status);
+        
+        // Check if response is ok (status 200-299)
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        // Try to parse as JSON, but handle cases where it might not be JSON
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            // If response isn't JSON, assume success if status is ok
+            console.log('Response is not JSON, assuming success');
+            return { success: true };
+        }
+    })
     .then(data => {
+        console.log('Delete response data:', data);
+        
         if (data.success) {
             // Remove the note from the DOM
             const noteItem = document.querySelector(`[data-note-id="${noteId}"]`);
-            noteItem.remove();
+            if (noteItem) {
+                noteItem.remove();
+            }
             
             showToast('Note deleted successfully', 'success');
             
@@ -834,21 +860,24 @@ function deleteNote(noteId) {
             if (remainingNotes.length === 0) {
                 // Show the "no notes" message
                 const notesContainer = document.querySelector('.card-body:has(.note-item)');
-                notesContainer.innerHTML = `
-                    <div class="text-center text-muted py-4">
-                        <i class="bi bi-sticky fs-1 mb-2 d-block"></i>
-                        <p>No notes yet</p>
-                        <button class="btn btn-outline-warning btn-sm" data-bs-toggle="collapse" data-bs-target="#noteForm">
-                            <i class="bi bi-plus me-1"></i>Add First Note
-                        </button>
-                    </div>
-                `;
+                if (notesContainer) {
+                    notesContainer.innerHTML = `
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-sticky fs-1 mb-2 d-block"></i>
+                            <p>No notes yet</p>
+                            <button class="btn btn-outline-warning btn-sm" data-bs-toggle="collapse" data-bs-target="#noteForm">
+                                <i class="bi bi-plus me-1"></i>Add First Note
+                            </button>
+                        </div>
+                    `;
+                }
             }
         } else {
-            showToast('Error deleting note', 'error');
+            showToast('Error deleting note: ' + (data.error || 'Unknown error'), 'error');
         }
     })
     .catch(error => {
+        console.error('Error deleting note:', error);
         showToast('Error deleting note. Please try again.', 'error');
     });
 }
