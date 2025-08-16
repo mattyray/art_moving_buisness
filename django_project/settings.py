@@ -119,30 +119,33 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# ✅ Cloudinary Configuration
+# ✅ Cloudinary Configuration - UPDATED FOR ALL FILE TYPES
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': env('CLOUDINARY_CLOUD_NAME', default=''),
     'API_KEY': env('CLOUDINARY_API_KEY', default=''),
     'API_SECRET': env('CLOUDINARY_API_SECRET', default=''),
+    'SECURE': True,
+    'ALLOWED_FORMATS': ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt'],
+    'RESOURCE_TYPE': 'auto',
 }
 
-# Configure cloudinary
+# Configure cloudinary - UPDATED
 cloudinary.config(
     cloud_name=env('CLOUDINARY_CLOUD_NAME', default=''),
     api_key=env('CLOUDINARY_API_KEY', default=''),
     api_secret=env('CLOUDINARY_API_SECRET', default=''),
-    secure=True
+    secure=True,
+    resource_type='auto'
 )
 
-# ✅ Storage Configuration - FIXED VERSION
+# ✅ Storage Configuration 
 if not DEBUG:
     # Production: Use Cloudinary + Fixed Static Files Storage
     STORAGES = {
         "default": {
-            "BACKEND": "workorders.storage.CustomCloudinaryStorage",  # ← NEW - points to our custom storage
+            "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
         },
         "staticfiles": {
-            # FIXED: Use CompressedStaticFilesStorage instead of CompressedManifestStaticFilesStorage
             "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
         },
     }
