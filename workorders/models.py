@@ -104,7 +104,7 @@ class JobAttachment(models.Model):
 
     def __str__(self):
         return f"Attachment {self.id} for WorkOrder {self.work_order.id}"
-    
+        
     def save(self, *args, **kwargs):
         print(f"🔧 JobAttachment.save() called for file: {self.file.name if self.file else 'No file'}")
         
@@ -132,18 +132,29 @@ class JobAttachment(models.Model):
             
             print(f"🏷️ File type set to: {self.file_type}")
             
-            # Create thumbnail for images only
+            # Create thumbnail for images AFTER saving the main file
             if self.file_type == 'image' and not self.thumbnail:
                 try:
-                    print(f"🖼️ Attempting to create thumbnail for image")
-                    self.create_thumbnail()
+                    print(f"🖼️ Will create thumbnail after saving main file")
+                    # Store that we need to create thumbnail, but do it after save
+                    self._create_thumbnail_after_save = True
                 except Exception as e:
-                    print(f"⚠️ Warning: Could not create thumbnail: {e}")
+                    print(f"⚠️ Warning: Could not prepare thumbnail: {e}")
         
         print(f"💾 Saving JobAttachment to database")
         super().save(*args, **kwargs)
+        
+        # Create thumbnail AFTER the main file is saved
+        if hasattr(self, '_create_thumbnail_after_save') and self._create_thumbnail_after_save:
+            try:
+                print(f"🖼️ Creating thumbnail after main file save")
+                self.create_thumbnail()
+                # Remove the flag
+                del self._create_thumbnail_after_save
+            except Exception as e:
+                print(f"⚠️ Warning: Could not create thumbnail after save: {e}")
+        
         print(f"✅ JobAttachment saved successfully with ID: {self.id}")
-    
     def create_thumbnail(self):
         if not self.file:
             return
