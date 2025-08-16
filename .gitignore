@@ -4,3 +4,21 @@ db.sqlite3
 .DS_Store
 docker-compose-prod.yml
 .env venv/
+.env
+# .gitignore (add these lines if missing)
+.env
+.env.local
+.env.production
+*.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+pip-log.txt
+.DS_Store
+.coverage
+.pytest_cache/
+staticfiles/
+media/
