@@ -132,7 +132,7 @@ class JobAttachment(models.Model):
             
             print(f"🏷️ File type set to: {self.file_type}")
             
-            # Create thumbnail for images (enabled in production now)
+            # Create thumbnail for images only
             if self.file_type == 'image' and not self.thumbnail:
                 try:
                     print(f"🖼️ Attempting to create thumbnail for image")

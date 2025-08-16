@@ -139,7 +139,7 @@ if not DEBUG:
     # Production: Use Cloudinary + Fixed Static Files Storage
     STORAGES = {
         "default": {
-            "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+            "BACKEND": "workorders.storage.CustomCloudinaryStorage",  # ← NEW - points to our custom storage
         },
         "staticfiles": {
             # FIXED: Use CompressedStaticFilesStorage instead of CompressedManifestStaticFilesStorage

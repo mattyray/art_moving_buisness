@@ -9,6 +9,7 @@ from django.db.models import Q
 from django.template.loader import render_to_string
 from weasyprint import HTML
 from django.conf import settings
+from django.core.exceptions import ValidationError  # ← ADDED THIS IMPORT
 
 from .models import WorkOrder, Event, JobAttachment, JobNote
 from .forms import WorkOrderForm, EventFormSet, JobAttachmentForm, JobNoteForm
