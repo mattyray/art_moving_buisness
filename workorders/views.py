@@ -8,6 +8,7 @@ from django.contrib import messages
 from django.db.models import Q
 from django.template.loader import render_to_string
 from weasyprint import HTML
+from django.conf import settings
 
 from .models import WorkOrder, Event, JobAttachment, JobNote
 from .forms import WorkOrderForm, EventFormSet, JobAttachmentForm, JobNoteForm
@@ -174,10 +175,10 @@ def completed_jobs_view(request):
     }
     return render(request, 'workorders/completed_jobs.html', context)
 
-# ===== DETAIL VIEW (OPTIMIZED) =====
+# ===== DETAIL VIEW (OPTIMIZED WITH FILE UPLOAD FIX) =====
 @login_required
 def workorder_detail(request, job_id):
-    """OPTIMIZED: Detail view with prefetched data"""
+    """OPTIMIZED: Detail view with prefetched data and file upload debugging"""
     # Use optimized query to get work order with all related data
     workorder = get_object_or_404(WorkOrderQueries.get_optimized_base(), id=job_id)
     
@@ -193,11 +194,39 @@ def workorder_detail(request, job_id):
         if 'attachment_submit' in request.POST:
             attachment_form = JobAttachmentForm(request.POST, request.FILES)
             uploaded = request.FILES.get('file')
-            if attachment_form.is_valid() and uploaded:
+            
+            # DEBUGGING FOR FILE UPLOAD ISSUES
+            print(f"🔍 File upload debug:")
+            print(f"  - Files in request: {list(request.FILES.keys())}")
+            print(f"  - File object: {uploaded}")
+            print(f"  - File size: {uploaded.size if uploaded else 'No file'}")
+            print(f"  - File name: {uploaded.name if uploaded else 'No file'}")
+            print(f"  - Form is valid: {attachment_form.is_valid()}")
+            if not attachment_form.is_valid():
+                print(f"  - Form errors: {attachment_form.errors}")
+            
+            if attachment_form.is_valid() and uploaded and uploaded.size > 0:
                 attachment = attachment_form.save(commit=False)
                 attachment.work_order = workorder
-                attachment.save()
-                messages.success(request, f'File "{uploaded.name}" uploaded successfully.')
+                
+                # MORE DEBUGGING BEFORE SAVE
+                print(f"  - About to save attachment with file: {attachment.file}")
+                print(f"  - File size before save: {attachment.file.size if attachment.file else 'No file'}")
+                
+                try:
+                    attachment.save()
+                    messages.success(request, f'File "{uploaded.name}" uploaded successfully.')
+                except Exception as e:
+                    print(f"❌ Error saving attachment: {e}")
+                    messages.error(request, f'Error uploading file: {str(e)}')
+            else:
+                if not uploaded:
+                    messages.error(request, 'No file was selected.')
+                elif uploaded.size == 0:
+                    messages.error(request, 'The selected file is empty.')
+                else:
+                    messages.error(request, 'Invalid file upload.')
+                    
             return redirect('workorder_detail', job_id=workorder.id)
 
         elif 'note_submit' in request.POST:
@@ -296,10 +325,14 @@ def workorder_create(request):
 
             if attachment_form.is_valid():
                 uploaded = request.FILES.get('file')
-                if uploaded:
+                if uploaded and uploaded.size > 0:
                     attachment = attachment_form.save(commit=False)
                     attachment.work_order = workorder
-                    attachment.save()
+                    try:
+                        attachment.save()
+                    except Exception as e:
+                        print(f"Error saving attachment in create: {e}")
+                        messages.error(request, f'Error uploading file: {str(e)}')
 
             if note_form.is_valid():
                 text = note_form.cleaned_data.get('note', '').strip()
@@ -354,10 +387,14 @@ def workorder_edit(request, job_id):
 
             if attachment_form.is_valid():
                 uploaded = request.FILES.get('file')
-                if uploaded:
+                if uploaded and uploaded.size > 0:
                     attachment = attachment_form.save(commit=False)
                     attachment.work_order = workorder
-                    attachment.save()
+                    try:
+                        attachment.save()
+                    except Exception as e:
+                        print(f"Error saving attachment in edit: {e}")
+                        messages.error(request, f'Error uploading file: {str(e)}')
 
             if note_form.is_valid():
                 text = note_form.cleaned_data.get('note', '').strip()

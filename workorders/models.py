@@ -107,6 +107,10 @@ class JobAttachment(models.Model):
     
     def save(self, *args, **kwargs):
         if self.file:
+            # Ensure file has content and is not empty
+            if not hasattr(self.file, 'size') or self.file.size == 0:
+                raise ValidationError("Empty file cannot be uploaded")
+                
             self.file_size = self.file.size
             
             # Set file type based on extension
@@ -120,9 +124,12 @@ class JobAttachment(models.Model):
             else:
                 self.file_type = 'text'
             
-            # Create thumbnail for images
-            if self.file_type == 'image' and not self.thumbnail:
-                self.create_thumbnail()
+            # Only create thumbnail for images in development to avoid issues in production
+            if self.file_type == 'image' and not self.thumbnail and settings.DEBUG:
+                try:
+                    self.create_thumbnail()
+                except Exception as e:
+                    print(f"Warning: Could not create thumbnail: {e}")
         
         super().save(*args, **kwargs)
     
@@ -141,7 +148,8 @@ class JobAttachment(models.Model):
             
             from django.core.files.base import ContentFile
             self.thumbnail.save(thumb_name, ContentFile(thumb_io.read()), save=False)
-        except Exception:
+        except Exception as e:
+            print(f"Error creating thumbnail: {e}")
             pass  # Skip thumbnail creation if it fails
 
     def get_file_icon(self):
