@@ -27,9 +27,9 @@ class CustomCloudinaryStorage(MediaCloudinaryStorage):
                 result = cloudinary.uploader.upload(
                     content,
                     resource_type="raw",  # This is the key!
-                    public_id=os.path.splitext(name)[0],  # Use filename without extension
-                    use_filename=True,
-                    unique_filename=True
+                    public_id=name,  # Use the full name with path
+                    use_filename=False,
+                    unique_filename=False
                 )
                 print(f"✅ Raw file uploaded successfully: {result.get('public_id')}")
                 return result['public_id']
@@ -37,3 +37,19 @@ class CustomCloudinaryStorage(MediaCloudinaryStorage):
             except Exception as e:
                 print(f"❌ Error uploading raw file: {e}")
                 raise e
+
+    def url(self, name):
+        """Override URL generation to handle raw files correctly"""
+        try:
+            # Determine if this is an image or raw file based on extension
+            ext = os.path.splitext(name)[1].lower() if name else ''
+            
+            if ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp']:
+                # Images use default URL generation
+                return super().url(name)
+            else:
+                # Raw files need resource_type="raw"
+                return cloudinary.CloudinaryImage(name).build_url(resource_type="raw")
+        except Exception as e:
+            print(f"Error building URL for {name}: {e}")
+            return None

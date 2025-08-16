@@ -184,16 +184,27 @@ class JobAttachment(models.Model):
             return False
 
     def get_file_url(self):
-        """Safely get file URL, return None if file doesn't exist"""
+        """Get the correct URL for file type - images vs raw files"""
         try:
-            if self.file and hasattr(self.file, 'url'):
+            if self.file and hasattr(self.file, 'public_id') and self.file.public_id:
+                # For Cloudinary files, build the correct URL based on file type
+                if self.file_type == 'image':
+                    # Images use /image/upload/ path
+                    return cloudinary.CloudinaryImage(self.file.public_id).build_url()
+                else:
+                    # Documents, PDFs, text files use /raw/upload/ path
+                    return cloudinary.CloudinaryImage(self.file.public_id).build_url(
+                        resource_type="raw"
+                    )
+            elif self.file and hasattr(self.file, 'url'):
+                # Fallback to regular file URL (for local storage)
                 return self.file.url
-        except:
-            pass
+        except Exception as e:
+            print(f"Error getting file URL: {e}")
         return None
 
     def get_thumbnail_url(self):
-        """Get optimized thumbnail URL - Cloudinary or local"""
+        """Get optimized thumbnail URL - only for images"""
         if self.file_type == 'image':
             try:
                 # First try Cloudinary transformation if available
@@ -212,7 +223,7 @@ class JobAttachment(models.Model):
         return None
 
     def get_display_url(self):
-        """Get optimized display URL - Cloudinary or original"""
+        """Get optimized display URL - same as file URL for documents"""
         if self.file_type == 'image':
             try:
                 if hasattr(self.file, 'public_id') and self.file.public_id:
@@ -222,6 +233,7 @@ class JobAttachment(models.Model):
                     )
             except:
                 pass
+        # For documents/PDFs/text, just return the regular file URL
         return self.get_file_url()
 
 
