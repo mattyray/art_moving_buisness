@@ -21,3 +21,6 @@ tzdata==2025.2
 whitenoise==6.9.0
 weasyprint==60.2
 pydyf==0.8.0
+
+cloudinary==1.44.1
+django-cloudinary-storage==0.3.0

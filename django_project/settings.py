@@ -1,6 +1,9 @@
 from environ import Env
 from pathlib import Path
 import os
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
 # Initialize environment variables
 env = Env()
@@ -34,6 +37,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    # Third-party packages - CLOUDINARY MUST BE BEFORE CUSTOM APPS
+    'cloudinary_storage',
+    'cloudinary',
+    'crispy_forms',
+    'crispy_bootstrap5',
+    'import_export',
+
     # Custom apps
     'accounts.apps.AccountsConfig',
     'pages.apps.PagesConfig',
@@ -41,13 +51,6 @@ INSTALLED_APPS = [
     'clients',
     'invoices',
     "calendar_app",
-
-
-    # Third-party packages
-    'crispy_forms',
-    'crispy_bootstrap5',
-    'import_export',
-
 ]
 
 # ✅ Middleware
@@ -90,7 +93,6 @@ DATABASES = {
     "default": env.db_url("DATABASE_URL")
 }
 
-
 # ✅ Authentication
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
@@ -108,14 +110,52 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
+# ✅ Static Files
 STATIC_URL = "/static/"
-STATICFILES_DIRS = [BASE_DIR / "static"]  # 👈 crucial for collectstatic to find non-app static files
+STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-
+# ✅ Media Files Configuration
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# ✅ Cloudinary Configuration
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': env('CLOUDINARY_CLOUD_NAME', default=''),
+    'API_KEY': env('CLOUDINARY_API_KEY', default=''),
+    'API_SECRET': env('CLOUDINARY_API_SECRET', default=''),
+}
+
+# Configure cloudinary
+cloudinary.config(
+    cloud_name=env('CLOUDINARY_CLOUD_NAME', default=''),
+    api_key=env('CLOUDINARY_API_KEY', default=''),
+    api_secret=env('CLOUDINARY_API_SECRET', default=''),
+    secure=True
+)
+
+# ✅ Storage Configuration - Environment Based
+if not DEBUG:
+    # Production: Use Cloudinary
+    STORAGES = {
+        "default": {
+            "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+else:
+    # Development: Use local storage
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
 
 # ✅ Default Primary Key
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -143,7 +183,6 @@ else:
     SECURE_HSTS_PRELOAD = False
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
-
 
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
