@@ -106,15 +106,21 @@ class JobAttachment(models.Model):
         return f"Attachment {self.id} for WorkOrder {self.work_order.id}"
     
     def save(self, *args, **kwargs):
+        print(f"🔧 JobAttachment.save() called for file: {self.file.name if self.file else 'No file'}")
+        
         if self.file:
             # Ensure file has content and is not empty
             if not hasattr(self.file, 'size') or self.file.size == 0:
+                print(f"❌ File is empty or has no size")
                 raise ValidationError("Empty file cannot be uploaded")
                 
+            print(f"✅ File size: {self.file.size} bytes")
             self.file_size = self.file.size
             
             # Set file type based on extension
             ext = os.path.splitext(self.file.name)[1].lower()
+            print(f"📄 File extension: {ext}")
+            
             if ext in ['.jpg', '.jpeg', '.png', '.gif']:
                 self.file_type = 'image'
             elif ext == '.pdf':
@@ -124,20 +130,27 @@ class JobAttachment(models.Model):
             else:
                 self.file_type = 'text'
             
-            # Only create thumbnail for images in development to avoid issues in production
-            if self.file_type == 'image' and not self.thumbnail and settings.DEBUG:
+            print(f"🏷️ File type set to: {self.file_type}")
+            
+            # Create thumbnail for images (enabled in production now)
+            if self.file_type == 'image' and not self.thumbnail:
                 try:
+                    print(f"🖼️ Attempting to create thumbnail for image")
                     self.create_thumbnail()
                 except Exception as e:
-                    print(f"Warning: Could not create thumbnail: {e}")
+                    print(f"⚠️ Warning: Could not create thumbnail: {e}")
         
+        print(f"💾 Saving JobAttachment to database")
         super().save(*args, **kwargs)
+        print(f"✅ JobAttachment saved successfully with ID: {self.id}")
     
     def create_thumbnail(self):
         if not self.file:
             return
         
         try:
+            # Reset file pointer to beginning
+            self.file.seek(0)
             image = Image.open(self.file)
             image.thumbnail((200, 200), Image.Resampling.LANCZOS)
             
@@ -148,8 +161,9 @@ class JobAttachment(models.Model):
             
             from django.core.files.base import ContentFile
             self.thumbnail.save(thumb_name, ContentFile(thumb_io.read()), save=False)
+            print(f"✅ Thumbnail created successfully: {thumb_name}")
         except Exception as e:
-            print(f"Error creating thumbnail: {e}")
+            print(f"❌ Error creating thumbnail: {e}")
             pass  # Skip thumbnail creation if it fails
 
     def get_file_icon(self):
@@ -182,16 +196,19 @@ class JobAttachment(models.Model):
         """Get optimized thumbnail URL - Cloudinary or local"""
         if self.file_type == 'image':
             try:
+                # First try Cloudinary transformation if available
                 if hasattr(self.file, 'public_id') and self.file.public_id:
-                    # Cloudinary - return optimized thumbnail
                     return cloudinary.CloudinaryImage(self.file.public_id).build_url(
                         width=200, height=200, crop="fill", quality="auto", fetch_format="auto"
                     )
-                elif self.thumbnail:
-                    # Local thumbnail
+                # Fall back to local thumbnail
+                elif self.thumbnail and hasattr(self.thumbnail, 'url'):
                     return self.thumbnail.url
-            except:
-                pass
+                # Fall back to original image
+                elif self.file and hasattr(self.file, 'url'):
+                    return self.file.url
+            except Exception as e:
+                print(f"Error getting thumbnail URL: {e}")
         return None
 
     def get_display_url(self):

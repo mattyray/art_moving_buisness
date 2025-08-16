@@ -178,7 +178,7 @@ def completed_jobs_view(request):
 # ===== DETAIL VIEW (OPTIMIZED WITH FILE UPLOAD FIX) =====
 @login_required
 def workorder_detail(request, job_id):
-    """OPTIMIZED: Detail view with prefetched data and file upload debugging"""
+    """OPTIMIZED: Detail view with prefetched data and enhanced file upload debugging"""
     # Use optimized query to get work order with all related data
     workorder = get_object_or_404(WorkOrderQueries.get_optimized_base(), id=job_id)
     
@@ -195,17 +195,23 @@ def workorder_detail(request, job_id):
             attachment_form = JobAttachmentForm(request.POST, request.FILES)
             uploaded = request.FILES.get('file')
             
-            # DEBUGGING FOR FILE UPLOAD ISSUES
+            # ENHANCED DEBUGGING FOR ALL FILE TYPES
             print(f"🔍 File upload debug:")
             print(f"  - Files in request: {list(request.FILES.keys())}")
             print(f"  - File object: {uploaded}")
             print(f"  - File size: {uploaded.size if uploaded else 'No file'}")
             print(f"  - File name: {uploaded.name if uploaded else 'No file'}")
+            print(f"  - Content type: {uploaded.content_type if uploaded else 'No file'}")
             print(f"  - Form is valid: {attachment_form.is_valid()}")
+            
             if not attachment_form.is_valid():
                 print(f"  - Form errors: {attachment_form.errors}")
+                for field, errors in attachment_form.errors.items():
+                    for error in errors:
+                        messages.error(request, f"Form error in {field}: {error}")
             
             if attachment_form.is_valid() and uploaded and uploaded.size > 0:
+                print(f"  - File validation passed, creating attachment")
                 attachment = attachment_form.save(commit=False)
                 attachment.work_order = workorder
                 
@@ -215,16 +221,25 @@ def workorder_detail(request, job_id):
                 
                 try:
                     attachment.save()
+                    print(f"✅ Attachment saved successfully")
                     messages.success(request, f'File "{uploaded.name}" uploaded successfully.')
+                except ValidationError as ve:
+                    print(f"❌ Validation error saving attachment: {ve}")
+                    messages.error(request, f'Validation error: {str(ve)}')
                 except Exception as e:
-                    print(f"❌ Error saving attachment: {e}")
+                    print(f"❌ Unexpected error saving attachment: {e}")
+                    import traceback
+                    traceback.print_exc()
                     messages.error(request, f'Error uploading file: {str(e)}')
             else:
                 if not uploaded:
+                    print(f"❌ No file was uploaded")
                     messages.error(request, 'No file was selected.')
                 elif uploaded.size == 0:
+                    print(f"❌ Uploaded file is empty")
                     messages.error(request, 'The selected file is empty.')
                 else:
+                    print(f"❌ Form validation failed or other issue")
                     messages.error(request, 'Invalid file upload.')
                     
             return redirect('workorder_detail', job_id=workorder.id)
