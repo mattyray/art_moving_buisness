@@ -16,6 +16,10 @@ services:
       - "DJANGO_SESSION_COOKIE_SECURE=False"
       - "DJANGO_CSRF_COOKIE_SECURE=False"
       - "DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
+      # ✅ Cloudinary Environment Variables
+      - "CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-}"
+      - "CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY:-}"
+      - "CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-}"
     volumes:
       - .:/code    # Mounts your project directory into the container
     networks:
@@ -28,7 +32,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:
-      POSTGRES_DB: art_moving
+      POSTGRES_DB: postgres
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres  # ✅ Secure authentication
     healthcheck:  # Ensures DB is ready before Django starts

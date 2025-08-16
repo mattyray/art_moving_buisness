@@ -4,6 +4,9 @@ from django.core.exceptions import ValidationError
 from PIL import Image
 import os
 import uuid
+from io import BytesIO
+import cloudinary
+from cloudinary.models import CloudinaryField
 
 def validate_file_type(file):
     allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.doc', '.docx', '.txt']
@@ -150,6 +153,51 @@ class JobAttachment(models.Model):
             'text': 'bi-file-earmark-text',
         }
         return icons.get(self.file_type, 'bi-file-earmark')
+
+    def file_exists(self):
+        """Check if the file actually exists"""
+        try:
+            return self.file and self.file.storage.exists(self.file.name)
+        except:
+            return False
+
+    def get_file_url(self):
+        """Safely get file URL, return None if file doesn't exist"""
+        try:
+            if self.file and hasattr(self.file, 'url'):
+                return self.file.url
+        except:
+            pass
+        return None
+
+    def get_thumbnail_url(self):
+        """Get optimized thumbnail URL - Cloudinary or local"""
+        if self.file_type == 'image':
+            try:
+                if hasattr(self.file, 'public_id') and self.file.public_id:
+                    # Cloudinary - return optimized thumbnail
+                    return cloudinary.CloudinaryImage(self.file.public_id).build_url(
+                        width=200, height=200, crop="fill", quality="auto", fetch_format="auto"
+                    )
+                elif self.thumbnail:
+                    # Local thumbnail
+                    return self.thumbnail.url
+            except:
+                pass
+        return None
+
+    def get_display_url(self):
+        """Get optimized display URL - Cloudinary or original"""
+        if self.file_type == 'image':
+            try:
+                if hasattr(self.file, 'public_id') and self.file.public_id:
+                    # Cloudinary - return optimized display image
+                    return cloudinary.CloudinaryImage(self.file.public_id).build_url(
+                        width=800, height=600, crop="limit", quality="auto", fetch_format="auto"
+                    )
+            except:
+                pass
+        return self.get_file_url()
 
 
 class JobNote(models.Model):
