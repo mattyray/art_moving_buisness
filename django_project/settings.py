@@ -191,7 +191,7 @@ else:
     # Development: Use local storage
     STORAGES = {
         "default": {
-            "BACKEND": "django.core.files.storage.FileSystemStorage",
+            "BACKEND": "workorders.storage.CustomCloudinaryStorage",  # ← Change back to custom
         },
         "staticfiles": {
             "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
