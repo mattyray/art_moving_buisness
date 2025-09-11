@@ -619,3 +619,31 @@ def delete_event(request, job_id, event_id):
         messages.success(request, f"Event '{event_type}' deleted successfully.")
     
     return redirect('workorder_detail', job_id=workorder.id)
+
+@login_required
+def complete_event(request, event_id):
+    """Mark an event as complete or incomplete via AJAX"""
+    event = get_object_or_404(Event, id=event_id)
+    
+    if request.method == 'POST':
+        completed = request.POST.get('completed', 'false').lower() == 'true'
+        completed_by = request.POST.get('completed_by', '').strip()
+        
+        event.completed = completed
+        if completed:
+            event.completed_at = timezone.now()
+            event.completed_by = completed_by
+        else:
+            event.completed_at = None
+            event.completed_by = ''
+        
+        event.save()
+        
+        return JsonResponse({
+            'success': True,
+            'completed': event.completed,
+            'completed_at': event.completed_at.strftime('%b %d, %Y %I:%M %p') if event.completed_at else None,
+            'completed_by': event.completed_by
+        })
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})

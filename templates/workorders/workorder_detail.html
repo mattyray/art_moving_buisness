@@ -139,6 +139,22 @@
   gap: 0.5rem;
 }
 
+/* Event completion styles */
+.event-completed {
+  background-color: #f8f9fa !important;
+  opacity: 0.8;
+}
+
+.event-completed .card-title {
+  text-decoration: line-through;
+}
+
+.completion-info {
+  font-size: 0.75rem;
+  color: #6c757d;
+  font-style: italic;
+}
+
 @media (max-width: 768px) {
   .file-grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -371,7 +387,7 @@
     </div>
   </div>
 
-  <!-- Scheduled Events -->
+  <!-- Scheduled Events with Individual Completion -->
   <div class="card mb-4">
       <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Scheduled Events</h5>
@@ -384,11 +400,18 @@
           <div class="row">
             {% for event in events %}
             <div class="col-md-6 mb-3">
-              <div class="card border-start border-primary border-3">
+              <div class="card border-start border-3 {% if event.completed %}border-success event-completed{% else %}border-primary{% endif %}">
                 <div class="card-body py-2">
                   <div class="d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
-                      <h6 class="card-title text-primary mb-1">{{ event.get_event_type_display }}</h6>
+                      <h6 class="card-title mb-1 {% if event.completed %}text-success{% else %}text-primary{% endif %}">
+                        {% if event.completed %}
+                          <i class="bi bi-check-circle-fill me-2"></i>
+                        {% else %}
+                          <i class="bi bi-circle me-2"></i>
+                        {% endif %}
+                        {{ event.get_event_type_display }}
+                      </h6>
                       <p class="card-text mb-1 small">
                         <i class="bi bi-calendar3 me-1"></i>
                         {% if event.date %}{{ event.date|date:"M d, Y" }}{% else %}Not scheduled{% endif %}
@@ -396,13 +419,38 @@
                       <p class="card-text mb-0 small">
                         <i class="bi bi-geo-alt me-1"></i>{{ event.address|default:"No address" }}
                       </p>
+                      
+                      <!-- Event Completion Info -->
+                      {% if event.completed %}
+                        <div class="completion-info mt-2">
+                          <i class="bi bi-check-circle me-1"></i>
+                          Completed{% if event.completed_at %} on {{ event.completed_at|date:"M d, Y g:i A" }}{% endif %}
+                          {% if event.completed_by %} by {{ event.completed_by }}{% endif %}
+                        </div>
+                      {% endif %}
                     </div>
+                    
+                    <!-- Event Actions -->
                     <div class="dropdown">
                       <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
                               data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="bi bi-three-dots-vertical"></i>
                       </button>
                       <ul class="dropdown-menu">
+                        {% if not event.completed %}
+                          <li>
+                            <button class="dropdown-item text-success" onclick="markEventComplete({{ event.id }}, '{{ event.get_event_type_display }}')">
+                              <i class="bi bi-check-circle me-2"></i>Mark Complete
+                            </button>
+                          </li>
+                        {% else %}
+                          <li>
+                            <button class="dropdown-item text-warning" onclick="markEventIncomplete({{ event.id }}, '{{ event.get_event_type_display }}')">
+                              <i class="bi bi-arrow-counterclockwise me-2"></i>Mark Incomplete
+                            </button>
+                          </li>
+                        {% endif %}
+                        <li><hr class="dropdown-divider"></li>
                         <li>
                           <a class="dropdown-item text-danger" href="#" 
                             onclick="confirmDeleteEvent({{ event.id }}, '{{ event.get_event_type_display }}')">
@@ -454,6 +502,29 @@
     </div>
   </div>
 
+  <!-- Event Completion Modal -->
+  <div class="modal fade" id="eventCompletionModal" tabindex="-1" aria-labelledby="eventCompletionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="eventCompletionModalLabel">Mark Event Complete</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>Mark "<span id="eventToComplete"></span>" as complete?</p>
+          <div class="mb-3">
+            <label for="completedBy" class="form-label">Completed by (optional):</label>
+            <input type="text" class="form-control" id="completedBy" placeholder="Worker name or initials">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-success" id="confirmEventComplete">Mark Complete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Attachments & Notes Section -->
   <div class="row">
     <!-- Attachments -->
@@ -485,7 +556,6 @@
           </div>
         </div>
         
-        <!-- File Grid -->
         <!-- File Grid -->
         <div class="card-body">
           {% if attachments %}
@@ -704,6 +774,7 @@
   </div>
 </div>
 {% endblock %}
+
 {% block extra_js %}
 <script>
 // Function to handle event deletion confirmation
@@ -722,6 +793,59 @@ function confirmDeleteFile(attachmentId, fileName) {
     deleteForm.action = `/workorders/attachment/delete/${attachmentId}/`;
     const modal = new bootstrap.Modal(document.getElementById('deleteFileModal'));
     modal.show();
+}
+
+// ===== EVENT COMPLETION FUNCTIONS =====
+let currentEventId = null;
+
+function markEventComplete(eventId, eventType) {
+    currentEventId = eventId;
+    document.getElementById('eventToComplete').textContent = eventType;
+    document.getElementById('completedBy').value = '';
+    
+    const modal = new bootstrap.Modal(document.getElementById('eventCompletionModal'));
+    modal.show();
+}
+
+function markEventIncomplete(eventId, eventType) {
+    if (confirm(`Mark "${eventType}" as incomplete?`)) {
+        updateEventCompletion(eventId, false, '');
+    }
+}
+
+document.getElementById('confirmEventComplete').addEventListener('click', function() {
+    const completedBy = document.getElementById('completedBy').value.trim();
+    updateEventCompletion(currentEventId, true, completedBy);
+    bootstrap.Modal.getInstance(document.getElementById('eventCompletionModal')).hide();
+});
+
+function updateEventCompletion(eventId, completed, completedBy) {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch(`/workorders/event/${eventId}/complete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `completed=${completed}&completed_by=${encodeURIComponent(completedBy)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(`Event ${completed ? 'completed' : 'marked incomplete'} successfully`, 'success');
+            // Reload page to show updated state
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showToast('Error updating event: ' + (data.error || 'Unknown error'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating event:', error);
+        showToast('Error updating event. Please try again.', 'error');
+    });
 }
 
 // ===== NOTE EDITING FUNCTIONS =====

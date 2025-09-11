@@ -37,4 +37,6 @@ urlpatterns = [
     # Note management - NEW
     path('detail/<int:job_id>/edit-note/<int:note_id>/', views.edit_note, name='edit_note'),
     path('detail/<int:job_id>/delete-note/<int:note_id>/', views.delete_note, name='delete_note'),
+    path('event/<int:event_id>/complete/', views.complete_event, name='complete_event'),
+
 ]
