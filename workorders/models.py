@@ -76,6 +76,11 @@ class Event(models.Model):
     date = models.DateField(blank=True, null=True)
     daily_order = models.PositiveIntegerField(blank=True, null=True, help_text='Order of this event within the day')
     scheduled_time = models.TimeField(blank=True, null=True, help_text='Scheduled time for this event')
+    
+    # NEW: Event completion tracking fields
+    completed = models.BooleanField(default=False, help_text='Mark if this specific event was completed')
+    completed_at = models.DateTimeField(blank=True, null=True, help_text='When this event was marked complete')
+    completed_by = models.CharField(max_length=100, blank=True, help_text='Who marked this event complete')
 
     class Meta:
         ordering = ['date', 'daily_order', 'scheduled_time', 'id']

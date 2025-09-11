@@ -95,39 +95,48 @@ def workorder_pdf(request, pk):
     response["Content-Disposition"] = f"inline; filename=WorkOrder_{workorder.id}.pdf"
     return response
 
-# ===== CALENDAR DATA =====
+# ===== CALENDAR DATA - UPDATED FOR PHASE 1 =====
 @login_required
 def workorder_calendar_data(request):
-    """Returns only pending and scheduled events for calendar display, excluding completed jobs."""
+    """Returns all scheduled events for calendar display, with color coding for status."""
     events = []
     
-    # Color palette - moved from JavaScript to Python
+    # Color palette for active work orders
     palette = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
                "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
     
-    def get_color(wo_id):
+    def get_color(wo_id, is_completed=False):
+        if is_completed:
+            return "#6c757d"  # Gray for completed work orders
         return palette[wo_id % len(palette)]
 
-    # FIXED: Proper ordering by date first, then daily_order, then scheduled_time
+    # UPDATED: Include ALL work orders with scheduled events, regardless of status
     scheduled_events = Event.objects.select_related('work_order__client')\
-                                   .filter(date__isnull=False,
-                                          work_order__status__in=["pending", "in_progress"])\
+                                   .filter(date__isnull=False)\
                                    .order_by('date', 'daily_order', 'scheduled_time', 'id')
     
     for evt in scheduled_events:
+        # Check if work order is completed
+        is_completed = evt.work_order.status == 'completed'
+        
         # Build title with order number if it exists
         title = f"{evt.get_event_type_display()}: {evt.work_order.client.name}"
         if evt.daily_order:
             title = f"{evt.daily_order}. {title}"
         
+        # Add completion indicator to title if completed
+        if is_completed:
+            title = f"✓ {title}"
+        
         events.append({
             "title": title,
             "start": evt.date.isoformat(),
-            "color": get_color(evt.work_order.id),
+            "color": get_color(evt.work_order.id, is_completed),
             "url": f"/workorders/detail/{evt.work_order.id}/",
             "id": evt.id,
             "workOrderId": evt.work_order.id,
-            "dailyOrder": evt.daily_order or 999,  # Put unordered events last
+            "dailyOrder": evt.daily_order or 999,
+            "isCompleted": is_completed,  # New field for frontend use
         })
 
     return JsonResponse(events, safe=False)
@@ -197,7 +206,7 @@ def workorder_detail(request, job_id):
             uploaded = request.FILES.get('file')
             
             # ENHANCED DEBUGGING FOR ALL FILE TYPES
-            print(f"🔍 File upload debug:")
+            print(f"📁 File upload debug:")
             print(f"  - Files in request: {list(request.FILES.keys())}")
             print(f"  - File object: {uploaded}")
             print(f"  - File size: {uploaded.size if uploaded else 'No file'}")
