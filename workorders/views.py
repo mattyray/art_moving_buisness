@@ -96,47 +96,77 @@ def workorder_pdf(request, pk):
     return response
 
 # ===== CALENDAR DATA - UPDATED FOR PHASE 1 =====
+# ===== CALENDAR DATA - FIXED COLOR LOGIC =====
 @login_required
 def workorder_calendar_data(request):
-    """Returns all scheduled events for calendar display, with color coding for status."""
+    """Returns all scheduled events for calendar display, with color coding for individual event completion."""
     events = []
     
-    # Color palette for active work orders
+    # Color palette for active events (NO GRAY - 9 colors total)
     palette = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
-               "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
+               "#8c564b", "#e377c2", "#bcbd22", "#17becf"]
     
-    def get_color(wo_id, is_completed=False):
-        if is_completed:
-            return "#6c757d"  # Gray for completed work orders
-        return palette[wo_id % len(palette)]
+    def get_color(wo_id, is_event_completed=False, is_work_order_completed=False):
+        # Any type of completion = gray
+        if is_event_completed or is_work_order_completed:
+            return "#6c757d"  # Gray for completed
+        
+        # For active events, ensure we get a color from our 9-color palette
+        # Use modulo to wrap around if work order ID is large
+        color_index = wo_id % len(palette)
+        return palette[color_index]
 
-    # UPDATED: Include ALL work orders with scheduled events, regardless of status
+    # Include ALL work orders with scheduled events
     scheduled_events = Event.objects.select_related('work_order__client')\
                                    .filter(date__isnull=False)\
                                    .order_by('date', 'daily_order', 'scheduled_time', 'id')
     
     for evt in scheduled_events:
-        # Check if work order is completed
-        is_completed = evt.work_order.status == 'completed'
+        # Check BOTH individual event completion AND work order completion
+        is_event_completed = bool(evt.completed)  # Ensure boolean
+        is_work_order_completed = evt.work_order.status == 'completed'
+        is_any_completed = is_event_completed or is_work_order_completed
         
         # Build title with order number if it exists
         title = f"{evt.get_event_type_display()}: {evt.work_order.client.name}"
         if evt.daily_order:
             title = f"{evt.daily_order}. {title}"
         
-        # Add completion indicator to title if completed
-        if is_completed:
-            title = f"✓ {title}"
+        # Add completion indicator - ONLY if actually completed
+        if is_event_completed:
+            title = f"✓ {title} (Event Done)"
+        elif is_work_order_completed:
+            title = f"✓ {title} (Job Done)"
+        
+        # Get color - should never be gray unless actually completed
+        event_color = get_color(evt.work_order.id, is_event_completed, is_work_order_completed)
+        
+        # Debug logging (remove after testing)
+        if event_color == "#6c757d" and not is_any_completed:
+            print(f"🐛 DEBUG: Event {evt.id} is gray but not completed!")
+            print(f"  - Event completed: {is_event_completed}")
+            print(f"  - Work order completed: {is_work_order_completed}")
+            print(f"  - Work order ID: {evt.work_order.id}")
+            print(f"  - Color index: {evt.work_order.id % len(palette)}")
         
         events.append({
             "title": title,
             "start": evt.date.isoformat(),
-            "color": get_color(evt.work_order.id, is_completed),
+            "color": event_color,
             "url": f"/workorders/detail/{evt.work_order.id}/",
             "id": evt.id,
             "workOrderId": evt.work_order.id,
             "dailyOrder": evt.daily_order or 999,
-            "isCompleted": is_completed,  # New field for frontend use
+            "isEventCompleted": is_event_completed,
+            "isWorkOrderCompleted": is_work_order_completed,
+            "isCompleted": is_any_completed,
+            # Add debug info (remove after testing)
+            "debugInfo": {
+                "eventCompleted": is_event_completed,
+                "workOrderCompleted": is_work_order_completed,
+                "colorIndex": evt.work_order.id % len(palette),
+                "workOrderId": evt.work_order.id
+            }
         })
 
     return JsonResponse(events, safe=False)

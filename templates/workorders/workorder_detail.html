@@ -834,7 +834,14 @@ function updateEventCompletion(eventId, completed, completedBy) {
     .then(data => {
         if (data.success) {
             showToast(`Event ${completed ? 'completed' : 'marked incomplete'} successfully`, 'success');
-            // Reload page to show updated state
+            
+            // Refresh calendar if we're on a calendar page
+            if (typeof calendar !== 'undefined' && calendar.refetchEvents) {
+                console.log('🔄 Refreshing calendar events...');
+                calendar.refetchEvents();
+            }
+            
+            // Reload page to show updated state (for detail view)
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
@@ -847,7 +854,6 @@ function updateEventCompletion(eventId, completed, completedBy) {
         showToast('Error updating event. Please try again.', 'error');
     });
 }
-
 // ===== NOTE EDITING FUNCTIONS =====
 let currentEditingNote = null;
 
