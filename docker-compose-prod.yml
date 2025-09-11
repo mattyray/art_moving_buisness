@@ -18,7 +18,7 @@ services:
       - "PORT=8000"  # Needed for Heroku
       - "DATABASE_URL=${DATABASE_URL}"
   db:
-    image: postgres:15
+    image: postgres:16  # Updated to match production version
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:

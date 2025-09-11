@@ -95,39 +95,78 @@ def workorder_pdf(request, pk):
     response["Content-Disposition"] = f"inline; filename=WorkOrder_{workorder.id}.pdf"
     return response
 
-# ===== CALENDAR DATA =====
+# ===== CALENDAR DATA - UPDATED FOR PHASE 1 =====
+# ===== CALENDAR DATA - FIXED COLOR LOGIC =====
 @login_required
 def workorder_calendar_data(request):
-    """Returns only pending and scheduled events for calendar display, excluding completed jobs."""
+    """Returns all scheduled events for calendar display, with color coding for individual event completion."""
     events = []
     
-    # Color palette - moved from JavaScript to Python
+    # Color palette for active events (NO GRAY - 9 colors total)
     palette = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
-               "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
+               "#8c564b", "#e377c2", "#bcbd22", "#17becf"]
     
-    def get_color(wo_id):
-        return palette[wo_id % len(palette)]
+    def get_color(wo_id, is_event_completed=False, is_work_order_completed=False):
+        # Any type of completion = gray
+        if is_event_completed or is_work_order_completed:
+            return "#6c757d"  # Gray for completed
+        
+        # For active events, ensure we get a color from our 9-color palette
+        # Use modulo to wrap around if work order ID is large
+        color_index = wo_id % len(palette)
+        return palette[color_index]
 
-    # FIXED: Proper ordering by date first, then daily_order, then scheduled_time
+    # Include ALL work orders with scheduled events
     scheduled_events = Event.objects.select_related('work_order__client')\
-                                   .filter(date__isnull=False,
-                                          work_order__status__in=["pending", "in_progress"])\
+                                   .filter(date__isnull=False)\
                                    .order_by('date', 'daily_order', 'scheduled_time', 'id')
     
     for evt in scheduled_events:
+        # Check BOTH individual event completion AND work order completion
+        is_event_completed = bool(evt.completed)  # Ensure boolean
+        is_work_order_completed = evt.work_order.status == 'completed'
+        is_any_completed = is_event_completed or is_work_order_completed
+        
         # Build title with order number if it exists
         title = f"{evt.get_event_type_display()}: {evt.work_order.client.name}"
         if evt.daily_order:
             title = f"{evt.daily_order}. {title}"
         
+        # Add completion indicator - ONLY if actually completed
+        if is_event_completed:
+            title = f"✓ {title} (Event Done)"
+        elif is_work_order_completed:
+            title = f"✓ {title} (Job Done)"
+        
+        # Get color - should never be gray unless actually completed
+        event_color = get_color(evt.work_order.id, is_event_completed, is_work_order_completed)
+        
+        # Debug logging (remove after testing)
+        if event_color == "#6c757d" and not is_any_completed:
+            print(f"🐛 DEBUG: Event {evt.id} is gray but not completed!")
+            print(f"  - Event completed: {is_event_completed}")
+            print(f"  - Work order completed: {is_work_order_completed}")
+            print(f"  - Work order ID: {evt.work_order.id}")
+            print(f"  - Color index: {evt.work_order.id % len(palette)}")
+        
         events.append({
             "title": title,
             "start": evt.date.isoformat(),
-            "color": get_color(evt.work_order.id),
+            "color": event_color,
             "url": f"/workorders/detail/{evt.work_order.id}/",
             "id": evt.id,
             "workOrderId": evt.work_order.id,
-            "dailyOrder": evt.daily_order or 999,  # Put unordered events last
+            "dailyOrder": evt.daily_order or 999,
+            "isEventCompleted": is_event_completed,
+            "isWorkOrderCompleted": is_work_order_completed,
+            "isCompleted": is_any_completed,
+            # Add debug info (remove after testing)
+            "debugInfo": {
+                "eventCompleted": is_event_completed,
+                "workOrderCompleted": is_work_order_completed,
+                "colorIndex": evt.work_order.id % len(palette),
+                "workOrderId": evt.work_order.id
+            }
         })
 
     return JsonResponse(events, safe=False)
@@ -197,7 +236,7 @@ def workorder_detail(request, job_id):
             uploaded = request.FILES.get('file')
             
             # ENHANCED DEBUGGING FOR ALL FILE TYPES
-            print(f"🔍 File upload debug:")
+            print(f"📁 File upload debug:")
             print(f"  - Files in request: {list(request.FILES.keys())}")
             print(f"  - File object: {uploaded}")
             print(f"  - File size: {uploaded.size if uploaded else 'No file'}")
@@ -610,3 +649,31 @@ def delete_event(request, job_id, event_id):
         messages.success(request, f"Event '{event_type}' deleted successfully.")
     
     return redirect('workorder_detail', job_id=workorder.id)
+
+@login_required
+def complete_event(request, event_id):
+    """Mark an event as complete or incomplete via AJAX"""
+    event = get_object_or_404(Event, id=event_id)
+    
+    if request.method == 'POST':
+        completed = request.POST.get('completed', 'false').lower() == 'true'
+        completed_by = request.POST.get('completed_by', '').strip()
+        
+        event.completed = completed
+        if completed:
+            event.completed_at = timezone.now()
+            event.completed_by = completed_by
+        else:
+            event.completed_at = None
+            event.completed_by = ''
+        
+        event.save()
+        
+        return JsonResponse({
+            'success': True,
+            'completed': event.completed,
+            'completed_at': event.completed_at.strftime('%b %d, %Y %I:%M %p') if event.completed_at else None,
+            'completed_by': event.completed_by
+        })
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})

@@ -34,7 +34,10 @@ urlpatterns = [
     # File management
     path('attachment/delete/<int:attachment_id>/', views.delete_attachment, name='delete_attachment'),
     
-    # Note management - NEW
+    # Note management
     path('detail/<int:job_id>/edit-note/<int:note_id>/', views.edit_note, name='edit_note'),
     path('detail/<int:job_id>/delete-note/<int:note_id>/', views.delete_note, name='delete_note'),
+    
+    # Event completion - NEW
+    path('event/<int:event_id>/complete/', views.complete_event, name='complete_event'),
 ]

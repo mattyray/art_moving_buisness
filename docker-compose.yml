@@ -26,7 +26,7 @@ services:
       - art_moving_network
 
   db:
-    image: postgres:15  # Upgraded to latest stable version
+    image: postgres:16  # Updated to match production version
     container_name: art_moving_db
     restart: always
     volumes:

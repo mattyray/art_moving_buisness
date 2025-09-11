@@ -64,7 +64,7 @@ services:
       - art_moving_network
 
   db:
-    image: postgres:15  # Upgraded to latest stable version
+    image: postgres:16  # Updated to match production version
     container_name: art_moving_db
     restart: always
     volumes:
@@ -105,7 +105,7 @@ services:
       - "PORT=8000"  # Needed for Heroku
       - "DATABASE_URL=${DATABASE_URL}"
   db:
-    image: postgres:15
+    image: postgres:16  # Updated to match production version
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
@@ -117,8 +117,7 @@ services:
       timeout: 5s
 
 volumes:
-  postgres_data:
-===== heroku.yml =====
+  postgres_data:===== heroku.yml =====
 build:
   docker:
     web: Dockerfile  # Tells Heroku to use the Dockerfile to build your app
@@ -382,6 +381,11 @@ class Event(models.Model):
     date = models.DateField(blank=True, null=True)
     daily_order = models.PositiveIntegerField(blank=True, null=True, help_text='Order of this event within the day')
     scheduled_time = models.TimeField(blank=True, null=True, help_text='Scheduled time for this event')
+    
+    # NEW: Event completion tracking fields
+    completed = models.BooleanField(default=False, help_text='Mark if this specific event was completed')
+    completed_at = models.DateTimeField(blank=True, null=True, help_text='When this event was marked complete')
+    completed_by = models.CharField(max_length=100, blank=True, help_text='Who marked this event complete')
 
     class Meta:
         ordering = ['date', 'daily_order', 'scheduled_time', 'id']
