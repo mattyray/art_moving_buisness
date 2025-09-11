@@ -410,13 +410,23 @@ class JobAttachment(models.Model):
 
     def __str__(self):
         return f"Attachment {self.id} for WorkOrder {self.work_order.id}"
-    
+        
     def save(self, *args, **kwargs):
+        print(f"🔧 JobAttachment.save() called for file: {self.file.name if self.file else 'No file'}")
+        
         if self.file:
+            # Ensure file has content and is not empty
+            if not hasattr(self.file, 'size') or self.file.size == 0:
+                print(f"❌ File is empty or has no size")
+                raise ValidationError("Empty file cannot be uploaded")
+                
+            print(f"✅ File size: {self.file.size} bytes")
             self.file_size = self.file.size
             
             # Set file type based on extension
             ext = os.path.splitext(self.file.name)[1].lower()
+            print(f"📄 File extension: {ext}")
+            
             if ext in ['.jpg', '.jpeg', '.png', '.gif']:
                 self.file_type = 'image'
             elif ext == '.pdf':
@@ -426,17 +436,38 @@ class JobAttachment(models.Model):
             else:
                 self.file_type = 'text'
             
-            # Create thumbnail for images
+            print(f"🏷️ File type set to: {self.file_type}")
+            
+            # Create thumbnail for images AFTER saving the main file
             if self.file_type == 'image' and not self.thumbnail:
-                self.create_thumbnail()
+                try:
+                    print(f"🖼️ Will create thumbnail after saving main file")
+                    # Store that we need to create thumbnail, but do it after save
+                    self._create_thumbnail_after_save = True
+                except Exception as e:
+                    print(f"⚠️ Warning: Could not prepare thumbnail: {e}")
         
+        print(f"💾 Saving JobAttachment to database")
         super().save(*args, **kwargs)
-    
+        
+        # Create thumbnail AFTER the main file is saved
+        if hasattr(self, '_create_thumbnail_after_save') and self._create_thumbnail_after_save:
+            try:
+                print(f"🖼️ Creating thumbnail after main file save")
+                self.create_thumbnail()
+                # Remove the flag
+                del self._create_thumbnail_after_save
+            except Exception as e:
+                print(f"⚠️ Warning: Could not create thumbnail after save: {e}")
+        
+        print(f"✅ JobAttachment saved successfully with ID: {self.id}")
     def create_thumbnail(self):
         if not self.file:
             return
         
         try:
+            # Reset file pointer to beginning
+            self.file.seek(0)
             image = Image.open(self.file)
             image.thumbnail((200, 200), Image.Resampling.LANCZOS)
             
@@ -447,7 +478,9 @@ class JobAttachment(models.Model):
             
             from django.core.files.base import ContentFile
             self.thumbnail.save(thumb_name, ContentFile(thumb_io.read()), save=False)
-        except Exception:
+            print(f"✅ Thumbnail created successfully: {thumb_name}")
+        except Exception as e:
+            print(f"❌ Error creating thumbnail: {e}")
             pass  # Skip thumbnail creation if it fails
 
     def get_file_icon(self):
@@ -468,32 +501,46 @@ class JobAttachment(models.Model):
             return False
 
     def get_file_url(self):
-        """Safely get file URL, return None if file doesn't exist"""
+        """Get the correct URL for file type - images vs raw files"""
         try:
-            if self.file and hasattr(self.file, 'url'):
+            if self.file and hasattr(self.file, 'public_id') and self.file.public_id:
+                # For Cloudinary files, build the correct URL based on file type
+                if self.file_type == 'image':
+                    # Images use /image/upload/ path
+                    return cloudinary.CloudinaryImage(self.file.public_id).build_url()
+                else:
+                    # Documents, PDFs, text files use /raw/upload/ path
+                    return cloudinary.CloudinaryImage(self.file.public_id).build_url(
+                        resource_type="raw"
+                    )
+            elif self.file and hasattr(self.file, 'url'):
+                # Fallback to regular file URL (for local storage)
                 return self.file.url
-        except:
-            pass
+        except Exception as e:
+            print(f"Error getting file URL: {e}")
         return None
 
     def get_thumbnail_url(self):
-        """Get optimized thumbnail URL - Cloudinary or local"""
+        """Get optimized thumbnail URL - only for images"""
         if self.file_type == 'image':
             try:
+                # First try Cloudinary transformation if available
                 if hasattr(self.file, 'public_id') and self.file.public_id:
-                    # Cloudinary - return optimized thumbnail
                     return cloudinary.CloudinaryImage(self.file.public_id).build_url(
                         width=200, height=200, crop="fill", quality="auto", fetch_format="auto"
                     )
-                elif self.thumbnail:
-                    # Local thumbnail
+                # Fall back to local thumbnail
+                elif self.thumbnail and hasattr(self.thumbnail, 'url'):
                     return self.thumbnail.url
-            except:
-                pass
+                # Fall back to original image
+                elif self.file and hasattr(self.file, 'url'):
+                    return self.file.url
+            except Exception as e:
+                print(f"Error getting thumbnail URL: {e}")
         return None
 
     def get_display_url(self):
-        """Get optimized display URL - Cloudinary or original"""
+        """Get optimized display URL - same as file URL for documents"""
         if self.file_type == 'image':
             try:
                 if hasattr(self.file, 'public_id') and self.file.public_id:
@@ -503,6 +550,7 @@ class JobAttachment(models.Model):
                     )
             except:
                 pass
+        # For documents/PDFs/text, just return the regular file URL
         return self.get_file_url()
 
 
@@ -525,6 +573,8 @@ from django.contrib import messages
 from django.db.models import Q
 from django.template.loader import render_to_string
 from weasyprint import HTML
+from django.conf import settings
+from django.core.exceptions import ValidationError  # ← ADDED THIS IMPORT
 
 from .models import WorkOrder, Event, JobAttachment, JobNote
 from .forms import WorkOrderForm, EventFormSet, JobAttachmentForm, JobNoteForm
@@ -691,10 +741,10 @@ def completed_jobs_view(request):
     }
     return render(request, 'workorders/completed_jobs.html', context)
 
-# ===== DETAIL VIEW (OPTIMIZED) =====
+# ===== DETAIL VIEW (OPTIMIZED WITH FILE UPLOAD FIX) =====
 @login_required
 def workorder_detail(request, job_id):
-    """OPTIMIZED: Detail view with prefetched data"""
+    """OPTIMIZED: Detail view with prefetched data and enhanced file upload debugging"""
     # Use optimized query to get work order with all related data
     workorder = get_object_or_404(WorkOrderQueries.get_optimized_base(), id=job_id)
     
@@ -710,11 +760,54 @@ def workorder_detail(request, job_id):
         if 'attachment_submit' in request.POST:
             attachment_form = JobAttachmentForm(request.POST, request.FILES)
             uploaded = request.FILES.get('file')
-            if attachment_form.is_valid() and uploaded:
+            
+            # ENHANCED DEBUGGING FOR ALL FILE TYPES
+            print(f"🔍 File upload debug:")
+            print(f"  - Files in request: {list(request.FILES.keys())}")
+            print(f"  - File object: {uploaded}")
+            print(f"  - File size: {uploaded.size if uploaded else 'No file'}")
+            print(f"  - File name: {uploaded.name if uploaded else 'No file'}")
+            print(f"  - Content type: {uploaded.content_type if uploaded else 'No file'}")
+            print(f"  - Form is valid: {attachment_form.is_valid()}")
+            
+            if not attachment_form.is_valid():
+                print(f"  - Form errors: {attachment_form.errors}")
+                for field, errors in attachment_form.errors.items():
+                    for error in errors:
+                        messages.error(request, f"Form error in {field}: {error}")
+            
+            if attachment_form.is_valid() and uploaded and uploaded.size > 0:
+                print(f"  - File validation passed, creating attachment")
                 attachment = attachment_form.save(commit=False)
                 attachment.work_order = workorder
-                attachment.save()
-                messages.success(request, f'File "{uploaded.name}" uploaded successfully.')
+                
+                # MORE DEBUGGING BEFORE SAVE
+                print(f"  - About to save attachment with file: {attachment.file}")
+                print(f"  - File size before save: {attachment.file.size if attachment.file else 'No file'}")
+                
+                try:
+                    attachment.save()
+                    print(f"✅ Attachment saved successfully")
+                    messages.success(request, f'File "{uploaded.name}" uploaded successfully.')
+                except ValidationError as ve:
+                    print(f"❌ Validation error saving attachment: {ve}")
+                    messages.error(request, f'Validation error: {str(ve)}')
+                except Exception as e:
+                    print(f"❌ Unexpected error saving attachment: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    messages.error(request, f'Error uploading file: {str(e)}')
+            else:
+                if not uploaded:
+                    print(f"❌ No file was uploaded")
+                    messages.error(request, 'No file was selected.')
+                elif uploaded.size == 0:
+                    print(f"❌ Uploaded file is empty")
+                    messages.error(request, 'The selected file is empty.')
+                else:
+                    print(f"❌ Form validation failed or other issue")
+                    messages.error(request, 'Invalid file upload.')
+                    
             return redirect('workorder_detail', job_id=workorder.id)
 
         elif 'note_submit' in request.POST:
@@ -813,10 +906,14 @@ def workorder_create(request):
 
             if attachment_form.is_valid():
                 uploaded = request.FILES.get('file')
-                if uploaded:
+                if uploaded and uploaded.size > 0:
                     attachment = attachment_form.save(commit=False)
                     attachment.work_order = workorder
-                    attachment.save()
+                    try:
+                        attachment.save()
+                    except Exception as e:
+                        print(f"Error saving attachment in create: {e}")
+                        messages.error(request, f'Error uploading file: {str(e)}')
 
             if note_form.is_valid():
                 text = note_form.cleaned_data.get('note', '').strip()
@@ -871,10 +968,14 @@ def workorder_edit(request, job_id):
 
             if attachment_form.is_valid():
                 uploaded = request.FILES.get('file')
-                if uploaded:
+                if uploaded and uploaded.size > 0:
                     attachment = attachment_form.save(commit=False)
                     attachment.work_order = workorder
-                    attachment.save()
+                    try:
+                        attachment.save()
+                    except Exception as e:
+                        print(f"Error saving attachment in edit: {e}")
+                        messages.error(request, f'Error uploading file: {str(e)}')
 
             if note_form.is_valid():
                 text = note_form.cleaned_data.get('note', '').strip()
@@ -2025,43 +2126,84 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # ✅ Media Files Configuration
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# ✅ Cloudinary Configuration
+# ✅ Cloudinary Configuration - UPDATED FOR ALL FILE TYPES
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': env('CLOUDINARY_CLOUD_NAME', default=''),
     'API_KEY': env('CLOUDINARY_API_KEY', default=''),
     'API_SECRET': env('CLOUDINARY_API_SECRET', default=''),
+    'SECURE': True,
+    'ALLOWED_FORMATS': ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt'],
+    'RESOURCE_TYPE': 'auto',
 }
 
-# Configure cloudinary
+# Configure cloudinary - UPDATED
 cloudinary.config(
     cloud_name=env('CLOUDINARY_CLOUD_NAME', default=''),
     api_key=env('CLOUDINARY_API_KEY', default=''),
     api_secret=env('CLOUDINARY_API_SECRET', default=''),
-    secure=True
+    secure=True,
+    resource_type='auto'
 )
 
-# ✅ Storage Configuration - Environment Based
+# ✅ Storage Configuration 
 if not DEBUG:
-    # Production: Use Cloudinary
+    # Production: Use Cloudinary + Fixed Static Files Storage
     STORAGES = {
         "default": {
             "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
         },
         "staticfiles": {
-            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+            "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
         },
     }
+    
+    # Add WhiteNoise settings for better static file handling
+    WHITENOISE_USE_FINDERS = True
+    WHITENOISE_STATIC_PREFIX = '/static/'
+    
+    # Production logging to see what's happening
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'verbose': {
+                'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+                'style': '{',
+            },
+        },
+        'handlers': {
+            'console': {
+                'level': 'INFO',
+                'class': 'logging.StreamHandler',
+                'formatter': 'verbose',
+            },
+        },
+        'root': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+    }
+    
+    # Print debug info
+    print("🚀 PRODUCTION MODE: DEBUG=False")
+    cloudinary_configured = all([
+        env('CLOUDINARY_CLOUD_NAME', default=''),
+        env('CLOUDINARY_API_KEY', default=''),
+        env('CLOUDINARY_API_SECRET', default='')
+    ])
+    print(f"☁️  Cloudinary configured: {cloudinary_configured}")
+    print(f"🏠 ALLOWED_HOSTS: {len(ALLOWED_HOSTS)} hosts configured")
+    
 else:
     # Development: Use local storage
     STORAGES = {
         "default": {
-            "BACKEND": "django.core.files.storage.FileSystemStorage",
+            "BACKEND": "workorders.storage.CustomCloudinaryStorage",  # ← Change back to custom
         },
         "staticfiles": {
             "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
@@ -2095,11 +2237,13 @@ else:
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
 
+# ✅ Static Files Finders
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 ]
 
+# ✅ Import/Export
 IMPORT_EXPORT_USE_TRANSACTIONS = True
 
 ===== django_project/urls.py =====
@@ -5893,16 +6037,26 @@ document.addEventListener("DOMContentLoaded", function () {
         </div>
         
         <!-- File Grid -->
+        <!-- File Grid -->
         <div class="card-body">
           {% if attachments %}
             <div class="file-grid">
               {% for attachment in attachments %}
                 <div class="file-card">
                   <!-- Image Thumbnail or File Icon -->
-                  {% if attachment.file_type == 'image' and attachment.thumbnail %}
-                    <img src="{{ attachment.thumbnail.url }}" alt="{{ attachment.file.name }}" class="file-thumbnail">
+                  {% if attachment.file_type == 'image' %}
+                    {% with thumbnail_url=attachment.get_thumbnail_url %}
+                      {% if thumbnail_url %}
+                        <img src="{{ thumbnail_url }}" alt="{{ attachment.file.name }}" class="file-thumbnail" 
+                            onclick="window.open('{{ attachment.get_display_url }}', '_blank')">
+                      {% else %}
+                        <div class="file-icon text-primary">
+                          <i class="{{ attachment.get_file_icon }}"></i>
+                        </div>
+                      {% endif %}
+                    {% endwith %}
                   {% else %}
-                    <div class="file-icon">
+                    <div class="file-icon text-{% if attachment.file_type == 'pdf' %}danger{% elif attachment.file_type == 'document' %}info{% else %}secondary{% endif %}">
                       <i class="{{ attachment.get_file_icon }}"></i>
                     </div>
                   {% endif %}
@@ -5912,16 +6066,21 @@ document.addEventListener("DOMContentLoaded", function () {
                   
                   <!-- File Info -->
                   <div class="file-info">
+                    <div class="badge bg-{% if attachment.file_type == 'image' %}success{% elif attachment.file_type == 'pdf' %}danger{% elif attachment.file_type == 'document' %}info{% else %}secondary{% endif %} mb-1">
+                      {{ attachment.get_file_type_display }}
+                    </div><br>
                     {{ attachment.file_size|filesizeformat }}<br>
                     {{ attachment.uploaded_at|date:"M d, Y" }}
                   </div>
                   
                   <!-- Actions -->
                   <div class="file-actions">
-                    <a href="{{ attachment.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
-                      <i class="bi bi-eye"></i>
-                    </a>
-                    <button class="btn btn-sm btn-outline-danger" onclick="confirmDeleteFile({{ attachment.id }}, '{{ attachment.file.name }}')">
+                    {% if attachment.get_file_url %}
+                      <a href="{{ attachment.get_file_url }}" class="btn btn-sm btn-outline-primary" target="_blank" title="View/Download">
+                        <i class="bi bi-{% if attachment.file_type == 'image' %}eye{% else %}download{% endif %}"></i>
+                      </a>
+                    {% endif %}
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDeleteFile({{ attachment.id }}, '{{ attachment.file.name }}')" title="Delete">
                       <i class="bi bi-trash"></i>
                     </button>
                   </div>
@@ -5938,8 +6097,6 @@ document.addEventListener("DOMContentLoaded", function () {
             </div>
           {% endif %}
         </div>
-      </div>
-    </div>
 
     <!-- Notes with Editing -->
     <div class="col-12">
