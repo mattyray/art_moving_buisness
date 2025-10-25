@@ -1,0 +1,14 @@
+=== art-moving-buisness Config Vars
+
+CLOUDINARY_API_KEY:    294212831892942
+CLOUDINARY_API_SECRET: YILK1xVjiVRSRIjc5nnEoD6ubBw
+CLOUDINARY_CLOUD_NAME: du1rabsli
+DATABASE_URL:          postgres://u826p8afoh5lip:p4c708787f814cc5539ff6f7d7c8dea321d38580120d0c08bb7e6d12d79aea51d@cat670aihdrkt1.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com:5432/db1cqodceigo2f
+DJANGO_ALLOWED_HOSTS:  localhost,127.0.0.1,art-moving-buisness-0a734245a61f.herokuapp.com,ejartmover.net,www.ejartmover.net
+DJANGO_DEBUG:          False
+DJANGO_SECRET_KEY:     "=w=x*4=450mwum0#81jd$$ybe&ktsd)&px!s$95nislg!vrqm=d"
+EMAIL_BACKEND:         django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST:            smtp.gmail.com
+POSTGRES_DB:           postgres
+POSTGRES_PASSWORD:     postgres
+POSTGRES_USER:         postgres

@@ -1,0 +1,17 @@
+=== art-moving-buisness Releases - Current: v85
+
+ v85 Deploy d193280d                          mnraynor90@gmail.com 2025/10/20 12:06:50 -0400 
+ v84 Deploy 36137b27                          mnraynor90@gmail.com 2025/09/11 16:59:48 -0400 
+ v83 Deploy 762c882c                          mnraynor90@gmail.com 2025/08/16 15:34:44 -0400 
+ v82 Deploy 39d54332                          mnraynor90@gmail.com 2025/08/16 15:25:57 -0400 
+ v81 Deploy 84d60e6c                          mnraynor90@gmail.com 2025/08/16 15:17:25 -0400 
+ v80 Deploy 1e29897e                          mnraynor90@gmail.com 2025/08/16 15:07:03 -0400 
+ v79 Deploy d4ba5fd2                          mnraynor90@gmail.com 2025/08/16 14:59:50 -0400 
+ v78 Deploy 9c21e12b                          mnraynor90@gmail.com 2025/08/16 14:27:03 -0400 
+ v77 Deploy 7a30fbc5                          mnraynor90@gmail.com 2025/08/16 14:12:06 -0400 
+ v76 Deploy 69ad0057                          mnraynor90@gmail.com 2025/08/16 14:02:22 -0400 
+ v75 Deploy 4f5e5293                          mnraynor90@gmail.com 2025/08/16 13:53:08 -0400 
+ v74 Set DJANGO_DEBUG config vars             mnraynor90@gmail.com 2025/08/16 13:44:52 -0400 
+ v73 Remove DISABLE_COLLECTSTATIC config vars mnraynor90@gmail.com 2025/08/16 13:43:26 -0400 
+ v72 Set DJANGO_DEBUG config vars             mnraynor90@gmail.com 2025/08/16 13:32:16 -0400 
+ v71 Set DJANGO_DEBUG config vars             mnraynor90@gmail.com 2025/08/16 13:30:50 -0400 
