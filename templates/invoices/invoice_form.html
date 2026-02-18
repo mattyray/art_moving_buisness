@@ -169,8 +169,10 @@
     <div class="card-body">
       <form method="post" id="invoice-form">
         {% csrf_token %}
+        {% if creating %}
         <input type="hidden" name="client" value="{{ client_id }}">
         <input type="hidden" name="status" value="unpaid">
+        {% endif %}
 
         {{ form.work_order|as_crispy_field }}
 

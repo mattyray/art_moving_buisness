@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.db.models import Q
 from django.template.loader import render_to_string
@@ -13,71 +14,10 @@ from django.core.exceptions import ValidationError  # ← ADDED THIS IMPORT
 
 from .models import WorkOrder, Event, JobAttachment, JobNote
 from .forms import WorkOrderForm, EventFormSet, JobAttachmentForm, JobNoteForm
-
-# ===== OPTIMIZATION: Query Helper Class =====
-class WorkOrderQueries:
-    """
-    Optimized query methods that reduce database hits by 90%
-    """
-    
-    @staticmethod
-    def get_optimized_base():
-        """Base queryset with smart prefetching - reduces N+1 queries"""
-        return WorkOrder.objects.select_related('client')\
-                               .prefetch_related('events', 'notes', 'attachments', 'invoices')
-    
-    @staticmethod
-    def get_pending_jobs(search_query='', limit=None):
-        """Get pending jobs with optimized queries"""
-        qs = WorkOrderQueries.get_optimized_base()\
-                            .exclude(events__date__isnull=False)\
-                            .filter(status__in=["pending", "in_progress"])
-        
-        if search_query:
-            qs = qs.filter(client__name__icontains=search_query)
-        qs = qs.order_by('-updated_at')
-        if limit:
-            qs = qs[:limit]
-        return qs
-    
-    @staticmethod
-    def get_scheduled_jobs(search_query='', limit=None):
-        """Get scheduled jobs with optimized queries"""
-        qs = WorkOrderQueries.get_optimized_base()\
-                            .filter(events__date__isnull=False, status__in=["pending", "in_progress"])\
-                            .distinct()
-        if search_query:
-            qs = qs.filter(client__name__icontains=search_query)
-        qs = qs.order_by('-updated_at')
-        if limit:
-            qs = qs[:limit]
-        return qs
-    
-    @staticmethod
-    def get_completed_uninvoiced_jobs(search_query='', limit=None):
-        """Get completed but uninvoiced jobs"""
-        qs = WorkOrderQueries.get_optimized_base()\
-                            .filter(status='completed', invoiced=False)
-        if search_query:
-            qs = qs.filter(client__name__icontains=search_query)
-        qs = qs.order_by('-completed_at')
-        if limit:
-            qs = qs[:limit]
-        return qs
-    
-    @staticmethod
-    def get_completed_invoiced_jobs(search_query='', limit=None):
-        """Get completed and invoiced jobs"""
-        qs = WorkOrderQueries.get_optimized_base()\
-                            .filter(status='completed', invoiced=True)
-        if search_query:
-            qs = qs.filter(client__name__icontains=search_query)
-        qs = qs.order_by('-completed_at')
-        if limit:
-            qs = qs[:limit]
-        return qs
+from .queries import WorkOrderQueries
 
 # ===== PDF GENERATION =====
+@login_required
 def workorder_pdf(request, pk):
     # Use optimized query
     workorder = get_object_or_404(WorkOrderQueries.get_optimized_base(), pk=pk)
@@ -141,14 +81,6 @@ def workorder_calendar_data(request):
         # Get color - should never be gray unless actually completed
         event_color = get_color(evt.work_order.id, is_event_completed, is_work_order_completed)
         
-        # Debug logging (remove after testing)
-        if event_color == "#6c757d" and not is_any_completed:
-            print(f"🐛 DEBUG: Event {evt.id} is gray but not completed!")
-            print(f"  - Event completed: {is_event_completed}")
-            print(f"  - Work order completed: {is_work_order_completed}")
-            print(f"  - Work order ID: {evt.work_order.id}")
-            print(f"  - Color index: {evt.work_order.id % len(palette)}")
-        
         events.append({
             "title": title,
             "start": evt.date.isoformat(),
@@ -160,13 +92,6 @@ def workorder_calendar_data(request):
             "isEventCompleted": is_event_completed,
             "isWorkOrderCompleted": is_work_order_completed,
             "isCompleted": is_any_completed,
-            # Add debug info (remove after testing)
-            "debugInfo": {
-                "eventCompleted": is_event_completed,
-                "workOrderCompleted": is_work_order_completed,
-                "colorIndex": evt.work_order.id % len(palette),
-                "workOrderId": evt.work_order.id
-            }
         })
 
     return JsonResponse(events, safe=False)
@@ -499,6 +424,7 @@ def mark_scheduled(request, job_id):
     return redirect('workorder_edit', job_id=job_id)
 
 @login_required
+@require_POST
 def mark_completed(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
     if workorder.status in ['pending', 'in_progress']:
@@ -509,6 +435,7 @@ def mark_completed(request, job_id):
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('workorder_list')))
 
 @login_required
+@require_POST
 def complete_and_invoice(request, job_id):
     """Mark work order as completed and redirect to invoice creation"""
     workorder = get_object_or_404(WorkOrder, id=job_id)
@@ -521,6 +448,7 @@ def complete_and_invoice(request, job_id):
     return redirect(f'/invoices/create/?work_order={workorder.id}')
 
 @login_required
+@require_POST
 def mark_paid(request, job_id):
     workorder = get_object_or_404(WorkOrder, id=job_id)
 
@@ -532,6 +460,7 @@ def mark_paid(request, job_id):
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', reverse('completed_jobs')))
 
 @login_required
+@require_POST
 def mark_completed_and_paid(request, job_id):
     """Mark work order as completed and paid in one action"""
     workorder = get_object_or_404(WorkOrder, id=job_id)
@@ -594,7 +523,10 @@ def load_more_workorders(request):
         return JsonResponse({'error': 'Invalid request'}, status=400)
     
     section = request.GET.get('section')
-    offset = int(request.GET.get('offset', 0))
+    try:
+        offset = int(request.GET.get('offset', 0))
+    except (ValueError, TypeError):
+        offset = 0
     limit = 5
     
     # Use optimized queries

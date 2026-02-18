@@ -247,7 +247,7 @@ def ajax_get_active_workorders(request):
     results = [
         {
             'id': wo.id,
-            'text': f"Order #{wo.id} – {wo.job_description[:40]}{'...' if len(wo.job_description) > 40 else ''}"
+            'text': f"Order #{wo.id} – {(wo.job_description or '')[:40]}{'...' if len(wo.job_description or '') > 40 else ''}"
         }
         for wo in work_orders
     ]
@@ -282,7 +282,10 @@ def load_more_invoices(request):
         return JsonResponse({'error': 'Invalid request'}, status=400)
     
     section = request.GET.get('section')
-    offset = int(request.GET.get('offset', 0))
+    try:
+        offset = int(request.GET.get('offset', 0))
+    except (ValueError, TypeError):
+        offset = 0
     limit = 5
     
     # Determine which queryset to use based on section
