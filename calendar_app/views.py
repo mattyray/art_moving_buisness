@@ -2,6 +2,7 @@ import datetime
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
 from workorders.models import Event
 import json
 
@@ -13,6 +14,7 @@ def get_event_color(work_order_id):
     return palette[work_order_id % len(palette)]
 
 
+@login_required
 def week_detail(request, week_str):
     # Parse week_str (format: mm-dd-yy for the Monday of that week)
     month, day, year = week_str.split('-')
@@ -51,6 +53,7 @@ def week_detail(request, week_str):
     return render(request, 'calendar/week_detail.html', context)
 
 
+@login_required
 def day_detail(request, day_str):
     # Parse day_str (format: mm-dd-yy)
     month, day, year = day_str.split('-')
@@ -81,6 +84,7 @@ def day_detail(request, day_str):
     return render(request, 'calendar/day_detail.html', context)
 
 
+@login_required
 @require_http_methods(["POST"])
 def update_daily_order(request, day_str):
     """AJAX endpoint to save daily event ordering and times"""
