@@ -176,7 +176,11 @@
         <div id="events-display">
           {% if job.events.all %}
             {% for event in job.events.all %}
-              <div class="alert alert-info d-flex justify-content-between align-items-center">
+              <div class="alert alert-info d-flex justify-content-between align-items-center"
+                   data-event-id="{{ event.id }}"
+                   data-event-type="{{ event.event_type }}"
+                   data-event-address="{{ event.address }}"
+                   data-event-date="{{ event.date|date:'Y-m-d' }}">
                 <div>
                   <strong>{{ event.get_event_type_display }}</strong><br>
                   <small>{{ event.address }} • {{ event.date|date:"M d, Y" }}</small>
@@ -400,6 +404,7 @@
         </form>
       </div>
       <div class="modal-footer">
+        <input type="hidden" id="editingEventId" value="">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="button" class="btn btn-primary" id="saveEvent">Add Event</button>
       </div>
@@ -480,62 +485,113 @@ $(document).ready(function() {
     });
   });
 
-  // Event Modal
+  // Event Modal - handles both Add and Edit
   $('#saveEvent').click(function() {
     const eventType = $('#eventType').val();
     const address = $('#eventAddress').val();
     const date = $('#eventDate').val();
+    const editingId = $('#editingEventId').val();
 
     if (!eventType) {
       alert('Event type is required');
       return;
     }
 
-    // Add to visual display
     const eventTypeText = $('#eventType option:selected').text();
-    const eventHtml = `
-      <div class="alert alert-info d-flex justify-content-between align-items-center" data-temp-id="${eventCounter}">
-        <div>
-          <strong>${eventTypeText}</strong><br>
-          <small>${address} ${date ? '• ' + new Date(date).toLocaleDateString() : ''}</small>
+
+    if (editingId) {
+      // Editing an existing event - update the display card
+      const card = document.querySelector(`[data-event-id="${editingId}"]`);
+      if (card) {
+        card.dataset.eventType = eventType;
+        card.dataset.eventAddress = address;
+        card.dataset.eventDate = date;
+        card.querySelector('strong').textContent = eventTypeText;
+        card.querySelector('small').textContent = address + (date ? ' \u2022 ' + new Date(date + 'T00:00:00').toLocaleDateString() : '');
+      }
+
+      // Update the hidden formset - find or create the form for this event
+      const formContainer = $('#event-forms-container');
+      let existingForm = formContainer.find(`[data-existing-id="${editingId}"]`);
+      if (existingForm.length === 0) {
+        const formCount = formContainer.children('.event-form').length;
+        const hiddenForm = `
+          <div class="event-form" data-existing-id="${editingId}">
+            <input type="hidden" name="events-${formCount}-id" value="${editingId}">
+            <input type="hidden" name="events-${formCount}-event_type" value="${eventType}">
+            <input type="hidden" name="events-${formCount}-address" value="${address}">
+            <input type="hidden" name="events-${formCount}-date" value="${date}">
+          </div>
+        `;
+        formContainer.append(hiddenForm);
+        $('#id_events-TOTAL_FORMS').val(formCount + 1);
+      } else {
+        existingForm.find('[name$="-event_type"]').val(eventType);
+        existingForm.find('[name$="-address"]').val(address);
+        existingForm.find('[name$="-date"]').val(date);
+      }
+    } else {
+      // Adding a new event
+      const eventHtml = `
+        <div class="alert alert-info d-flex justify-content-between align-items-center" data-temp-id="${eventCounter}">
+          <div>
+            <strong>${eventTypeText}</strong><br>
+            <small>${address} ${date ? '\u2022 ' + new Date(date + 'T00:00:00').toLocaleDateString() : ''}</small>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="removeEvent(${eventCounter})">
+            <i class="bi bi-trash"></i>
+          </button>
         </div>
-        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="removeEvent(${eventCounter})">
-          <i class="bi bi-trash"></i>
-        </button>
-      </div>
-    `;
+      `;
 
-    $('#events-display .text-center').hide();
-    $('#events-display').append(eventHtml);
+      $('#events-display .text-center').hide();
+      $('#events-display').append(eventHtml);
 
-    // Add hidden form fields for submission
-    const formContainer = $('#event-forms-container');
-    const formCount = formContainer.children('.event-form').length;
-    
-    const hiddenForm = `
-      <div class="event-form" data-temp-id="${eventCounter}">
-        <input type="hidden" name="events-${formCount}-event_type" value="${eventType}">
-        <input type="hidden" name="events-${formCount}-address" value="${address}">
-        <input type="hidden" name="events-${formCount}-date" value="${date}">
-      </div>
-    `;
-    
-    formContainer.append(hiddenForm);
-    
-    // Update form count
-    $('#id_events-TOTAL_FORMS').val(formCount + 1);
+      const formContainer = $('#event-forms-container');
+      const formCount = formContainer.children('.event-form').length;
+      const hiddenForm = `
+        <div class="event-form" data-temp-id="${eventCounter}">
+          <input type="hidden" name="events-${formCount}-event_type" value="${eventType}">
+          <input type="hidden" name="events-${formCount}-address" value="${address}">
+          <input type="hidden" name="events-${formCount}-date" value="${date}">
+        </div>
+      `;
+      formContainer.append(hiddenForm);
+      $('#id_events-TOTAL_FORMS').val(formCount + 1);
+      eventCounter++;
+    }
 
     // Clear and close modal
     $('#eventForm')[0].reset();
+    $('#editingEventId').val('');
     $('#eventModal').modal('hide');
-    eventCounter++;
   });
 
-  // Reset modals
+  // Reset modal to "Add" state when closed
   $('#newClientModal, #eventModal').on('hidden.bs.modal', function() {
     $(this).find('form')[0].reset();
+    $('#editingEventId').val('');
+    $('#eventModalLabel').html('<i class="bi bi-calendar-plus me-2"></i>Add Event');
+    $('#saveEvent').text('Add Event');
   });
 });
+
+function editEvent(eventId) {
+  const card = document.querySelector(`[data-event-id="${eventId}"]`);
+  if (!card) return;
+
+  // Populate modal with existing data
+  $('#eventType').val(card.dataset.eventType);
+  $('#eventAddress').val(card.dataset.eventAddress);
+  $('#eventDate').val(card.dataset.eventDate);
+  $('#editingEventId').val(eventId);
+
+  // Update modal title and button
+  $('#eventModalLabel').html('<i class="bi bi-pencil me-2"></i>Edit Event');
+  $('#saveEvent').text('Update Event');
+
+  $('#eventModal').modal('show');
+}
 
 function removeEvent(tempId) {
   $(`[data-temp-id="${tempId}"]`).remove();
