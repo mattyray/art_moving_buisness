@@ -77,7 +77,7 @@ class EventResource(resources.ModelResource):
             row['date'] = None
             
         # Validate event_type
-        valid_types = ['pickup', 'pickup_wrap', 'wrap', 'install', 'deliver_install', 'dropoff']
+        valid_types = ['consult', 'pickup', 'pickup_wrap', 'wrap', 'install', 'deliver_install', 'dropoff']
         if row.get('event_type') not in valid_types:
             raise ValueError(f"Invalid event_type: {row.get('event_type')}")
             

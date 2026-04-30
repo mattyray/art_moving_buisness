@@ -63,6 +63,7 @@ class WorkOrder(models.Model):
 
 class Event(models.Model):
     EVENT_TYPES = [
+        ('consult', 'Consult'),
         ('pickup', 'Pickup'),
         ('pickup_wrap', 'Pickup and Wrap'),
         ('wrap', 'Wrap'),
