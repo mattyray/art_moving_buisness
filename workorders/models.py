@@ -70,10 +70,12 @@ class Event(models.Model):
         ('install', 'Install'),
         ('deliver_install', 'Deliver and Install'),
         ('dropoff', 'Drop Off'),
+        ('misc', 'Miscellaneous'),
     ]
     work_order = models.ForeignKey(WorkOrder, on_delete=models.CASCADE, related_name='events')
     event_type = models.CharField(max_length=30, choices=EVENT_TYPES)
     address = models.CharField(max_length=255, blank=True)
+    assigned_to = models.CharField(max_length=100, blank=True, help_text='Who is scheduled to do this job')
     date = models.DateField(blank=True, null=True)
     daily_order = models.PositiveIntegerField(blank=True, null=True, help_text='Order of this event within the day')
     scheduled_time = models.TimeField(blank=True, null=True, help_text='Scheduled time for this event')

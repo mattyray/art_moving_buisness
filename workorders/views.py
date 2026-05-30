@@ -69,6 +69,8 @@ def workorder_calendar_data(request):
         
         # Build title with order number if it exists
         title = f"{evt.get_event_type_display()}: {evt.work_order.client.name}"
+        if evt.assigned_to:
+            title = f"{title} ({evt.assigned_to})"
         if evt.daily_order:
             title = f"{evt.daily_order}. {title}"
         

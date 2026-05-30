@@ -66,7 +66,7 @@ class EventResource(resources.ModelResource):
     class Meta:
         model = Event
         import_id_fields = ['id']
-        fields = ('id', 'work_order', 'event_type', 'address', 'date', 'daily_order', 'scheduled_time')
+        fields = ('id', 'work_order', 'event_type', 'address', 'assigned_to', 'date', 'daily_order', 'scheduled_time')
         skip_unchanged = True
         report_skipped = True
 
@@ -77,7 +77,7 @@ class EventResource(resources.ModelResource):
             row['date'] = None
             
         # Validate event_type
-        valid_types = ['consult', 'pickup', 'pickup_wrap', 'wrap', 'install', 'deliver_install', 'dropoff']
+        valid_types = ['consult', 'pickup', 'pickup_wrap', 'wrap', 'install', 'deliver_install', 'dropoff', 'misc']
         if row.get('event_type') not in valid_types:
             raise ValueError(f"Invalid event_type: {row.get('event_type')}")
             

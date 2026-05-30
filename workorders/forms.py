@@ -52,10 +52,15 @@ class EventForm(forms.ModelForm):
         widget=forms.TextInput(attrs={'class': 'form-control'}),
         label="Address"
     )
+    assigned_to = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+        label="Assigned To"
+    )
 
     class Meta:
         model = Event
-        fields = ['event_type', 'address', 'date']
+        fields = ['event_type', 'address', 'assigned_to', 'date']
 
 EventFormSet = inlineformset_factory(
     WorkOrder,

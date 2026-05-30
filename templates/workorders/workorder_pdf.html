@@ -312,6 +312,9 @@
             {% if event.address %}
               <strong>Address:</strong> {{ event.address }}<br>
             {% endif %}
+            {% if event.assigned_to %}
+              <strong>Assigned to:</strong> {{ event.assigned_to }}<br>
+            {% endif %}
             {% if event.date %}
               <strong>Date:</strong> {{ event.date|date:"F j, Y" }}
             {% else %}

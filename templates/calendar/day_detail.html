@@ -221,6 +221,9 @@
             {% if evt.address %}
               <small class="text-muted">{{ evt.address }}</small>
             {% endif %}
+            {% if evt.assigned_to %}
+              <small class="text-muted d-block"><i class="bi bi-person me-1"></i>{{ evt.assigned_to }}</small>
+            {% endif %}
           </div>
         </div>
         {% endfor %}

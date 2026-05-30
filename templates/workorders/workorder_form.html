@@ -180,10 +180,12 @@
                    data-event-id="{{ event.id }}"
                    data-event-type="{{ event.event_type }}"
                    data-event-address="{{ event.address }}"
+                   data-event-assigned="{{ event.assigned_to }}"
                    data-event-date="{{ event.date|date:'Y-m-d' }}">
                 <div>
                   <strong>{{ event.get_event_type_display }}</strong><br>
                   <small>{{ event.address }} • {{ event.date|date:"M d, Y" }}</small>
+                  {% if event.assigned_to %}<br><small><i class="bi bi-person me-1"></i>{{ event.assigned_to }}</small>{% endif %}
                 </div>
                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="editEvent({{ event.id }})">
                   <i class="bi bi-pencil"></i>
@@ -392,11 +394,16 @@
               <option value="install">Install</option>
               <option value="deliver_install">Deliver and Install</option>
               <option value="dropoff">Drop Off</option>
+              <option value="misc">Miscellaneous</option>
             </select>
           </div>
           <div class="mb-3">
             <label for="eventAddress" class="form-label">Address</label>
             <input type="text" class="form-control" id="eventAddress">
+          </div>
+          <div class="mb-3">
+            <label for="eventAssignedTo" class="form-label">Assigned To</label>
+            <input type="text" class="form-control" id="eventAssignedTo" placeholder="Who is scheduled to do this job?">
           </div>
           <div class="mb-3">
             <label for="eventDate" class="form-label">Date</label>
@@ -490,6 +497,7 @@ $(document).ready(function() {
   $('#saveEvent').click(function() {
     const eventType = $('#eventType').val();
     const address = $('#eventAddress').val();
+    const assignedTo = $('#eventAssignedTo').val();
     const date = $('#eventDate').val();
     const editingId = $('#editingEventId').val();
 
@@ -499,6 +507,8 @@ $(document).ready(function() {
     }
 
     const eventTypeText = $('#eventType option:selected').text();
+    const dateText = date ? ' \u2022 ' + new Date(date + 'T00:00:00').toLocaleDateString() : '';
+    const assignedHtml = assignedTo ? `<br><small><i class="bi bi-person me-1"></i>${assignedTo}</small>` : '';
 
     if (editingId) {
       // Editing an existing event - update the display card
@@ -506,9 +516,10 @@ $(document).ready(function() {
       if (card) {
         card.dataset.eventType = eventType;
         card.dataset.eventAddress = address;
+        card.dataset.eventAssigned = assignedTo;
         card.dataset.eventDate = date;
-        card.querySelector('strong').textContent = eventTypeText;
-        card.querySelector('small').textContent = address + (date ? ' \u2022 ' + new Date(date + 'T00:00:00').toLocaleDateString() : '');
+        const contentDiv = card.querySelector('div');
+        contentDiv.innerHTML = `<strong>${eventTypeText}</strong><br><small>${address}${dateText}</small>${assignedHtml}`;
       }
 
       // Update the hidden formset - find or create the form for this event
@@ -521,6 +532,7 @@ $(document).ready(function() {
             <input type="hidden" name="events-${formCount}-id" value="${editingId}">
             <input type="hidden" name="events-${formCount}-event_type" value="${eventType}">
             <input type="hidden" name="events-${formCount}-address" value="${address}">
+            <input type="hidden" name="events-${formCount}-assigned_to" value="${assignedTo}">
             <input type="hidden" name="events-${formCount}-date" value="${date}">
           </div>
         `;
@@ -529,6 +541,7 @@ $(document).ready(function() {
       } else {
         existingForm.find('[name$="-event_type"]').val(eventType);
         existingForm.find('[name$="-address"]').val(address);
+        existingForm.find('[name$="-assigned_to"]').val(assignedTo);
         existingForm.find('[name$="-date"]').val(date);
       }
     } else {
@@ -537,7 +550,7 @@ $(document).ready(function() {
         <div class="alert alert-info d-flex justify-content-between align-items-center" data-temp-id="${eventCounter}">
           <div>
             <strong>${eventTypeText}</strong><br>
-            <small>${address} ${date ? '\u2022 ' + new Date(date + 'T00:00:00').toLocaleDateString() : ''}</small>
+            <small>${address}${dateText}</small>${assignedHtml}
           </div>
           <button type="button" class="btn btn-sm btn-outline-secondary" onclick="removeEvent(${eventCounter})">
             <i class="bi bi-trash"></i>
@@ -554,6 +567,7 @@ $(document).ready(function() {
         <div class="event-form" data-temp-id="${eventCounter}">
           <input type="hidden" name="events-${formCount}-event_type" value="${eventType}">
           <input type="hidden" name="events-${formCount}-address" value="${address}">
+          <input type="hidden" name="events-${formCount}-assigned_to" value="${assignedTo}">
           <input type="hidden" name="events-${formCount}-date" value="${date}">
         </div>
       `;
@@ -584,6 +598,7 @@ function editEvent(eventId) {
   // Populate modal with existing data
   $('#eventType').val(card.dataset.eventType);
   $('#eventAddress').val(card.dataset.eventAddress);
+  $('#eventAssignedTo').val(card.dataset.eventAssigned);
   $('#eventDate').val(card.dataset.eventDate);
   $('#editingEventId').val(eventId);
 

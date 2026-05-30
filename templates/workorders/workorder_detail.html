@@ -419,7 +419,12 @@
                       <p class="card-text mb-0 small">
                         <i class="bi bi-geo-alt me-1"></i>{{ event.address|default:"No address" }}
                       </p>
-                      
+                      {% if event.assigned_to %}
+                      <p class="card-text mb-0 small">
+                        <i class="bi bi-person me-1"></i>{{ event.assigned_to }}
+                      </p>
+                      {% endif %}
+
                       <!-- Event Completion Info -->
                       {% if event.completed %}
                         <div class="completion-info mt-2">

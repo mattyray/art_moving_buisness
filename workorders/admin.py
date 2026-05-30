@@ -43,8 +43,8 @@ class WorkOrderAdmin(ImportExportModelAdmin):
 @admin.register(Event)
 class EventAdmin(ImportExportModelAdmin):
     resource_class = EventResource
-    list_display = ['id', 'event_type', 'address', 'date', 'work_order']
-    search_fields = ['event_type', 'address', 'work_order__job_description']
+    list_display = ['id', 'event_type', 'address', 'assigned_to', 'date', 'work_order']
+    search_fields = ['event_type', 'address', 'assigned_to', 'work_order__job_description']
     list_filter = ['event_type', 'date']
 
 # --------------------------
